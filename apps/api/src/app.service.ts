@@ -1,12 +1,5 @@
 import { Injectable } from '@nestjs/common';
-
-export interface HealthStatus {
-  status: 'ok';
-  service: string;
-  version: string;
-  timestamp: string;
-  uptimeSeconds: number;
-}
+import type { HealthStatus } from '@peoplelens/types';
 
 @Injectable()
 export class AppService {

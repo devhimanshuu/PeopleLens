@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import Joi from 'joi';
 import { AppController } from '@app/app.controller';
 import { AppService } from '@app/app.service';
+import { SignalsModule } from '@app/signals/signals.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AppService } from '@app/app.service';
         DATABASE_URL: Joi.string().optional(),
       }),
     }),
+    SignalsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

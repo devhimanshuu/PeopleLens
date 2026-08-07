@@ -9,6 +9,11 @@
     "pnpm": ">=10.0.0"
   },
   "packageManager": "pnpm@10.33.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "core-js-pure"
+    ]
+  },
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@peoplelens/web",

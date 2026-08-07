@@ -6,6 +6,7 @@ build
 .turbo
 coverage
 *.lock
+pnpm-lock.yaml
 *.tsbuildinfo
 .freebuff
 desktop-v2.db
