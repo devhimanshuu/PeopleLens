@@ -1,0 +1,14 @@
+// PeopleLens Prisma schema — Phase 1 initializes the data-layer foundation only.
+//
+// Domain models (Employee, Organization, Team, …) are intentionally deferred to
+// Phase 2. Adding them here would couple the foundation to business decisions
+// that have not been reviewed yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
