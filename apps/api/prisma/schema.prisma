@@ -1,8 +1,15 @@
-// PeopleLens Prisma schema — Phase 1 initializes the data-layer foundation only.
+// PeopleLens Prisma schema — Phase 2 core domain.
 //
-// Domain models (Employee, Organization, Team, …) are intentionally deferred to
-// Phase 2. Adding them here would couple the foundation to business decisions
-// that have not been reviewed yet.
+// Design notes:
+// - `User` mirrors the Neon Auth identity (email) and adds the platform role
+//   (admin / manager / viewer). Auth itself stays on Neon Auth; the API maps
+//   a validated session back to this row for RBAC.
+// - `Employee` is the workforce record. `managerId` is a self-relation for
+//   reporting lines; `departmentId` / `teamId` place the person in the org.
+// - Soft deletes use `deletedAt` so history, audit trails and the dashboard
+//   keep working after a record is "removed".
+// - `ImportHistory` captures every CSV bulk-import outcome for replayable,
+//   auditable onboarding.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +18,214 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Platform access roles. Coarse-grained by design; scope decisions live in
+/// services (managers are scoped to their assigned departments).
+enum Role {
+  admin
+  manager
+  viewer
+}
+
+/// Employment lifecycle state.
+enum EmployeeStatus {
+  active
+  on_leave
+  probation
+  terminated
+}
+
+/// Gender identity (self-reported).
+enum Gender {
+  female
+  male
+  non_binary
+  prefer_not_to_say
+}
+
+/// Outcome of a CSV bulk import.
+enum ImportStatus {
+  completed
+  partial
+  failed
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity & access
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Platform account. `email` is the join key with Neon Auth; the Neon-managed
+/// session is validated by the API and mapped to this row for RBAC.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(viewer)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional link to an employee profile (self-service account claim).
+  employee Employee?
+
+  // Departments this user manages (RBAC scope for managers).
+  managedDepartments Department[] @relation("DepartmentManager")
+
+  imports  ImportHistory[]
+  auditLogs AuditLog[]
+
+  @@index([role])
+  @@index([email])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Organization
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Organizational unit. Supports a hierarchy (`parentId`) and an assigned
+/// manager (`managerUserId`) that defines RBAC scope for manager accounts.
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Org hierarchy — a department may sit under a parent department.
+  parentId String?
+  parent   Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Department[] @relation("DepartmentHierarchy")
+
+  // Assigned manager — the user whose RBAC scope includes this department.
+  managerUserId String?
+  managerUser   User?  @relation("DepartmentManager", fields: [managerUserId], references: [id], onDelete: SetNull)
+
+  teams     Team[]
+  employees Employee[]
+
+  @@index([parentId])
+  @@index([managerUserId])
+  @@index([deletedAt])
+  @@unique([name, deletedAt])
+}
+
+/// Sub-unit of a department (e.g. Platform, Growth under Engineering).
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  // Team lead — an employee record, not necessarily an account.
+  leadEmployeeId String?
+  leadEmployee   Employee? @relation("TeamLead", fields: [leadEmployeeId], references: [id], onDelete: SetNull)
+
+  employees Employee[]
+
+  @@index([departmentId])
+  @@index([deletedAt])
+  @@unique([name, departmentId, deletedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workforce
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Employee record — the core workforce domain.
+model Employee {
+  id           String   @id @default(cuid())
+  employeeCode String   @unique
+  firstName    String
+  lastName     String
+  email        String   @unique
+  phone        String?
+  jobTitle     String
+  gender       Gender
+  dateOfBirth  DateTime?
+  hiredAt      DateTime
+  status       EmployeeStatus @default(active)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  // Org placement.
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  // Reporting line — the employee's manager is another employee.
+  managerId String?
+  manager   Employee?  @relation("ReportingLine", fields: [managerId], references: [id], onDelete: SetNull)
+  reports   Employee[] @relation("ReportingLine")
+
+  // Optional account claim (self-service) — links the profile to a platform account.
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Team leads are employees too.
+  ledTeams Team[] @relation("TeamLead")
+
+  @@index([departmentId])
+  @@index([teamId])
+  @@index([managerId])
+  @@index([status])
+  @@index([hiredAt])
+  @@index([deletedAt])
+  @@index([firstName, lastName])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Imports & audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Result of a CSV bulk import, including a per-row error report.
+model ImportHistory {
+  id           String       @id @default(cuid())
+  fileName     String
+  status       ImportStatus
+  totalRows    Int
+  successCount Int
+  failedCount  Int
+  duplicateCount Int        @default(0)
+  /// JSON array of `{ row, email?, employeeCode?, errors: string[] }`.
+  errorReport  Json?
+  importedByUserId String
+  importedByUser   User     @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
+  createdAt    DateTime     @default(now())
+
+  @@index([importedByUserId])
+  @@index([createdAt])
+}
+
+/// Basic audit trail for state-changing operations.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorUserId String?
+  actorUser  User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
 }
