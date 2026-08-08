@@ -9,15 +9,8 @@ import type { Employee, Prisma } from '@prisma/client';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { RbacService } from '@app/common/services/rbac.service';
 import { PrismaService } from '@app/database/prisma.service';
-
-/**
- * Initial analytics dashboard.
- *
- * Aggregates headcount KPIs and distribution slices (department, status,
- * gender) plus recent hires. Optional {@link DashboardFilters} slice the whole
- * overview server-side; managers always see their own departments only
- * (admins and viewers see the whole organization).
- */
+// Initial analytics dashboard. Aggregates headcount KPIs and distribution slices (department, status, gender)…
+// plus recent hires. Optional {@link DashboardFilters} slice the whole overview server-side; managers always…
 @Injectable()
 export class DashboardService {
   constructor(
@@ -30,12 +23,8 @@ export class DashboardService {
     filters: DashboardFilters = {},
   ): Promise<DashboardOverview> {
     const scope = await this.rbac.departmentScope(actor);
-
-    // The manager scope is AUTHORITATIVE — an explicit department filter may
-    // only narrow it, never widen it. Intersect: an in-scope id narrows to
-    // that department; an out-of-scope id matches nothing (empty IN), so a
-    // manager can never read another department's analytics by guessing ids.
-    // Admins/viewers (no scope) pass the filter through untouched.
+    // The manager scope is AUTHORITATIVE — an explicit department filter may only narrow it, never widen it.…
+    // Intersect: an in-scope id narrows to that department; an out-of-scope id matches nothing (empty IN), so a…
     const departmentFilter: string | { in: string[] } | undefined = scope
       ? filters.departmentId
         ? scope.includes(filters.departmentId)
@@ -70,11 +59,8 @@ export class DashboardService {
           where: { deletedAt: null, department: scope ? { id: { in: scope } } : {} },
         }),
       ]);
-
-    // Scope-aware department options (id + name) so the client's filter
-    // dropdown can never offer a department the caller cannot see. Kept
-    // scope-wide (not narrowed by the active filter) so the dropdown stays
-    // usable while a filter is applied.
+    // Scope-aware department options (id + name) so the client's filter dropdown can never offer a department the…
+    // caller cannot see. Kept scope-wide (not narrowed by the active filter) so the dropdown stays usable while a…
     const optionsWhere: Prisma.DepartmentWhereInput = {
       deletedAt: null,
       ...(scope ? { id: { in: scope } } : {}),
@@ -125,11 +111,8 @@ export class DashboardService {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  /**
-   * Distinct department managers WITHIN scope. Counting manager *accounts*
-   * globally would leak org size to scoped managers and disagree with the
-   * department-scoped numbers around it.
-   */
+  // Distinct department managers WITHIN scope. Counting manager *accounts* globally would leak org size to scoped…
+  // managers and disagree with the department-scoped numbers around it.
   private async countDepartmentManagers(orgWhere: Prisma.DepartmentWhereInput): Promise<number> {
     const rows = await this.prisma.department.findMany({
       where: { ...orgWhere, managerUserId: { not: null } },

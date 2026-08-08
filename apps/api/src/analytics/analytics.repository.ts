@@ -46,12 +46,8 @@ export interface LastImportRow {
   failedCount: number;
   createdAt: Date;
 }
-
-/**
- * Data access for the analytics engine. Keeps Prisma queries out of the
- * service so calculation logic stays pure and unit-testable; every query is
- * scope-aware (the `scope` argument comes from RbacService).
- */
+// Data access for the analytics engine. Keeps Prisma queries out of the service so calculation logic stays pure…
+// and unit-testable; every query is scope-aware (the `scope` argument comes from RbacService).
 @Injectable()
 export class AnalyticsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -153,12 +149,8 @@ export class AnalyticsRepository {
       },
     });
   }
-
-  /**
-   * Organization hierarchy: departments → teams → employees.
-   * For scoped callers only their departments (with their teams/employees)
-   * are returned; departments whose parent is outside the scope become roots.
-   */
+  // Organization hierarchy: departments → teams → employees. For scoped callers only their departments (with…
+  // their teams/employees) are returned; departments whose parent is outside the scope become roots.
   async getHierarchy(scope: string[] | null): Promise<OrgHierarchy> {
     const deptWhere: Prisma.DepartmentWhereInput = {
       deletedAt: null,

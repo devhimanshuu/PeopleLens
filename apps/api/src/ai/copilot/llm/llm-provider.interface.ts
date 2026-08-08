@@ -1,8 +1,5 @@
-/**
- * LLM provider abstraction — the copilot depends on this interface, never on
- * a concrete SDK, so providers are swappable via `AI_PROVIDER` and mockable
- * in tests without network access.
- */
+// LLM provider abstraction — the copilot depends on this interface, never on a concrete SDK, so providers are…
+// swappable via `AI_PROVIDER` and mockable in tests without network access.
 
 export interface LLMMessage {
   role: 'user' | 'assistant';

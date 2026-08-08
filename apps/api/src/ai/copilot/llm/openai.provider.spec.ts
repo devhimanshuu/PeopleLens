@@ -207,9 +207,8 @@ describe('OpenAiProvider', () => {
   });
 
   it('preserves categorized provider errors through the retry loop', async () => {
-    // A provider-reported error inside callOnce must surface with its original
-    // category (not be re-wrapped as a generic network error). The fetch mock
-    // builds a FRESH Response per call — bodies are single-use.
+    // A provider-reported error inside callOnce must surface with its original category (not be re-wrapped as a…
+    // generic network error). The fetch mock builds a FRESH Response per call — bodies are single-use.
     global.fetch = jest
       .fn()
       .mockImplementation(() =>

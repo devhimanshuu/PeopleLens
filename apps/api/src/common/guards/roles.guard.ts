@@ -10,15 +10,8 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../constants/app.constants';
 import type { Role } from '../enums/role.enum';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
-
-/**
- * Role-based authorization guard.
- *
- * Reads the roles required by `@Roles(...)` (or a controller-level decorator)
- * and checks them against the authenticated user's roles. Public routes and
- * routes without `@Roles(...)` are allowed through. Run after the JWT guard so
- * `request.user` is populated.
- */
+// Role-based authorization guard. Reads the roles required by `@Roles(...)` (or a controller-level decorator)…
+// and checks them against the authenticated user's roles. Public routes and routes without `@Roles(...)` are…
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}

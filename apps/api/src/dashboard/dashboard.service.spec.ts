@@ -3,12 +3,8 @@ import type { RequestUser } from '@app/common/interfaces/request-user.interface'
 import { type RbacService } from '@app/common/services/rbac.service';
 import { type PrismaService } from '@app/database/prisma.service';
 import { DashboardService } from './dashboard.service';
-
-/**
- * Unit tests for the dashboard aggregation: RBAC scoping (managers only see
- * their departments) and slice filters must land in the generated `where`
- * clauses so analytics can never leak outside a caller's scope.
- */
+// Unit tests for the dashboard aggregation: RBAC scoping (managers only see their departments) and slice…
+// filters must land in the generated `where` clauses so analytics can never leak outside a caller's scope.
 describe('DashboardService', () => {
   let service: DashboardService;
   let prisma: {

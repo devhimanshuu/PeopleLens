@@ -1,9 +1,5 @@
-/**
- * Shared analytics calculations — the single source of truth for the
- * groupings and filters used by BOTH the analytics engine and the employee
- * explorer, so a bucket shown in a chart filters the same records the
- * explorer lists.
- */
+// Shared analytics calculations — the single source of truth for the groupings and filters used by BOTH the…
+// analytics engine and the employee explorer, so a bucket shown in a chart filters the same records the…
 import type { Prisma } from '@prisma/client';
 import type { AgeGroup, DashboardFilters, TenureGroup } from '@peoplelens/types';
 
@@ -67,15 +63,8 @@ export function buildGroupFilter(
   };
   return { [kind === 'age' ? 'dateOfBirth' : 'hiredAt']: ranges[group] ?? { gt: at(200) } };
 }
-
-/**
- * Scope-aware `where` builder for employee analytics queries.
- *
- * The manager scope is AUTHORITATIVE — an explicit `departmentId` filter can
- * only narrow it, never widen it (the same intersect pattern used across the
- * dashboard/teams/employees services): an in-scope id narrows, an out-of-scope
- * id matches nothing (`{ in: [] }`), and scope-less actors pass through.
- */
+// Scope-aware `where` builder for employee analytics queries. The manager scope is AUTHORITATIVE — an explicit…
+// `departmentId` filter can only narrow it, never widen it (the same intersect pattern used across the…
 export function buildAnalyticsWhere(
   scope: string[] | null,
   filters: DashboardFilters,

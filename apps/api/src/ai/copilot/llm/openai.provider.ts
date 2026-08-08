@@ -18,20 +18,8 @@ interface ChatCompletionResponse {
   };
   error?: { message?: string; type?: string };
 }
-
-/**
- * OpenAI-compatible chat-completions provider — a thin `fetch` client (no SDK
- * dependency) so any OpenAI-compatible endpoint works: OpenAI, Groq,
- * OpenRouter, Azure, local gateways. Includes timeout, bounded retries with
- * backoff, and defensive JSON parsing for `jsonMode` requests.
- *
- * Free-tier models (Groq/OpenRouter) sometimes reject the strict
- * `response_format: json_object` parameter with a 400; in that case the
- * request is retried once WITHOUT it (the copilot parses plans tolerantly).
- *
- * Failures are normalized into `LLMProviderError` categories the fallback
- * chain and copilot map to friendly messages; API keys never leave the server.
- */
+// OpenAI-compatible chat-completions provider — a thin `fetch` client (no SDK dependency) so any…
+// OpenAI-compatible endpoint works: OpenAI, Groq, OpenRouter, Azure, local gateways. Includes timeout, bounded…
 export class OpenAiProvider implements LLMProvider {
   private readonly logger = new Logger(OpenAiProvider.name);
 

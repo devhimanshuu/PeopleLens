@@ -19,25 +19,8 @@ interface NeonSessionUser {
   name?: string | null;
   image?: string | null;
 }
-
-/**
- * Bridges Neon Auth (Managed Better Auth) sessions into PeopleLens RBAC.
- *
- * The web app owns sign-in/sign-up via Neon Auth; the browser then holds the
- * `__Secure-neon-auth.session_token` cookie. Neon's managed server only
- * accepts sessions as that signed cookie value (it does NOT honor Bearer
- * tokens), so this service calls the managed `get-session` endpoint with the
- * cookie forwarded verbatim — the same mechanism the official Next.js proxy
- * uses. It then maps the confirmed identity (by email) to a local `User` row
- * — the source of truth for the platform role (admin / manager / viewer).
- *
- * First-contact bootstrap: the very first account to be validated becomes an
- * `admin` so a fresh deployment is immediately usable; every later sign-up is
- * `viewer` until an admin promotes them (see UsersModule). Emails listed in
- * the `ADMIN_EMAILS` env var are always provisioned (or re-promoted) as
- * admins — the durable way to grant specific identities full access. No users
- * are seeded — identities come exclusively from Neon Auth sign-ins.
- */
+// Bridges Neon Auth (Managed Better Auth) sessions into PeopleLens RBAC. The web app owns sign-in/sign-up via…
+// Neon Auth; the browser then holds the `__Secure-neon-auth.session_token` cookie. Neon's managed server only…
 @Injectable()
 export class NeonAuthService {
   private readonly logger = new Logger(NeonAuthService.name);
@@ -50,14 +33,8 @@ export class NeonAuthService {
   ) {
     this.cacheTtlMs = this.config.get<number>('auth.sessionCacheTtlMs', 60_000);
   }
-
-  /**
-   * Validates a Neon session and returns the principal to attach to
-   * `request.user`, or `null` when the session is missing/invalid/expired.
-   *
-   * @param sessionToken the `__Secure-neon-auth.session_token` cookie value,
-   * forwarded verbatim to the managed `get-session` endpoint.
-   */
+  // Validates a Neon session and returns the principal to attach to `request.user`, or `null` when the session is…
+  // missing/invalid/expired. @param sessionToken the `__Secure-neon-auth.session_token` cookie value, forwarded…
   async validateSession(sessionToken: string): Promise<CachedPrincipal | null> {
     const cached = this.cache.get(sessionToken);
     if (cached && cached.expiresAt > Date.now()) return cached;
@@ -156,10 +133,8 @@ export class NeonAuthService {
         }
       }
     } else if (bootstrapAdmin && (user.role !== 'admin' || !user.isActive)) {
-      // Env-listed admins are re-promoted on every session even if they were
-      // provisioned earlier as viewers (e.g. before ADMIN_EMAILS was set) and
-      // can never be locked out by an isActive flag. NOTE: this also means a
-      // UI demotion of an env-listed admin is reverted on their next auth.
+      // Env-listed admins are re-promoted on every session even if they were provisioned earlier as viewers (e.g.…
+      // before ADMIN_EMAILS was set) and can never be locked out by an isActive flag. NOTE: this also means a UI…
       try {
         user = await this.prisma.user.update({
           where: { id: user.id },

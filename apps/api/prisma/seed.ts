@@ -1,19 +1,5 @@
-/**
- * PeopleLens database seed.
- *
- * Provisions a realistic demo workspace inside a single transaction:
- *  - Departments with an org hierarchy.
- *  - Teams inside departments.
- *  - ~40 employees across the org with varied status/gender/hire dates,
- *    reporting lines and department/team placement.
- *
- * No user accounts are seeded — platform accounts are provisioned from Neon
- * Auth on first sign-in (the first account becomes admin automatically, see
- * NeonAuthService), so the workspace is empty of identities until someone
- * actually registers.
- *
- * Idempotent: safe to run repeatedly (upserts keyed on stable emails/codes).
- */
+// PeopleLens database seed. Provisions a realistic demo workspace inside a single transaction: - Departments…
+// with an org hierarchy. - Teams inside departments. - ~40 employees across the org with varied…
 import { PrismaClient, type Gender } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -37,11 +23,8 @@ function dateWithin(
 
 async function main(): Promise<void> {
   console.log('[seed] Seeding PeopleLens demo workspace…');
-
-  // ── Departments (with hierarchy) ──────────────────────────────────────────
-  // No managerUserId is assigned: departments can be linked to a platform
-  // account (which defines manager RBAC scope) from the Users & Roles page
-  // once real accounts exist.
+  // ── Departments (with hierarchy) ────────────────────────────────────────── No managerUserId is assigned:…
+  // departments can be linked to a platform account (which defines manager RBAC scope) from the Users & Roles…
   const deptDefs = [
     { name: 'Engineering', description: 'Builds the core product platform' },
     { name: 'Product', description: 'Product strategy and design' },
@@ -105,7 +88,6 @@ async function main(): Promise<void> {
     teamIds[t.name] = team.id;
     console.log(`  team: ${t.name} (${t.department})`);
   }
-
   // Teams grouped by department — employees may only join a team inside their
   // own department (the API enforces this on create/update).
   const teamsByDept: Record<string, string[]> = {};

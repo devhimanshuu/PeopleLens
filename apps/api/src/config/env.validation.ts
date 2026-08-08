@@ -1,11 +1,6 @@
 import Joi from 'joi';
-
-/**
- * Validated environment contract for the API.
- *
- * Fails fast at boot with a precise message when a required variable is
- * missing or malformed — misconfiguration should never surface at runtime.
- */
+// Validated environment contract for the API. Fails fast at boot with a precise message when a required…
+// variable is missing or malformed — misconfiguration should never surface at runtime.
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   PORT: Joi.number().port().default(3001),
@@ -17,17 +12,14 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string()
     .required()
     .description('PostgreSQL connection string consumed by Prisma'),
-
-  // Auth bridge — validates Neon Auth sessions from the API side.
-  // Required in production (the API would otherwise reject every protected
-  // route); optional in dev where the API boots fail-closed until configured.
+  // Auth bridge — validates Neon Auth sessions from the API side. Required in production (the API would otherwise…
+  // reject every protected route); optional in dev where the API boots fail-closed until configured.
   NEON_AUTH_BASE_URL: Joi.when('NODE_ENV', {
     is: 'production',
     then: Joi.string().required().description('Neon Auth base URL — required in production'),
     otherwise: Joi.string().allow('').default(''),
   }),
   SESSION_CACHE_TTL_MS: Joi.number().integer().positive().default(60000),
-
   // Comma-separated emails granted the Admin role at first contact and
   // re-promoted on every session (bootstrap admins).
   ADMIN_EMAILS: Joi.string().allow('').default(''),
@@ -35,14 +27,8 @@ export const envValidationSchema = Joi.object({
   // Global rate limiting (per user when authenticated, per IP otherwise).
   RATE_LIMIT_TTL_MS: Joi.number().integer().positive().default(60000),
   RATE_LIMIT_MAX: Joi.number().integer().positive().default(120),
-
-  // ── AI Copilot (Phase 5) ────────────────────────────────────────────────────
-  // Optional: without any API key the copilot reports "unavailable" and the
-  // rest of the product is untouched. The primary provider is defined by
-  // AI_PROVIDER + AI_API_KEY (any OpenAI-compatible endpoint via AI_BASE_URL);
-  // GROQ_* / OPENROUTER_* define automatic fallbacks in the chain — when one
-  // provider rate-limits or becomes unavailable the next configured one takes
-  // over. Provider defaults target free models where available.
+  // ── AI Copilot (Phase 5) ──────────────────────────────────────────────────── Optional: without any API key…
+  // the copilot reports "unavailable" and the rest of the product is untouched. The primary provider is defined…
   AI_PROVIDER: Joi.string().valid('openai', 'groq', 'openrouter').default('openai'),
   AI_API_KEY: Joi.string().allow('').default(''),
   AI_MODEL: Joi.string().allow('').default(''),
@@ -66,7 +52,6 @@ export const envValidationSchema = Joi.object({
     .uri({ allowRelative: false })
     .allow('')
     .default('https://openrouter.ai/api/v1'),
-
   // Set to true when the API runs behind a trusted reverse proxy so
   // X-Forwarded-For from loopback proxies is honored for rate limiting.
   TRUST_PROXY: Joi.boolean().truthy('true', '1').falsy('false', '0').default(false),

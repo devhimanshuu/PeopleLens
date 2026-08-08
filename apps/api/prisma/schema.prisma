@@ -1,15 +1,5 @@
-// PeopleLens Prisma schema — Phase 2 core domain.
-//
-// Design notes:
-// - `User` mirrors the Neon Auth identity (email) and adds the platform role
-//   (admin / manager / viewer). Auth itself stays on Neon Auth; the API maps
-//   a validated session back to this row for RBAC.
-// - `Employee` is the workforce record. `managerId` is a self-relation for
-//   reporting lines; `departmentId` / `teamId` place the person in the org.
-// - Soft deletes use `deletedAt` so history, audit trails and the dashboard
-//   keep working after a record is "removed".
-// - `ImportHistory` captures every CSV bulk-import outcome for replayable,
-//   auditable onboarding.
+// PeopleLens Prisma schema — Phase 2 core domain. Design notes: - `User` mirrors the Neon Auth identity (email)…
+// and adds the platform role (admin / manager / viewer). Auth itself stays on Neon Auth; the API maps a…
 
 generator client {
   provider = "prisma-client-js"
@@ -21,9 +11,7 @@ datasource db {
   // kept here so the Prisma 6 CLI resolves the datasource at migrate time.
   url      = env("DATABASE_URL")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Enums
+// ───────────────────────────────────────────────────────────────────────────── Enums…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Platform access roles. Coarse-grained by design; scope decisions live in
@@ -56,9 +44,7 @@ enum ImportStatus {
   partial
   failed
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Identity & access
+// ───────────────────────────────────────────────────────────────────────────── Identity & access…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Platform account. `email` is the join key with Neon Auth; the Neon-managed
@@ -85,14 +71,11 @@ model User {
   @@index([role])
   @@index([email])
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AI copilot (Phase 5)
+// ───────────────────────────────────────────────────────────────────────────── AI copilot (Phase 5)…
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// One copilot conversation thread. Owned by a user; messages are stored only
-/// when necessary for lightweight context — never auth tokens, API keys or
-/// raw tool payloads.
+/// One copilot conversation thread. Owned by a user; messages are stored only when necessary for lightweight…
+/// context — never auth tokens, API keys or raw tool payloads.
 model AiConversation {
   id        String   @id @default(cuid())
   userId    String
@@ -117,9 +100,7 @@ model AiMessage {
 
   @@index([conversationId, createdAt])
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Organization
+// ───────────────────────────────────────────────────────────────────────────── Organization…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Organizational unit. Supports a hierarchy (`parentId`) and an assigned
@@ -174,9 +155,7 @@ model Team {
   @@index([deletedAt])
   @@unique([name, departmentId, deletedAt])
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Workforce
+// ───────────────────────────────────────────────────────────────────────────── Workforce…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Employee record — the core workforce domain.
@@ -215,12 +194,8 @@ model Employee {
 
   // Team leads are employees too.
   ledTeams Team[] @relation("TeamLead")
-
-  // ── Analytics & engagement profile (Phase 4) ─────────────────────────────
-  // IBM HR-style dimensions powering the workforce-intelligence engine. All
-  // nullable so legacy rows and minimal imports report "not available" in
-  // analytics rather than fabricated values.
-  /// Observed attrition event (Yes/No in source datasets).
+  // ── Analytics & engagement profile (Phase 4) ───────────────────────────── IBM HR-style dimensions powering…
+  // the workforce-intelligence engine. All nullable so legacy rows and minimal imports report "not available" in…
   attrition Boolean @default(false)
   /// When the attrition event occurred (null while employed).
   attritionDate DateTime?
@@ -264,18 +239,15 @@ model Employee {
   @@index([hiredAt])
   @@index([deletedAt])
   @@index([firstName, lastName])
-  // Analytics query paths: attrition is the core risk dimension; the
-  // satisfaction/income filters in the explorer and analytics engine read
-  // these columns regularly on the scoped employee set.
+  // Analytics query paths: attrition is the core risk dimension; the satisfaction/income filters in the explorer…
+  // and analytics engine read these columns regularly on the scoped employee set.
   @@index([attrition])
   @@index([overTime])
   @@index([jobSatisfaction])
   @@index([monthlyIncome])
   @@index([jobTitle])
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Imports & audit
+// ───────────────────────────────────────────────────────────────────────────── Imports & audit…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Result of a CSV bulk import, including a per-row error report.

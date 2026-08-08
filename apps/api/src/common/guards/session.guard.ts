@@ -15,21 +15,8 @@ import type { RequestUser } from '../interfaces/request-user.interface';
 
 /** The Neon Auth session cookie this app's web client carries. */
 const NEON_SESSION_COOKIE = '__Secure-neon-auth.session_token';
-
-/**
- * Global authentication guard.
- *
- * Neon's managed server validates sessions ONLY via the signed
- * `__Secure-neon-auth.session_token` cookie (Bearer tokens are not honored),
- * so the guard reads that cookie from the request — the browser sends it
- * automatically to this same-site API. An `Authorization: Bearer <cookie>`
- * fallback keeps non-browser API clients working. The validated principal is
- * attached to `request.user` for `@CurrentUser()` and the `RolesGuard`.
- * Routes annotated with `@Public()` are skipped.
- *
- * Registered globally with `APP_GUARD` — every route is protected unless
- * explicitly marked public.
- */
+// Global authentication guard. Neon's managed server validates sessions ONLY via the signed…
+// `__Secure-neon-auth.session_token` cookie (Bearer tokens are not honored), so the guard reads that cookie…
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(

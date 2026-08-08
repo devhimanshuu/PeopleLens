@@ -1,10 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
-
-/**
- * Reusable pagination query parameters. Every list endpoint accepts
- * `page` + `pageSize` and returns a `Paginated<T>` envelope.
- */
+// Reusable pagination query parameters. Every list endpoint accepts `page` + `pageSize` and returns a…
+// `Paginated<T>` envelope.
 export class PaginationDto {
   @IsOptional()
   @Type(() => Number)

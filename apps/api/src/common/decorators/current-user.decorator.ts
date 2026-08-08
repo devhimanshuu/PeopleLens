@@ -2,17 +2,8 @@ import { createParamDecorator, type ExecutionContext, UnauthorizedException } fr
 import { REQUEST_USER_KEY } from '../constants/app.constants';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import type { RequestUser } from '../interfaces/request-user.interface';
-
-/**
- * Injects the authenticated user — or a single field of it — into a handler.
- *
- * @example
- *   @Get('me')
- *   getMe(@CurrentUser() user: RequestUser) { ... }
- *
- *   @Get('me/email')
- *   getEmail(@CurrentUser('email') email: string) { ... }
- */
+// Injects the authenticated user — or a single field of it — into a handler. @example @Get('me')…
+// getMe(@CurrentUser() user: RequestUser) { ... } @Get('me/email') getEmail(@CurrentUser('email') email:…
 export const CurrentUser = createParamDecorator(
   (
     field: keyof RequestUser | undefined,

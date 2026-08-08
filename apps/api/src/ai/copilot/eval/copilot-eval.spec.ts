@@ -135,7 +135,6 @@ async function runEvalCase(testCase: CopilotEvalCase): Promise<{
       .fn()
       .mockResolvedValue({ items: [], page: 1, pageSize: 5, total: 0, totalPages: 0 }),
   };
-
   // Record every tool execution by wrapping each tool's execute (single source
   // of truth for what ran — avoids double counting service mocks).
   const toolsService = new CopilotToolsService(

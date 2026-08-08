@@ -6,14 +6,8 @@ export interface RateLimitDecision {
   /** Seconds until the window frees a slot (for Retry-After). */
   retryAfterSeconds: number;
 }
-
-/**
- * Per-user sliding-window rate limiter for copilot requests.
- *
- * In-memory by design: single-instance deployment keeps state in the process.
- * A multi-instance deployment would swap this for a shared store (Redis)
- * without changing the copilot service — the contract stays the same.
- */
+// Per-user sliding-window rate limiter for copilot requests. In-memory by design: single-instance deployment…
+// keeps state in the process. A multi-instance deployment would swap this for a shared store (Redis) without…
 @Injectable()
 export class CopilotRateLimiter {
   /** userId → timestamps of accepted requests in the current window. */

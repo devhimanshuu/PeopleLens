@@ -54,18 +54,8 @@ const GENDER_LABELS: Record<string, string> = {
   non_binary: 'Non-binary',
   prefer_not_to_say: 'Prefer not to say',
 };
-
-/**
- * Workforce-intelligence engine.
- *
- * Every view is computed server-side from ONE scoped employee projection per
- * request (no N+1, no per-chart round trips) and is pure relative to its
- * inputs, so the calculation layer is unit-testable without a database.
- *
- * All claims are OBSERVATIONS from the current dataset — insights and the
- * executive summary describe observed patterns and correlations, never
- * predictions or causal guarantees.
- */
+// Workforce-intelligence engine. Every view is computed server-side from ONE scoped employee projection per…
+// request (no N+1, no per-chart round trips) and is pure relative to its inputs, so the calculation layer is…
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -199,9 +189,8 @@ export class AnalyticsService {
       totalDepartments: orgCounts.departments,
       totalManagers: orgCounts.managers,
       totalTeams: orgCounts.teams,
-      // The dataset is a current snapshot — there is no historical series to
-      // compare against, so trends are labelled as unavailable rather than
-      // fabricated.
+      // The dataset is a current snapshot — there is no historical series to compare against, so trends are labelled…
+      // as unavailable rather than fabricated.
       snapshot: true,
     };
   }
@@ -316,12 +305,8 @@ export class AnalyticsService {
       tenure: ordered((r) => tenureGroupOf(r.hiredAt) ?? 'Unknown', [...TENURE_GROUPS, 'Unknown']),
     };
   }
-
-  /**
-   * Deterministic insight generation. Each insight is an observed pattern with
-   * a drill-down that opens the employee explorer pre-filtered — insights are
-   * the start of the journey, not the end of it.
-   */
+  // Deterministic insight generation. Each insight is an observed pattern with a drill-down that opens the…
+  // employee explorer pre-filtered — insights are the start of the journey, not the end of it.
   private generateInsights(
     rows: AnalyticsEmployeeRow[],
     kpis: AnalyticsKpis,
@@ -413,7 +398,6 @@ export class AnalyticsService {
         { path: '/employees', params: { tenureGroup: '6-10' } },
       );
     }
-
     // 5. Largest department by headcount — computed independently of attrition
     // (an insight about size must not be derived from the attrition ranking).
     const largestBySize = [...byDept.entries()]
@@ -445,11 +429,8 @@ export class AnalyticsService {
 
     return insights.slice(0, 6);
   }
-
-  /**
-   * Deterministic executive summary — a stable, explainable headline derived
-   * from the observed KPIs, plus the top attention areas from the insights.
-   */
+  // Deterministic executive summary — a stable, explainable headline derived from the observed KPIs, plus the top…
+  // attention areas from the insights.
   private computeExecutiveSummary(
     kpis: AnalyticsKpis,
     insights: WorkforceInsight[],
@@ -493,9 +474,8 @@ export class AnalyticsService {
     deleted: number,
     lastImport: LastImportRow | null,
   ): DataQuality {
-    // A record is analytics-ready when it carries the core engagement fields
-    // the engine reads; records created before Phase 4 or from minimal CSVs
-    // lower the readiness score instead of being silently assumed complete.
+    // A record is analytics-ready when it carries the core engagement fields the engine reads; records created…
+    // before Phase 4 or from minimal CSVs lower the readiness score instead of being silently assumed complete.
     const coreFields: Array<{ field: string; label: string }> = [
       { field: 'jobSatisfaction', label: 'Job satisfaction' },
       { field: 'environmentSatisfaction', label: 'Environment satisfaction' },
@@ -565,9 +545,8 @@ export class AnalyticsService {
     incomeVisible: boolean,
   ): DepartmentComparison {
     const attritionRows = rows.filter((r) => r.attrition).length;
-    // Overtime rate uses the same convention as the KPI: only records with a
-    // known overtime value count toward the denominator, so a department with
-    // missing overtime data is not treated as "no overtime".
+    // Overtime rate uses the same convention as the KPI: only records with a known overtime value count toward the…
+    // denominator, so a department with missing overtime data is not treated as "no overtime".
     const overtimeKnown = rows.filter((r) => r.overTime !== null && r.overTime !== undefined);
     const satisfactionValues = rows
       .map((r) => r.jobSatisfaction)

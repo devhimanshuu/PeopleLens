@@ -1,14 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import type { EmployeeStatus, Gender } from '@peoplelens/types';
-
-/**
- * Optional slice filters for the dashboard overview.
- *
- * All filters are applied server-side and intersected with the caller's RBAC
- * scope (managers only ever see their assigned departments), so the client
- * cannot widen visibility by passing filters.
- */
+// Optional slice filters for the dashboard overview. All filters are applied server-side and intersected with…
+// the caller's RBAC scope (managers only ever see their assigned departments), so the client cannot widen…
 export class QueryDashboardDto {
   @ApiPropertyOptional({
     description: 'Restrict the overview to one department (scope-aware)',

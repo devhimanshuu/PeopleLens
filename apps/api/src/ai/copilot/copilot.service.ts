@@ -48,22 +48,8 @@ const planSchema = Joi.object({
   answer: Joi.string().max(MAX_ANSWER_CHARS).allow(''),
   refusal: Joi.string().max(MAX_ANSWER_CHARS).allow(''),
 }).options({ stripUnknown: true });
-
-/**
- * PeopleLens Workforce Copilot — the orchestration layer.
- *
- * Flow per turn (deterministic, bounded — no agent loops):
- *
- *   1. authenticate + authorize (global guards)          → user
- *   2. rate limit + input-size checks                    → cost controls
- *   3. planning LLM call (JSON)                          → tool + arguments
- *   4. backend validates arguments and executes the tool → structured result
- *   5. grounding LLM call over ONLY that result          → grounded answer
- *
- * The LLM never touches PostgreSQL: it reasons over structured results
- * produced by the trusted RBAC-scoped analytics services. Authorization is
- * inherited by construction — a manipulated model cannot widen its scope.
- */
+// PeopleLens Workforce Copilot — the orchestration layer. Flow per turn (deterministic, bounded — no agent…
+// loops): 1. authenticate + authorize (global guards) → user 2. rate limit + input-size checks → cost controls…
 @Injectable()
 export class CopilotService {
   private readonly logger = new Logger(CopilotService.name);

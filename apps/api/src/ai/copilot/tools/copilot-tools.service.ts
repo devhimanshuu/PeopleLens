@@ -22,16 +22,8 @@ import type { CopilotTool, CopilotToolExecution } from '../copilot.types';
 const MAX_SLICES = 8;
 /** Max employees returned by the search tool. */
 const MAX_SEARCH_LIMIT = 25;
-
-/**
- * Controlled analytics tools — the ONLY way the LLM touches workforce data.
- *
- * Authorization is inherited by construction: every tool forwards the actor
- * into the existing RBAC-scoped services (`AnalyticsService`, `EmployeesService`,
- * `ImportsService`), which enforce department scope and income gating
- * server-side. The model can only pick a tool + typed arguments; it can never
- * widen scope, reach raw tables, or execute SQL.
- */
+// Controlled analytics tools — the ONLY way the LLM touches workforce data. Authorization is inherited by…
+// construction: every tool forwards the actor into the existing RBAC-scoped services (`AnalyticsService`,…
 @Injectable()
 export class CopilotToolsService {
   private readonly logger = new Logger(CopilotToolsService.name);
@@ -515,11 +507,8 @@ export class CopilotToolsService {
 
   // ── shared helpers ─────────────────────────────────────────────────────────
 
-  /**
-   * Resolves an optional departmentName to a scope-aware overview. When the
-   * name is not in the actor's scope, returns the full overview plus an
-   * `unresolved` marker so the LLM can state the limitation truthfully.
-   */
+  // Resolves an optional departmentName to a scope-aware overview. When the name is not in the actor's scope,…
+  // returns the full overview plus an `unresolved` marker so the LLM can state the limitation truthfully.
   private async overviewFor(
     user: RequestUser,
     departmentName?: string,

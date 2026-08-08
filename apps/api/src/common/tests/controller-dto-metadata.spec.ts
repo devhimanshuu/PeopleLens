@@ -17,20 +17,8 @@ import { UpdateTeamDto } from '@app/teams/dto/update-team.dto';
 import { UsersController } from '@app/users/users.controller';
 import { UpdateUserRoleDto } from '@app/users/dto/update-user-role.dto';
 import { PaginationDto } from '@app/common/dto/pagination.dto';
-
-/**
- * Regression guard for DTO validation metadata.
- *
- * The global ValidationPipe resolves the class to validate for `@Query()` /
- * `@Body()` from `design:paramtypes` emitted by TypeScript. If a DTO is
- * imported as `import { X }` it is erased at compile time and the emitted
- * type degrades to `Function` — silently disabling validation (whitelist,
- * defaults, transformation) for that endpoint.
- *
- * These tests assert the DTO classes survive in the emitted metadata, so a
- * future "cleanup" back to type-only imports fails the build instead of
- * silently breaking the API.
- */
+// Regression guard for DTO validation metadata. The global ValidationPipe resolves the class to validate for…
+// `@Query()` / `@Body()` from `design:paramtypes` emitted by TypeScript. If a DTO is imported as `import { X }`…
 function paramtypes(controller: object, method: string): unknown[] {
   return Reflect.getMetadata('design:paramtypes', controller, method) ?? [];
 }

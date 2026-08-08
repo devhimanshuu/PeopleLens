@@ -8,18 +8,8 @@ const WRITE_ROLES = new Set<Role>([Role.ADMIN, Role.MANAGER]);
 
 /** Roles that can manage organization structure (departments/teams). */
 const ORG_ADMIN_ROLES = new Set<Role>([Role.ADMIN]);
-
-/**
- * Central RBAC decisions.
- *
- * - **admin**  → full access, no data scoping.
- * - **manager** → write access, but only within the departments they manage
- *   (`Department.managerUserId = user.id`).
- * - **viewer**  → read-only everywhere.
- *
- * Services use these helpers so authorization logic lives in exactly one
- * place instead of being duplicated across feature modules.
- */
+// Central RBAC decisions. - **admin** → full access, no data scoping. - **manager** → write access, but only…
+// within the departments they manage (`Department.managerUserId = user.id`). - **viewer** → read-only…
 @Injectable()
 export class RbacService {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,11 +46,8 @@ export class RbacService {
       throw new ForbiddenException('Only admins can manage organization structure');
     }
   }
-
-  /**
-   * Department ids a manager is allowed to see/modify. Returns `null` for
-   * admins and viewers (no scoping — they see everything).
-   */
+  // Department ids a manager is allowed to see/modify. Returns `null` for admins and viewers (no scoping — they…
+  // see everything).
   async departmentScope(user: RequestUser): Promise<string[] | null> {
     if (!this.isManager(user)) return null;
     const departments = await this.prisma.department.findMany({

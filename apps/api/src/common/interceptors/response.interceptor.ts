@@ -9,14 +9,8 @@ import type { ApiResponse } from '@peoplelens/types';
 import { type Observable, map } from 'rxjs';
 
 const SUCCESS_MESSAGE = 'OK';
-
-/**
- * Global response interceptor.
- *
- * Wraps every successful HTTP response in the standard envelope:
- * `{ success, message, data, timestamp }`. Streaming responses and payloads
- * that are already enveloped pass through untouched.
- */
+// Global response interceptor. Wraps every successful HTTP response in the standard envelope: `{ success,…
+// message, data, timestamp }`. Streaming responses and payloads that are already enveloped pass through…
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<
   T,

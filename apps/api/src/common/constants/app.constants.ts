@@ -1,9 +1,5 @@
-/**
- * Cross-cutting application constants.
- *
- * Kept in one place so the global prefix and metadata keys can never drift
- * between the bootstrap, guards and decorators.
- */
+// Cross-cutting application constants. Kept in one place so the global prefix and metadata keys can never drift…
+// between the bootstrap, guards and decorators.
 export const API_PREFIX = 'api' as const;
 export const API_VERSION = 'v1' as const;
 /** Global prefix applied to every route: `/api/v1/...`. */

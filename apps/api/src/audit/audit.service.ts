@@ -15,16 +15,8 @@ export type { AuditEntityType };
 
 /** Human-action label stored on each audit row. */
 export type { AuditAction };
-
-/**
- * Basic audit trail for state-changing operations.
- *
- * Writes are best-effort: audit failures must never fail the primary
- * operation, so errors are logged and swallowed. This keeps the audit layer
- * invisible to the request path while still providing a durable history.
- * Reads are admin-only (enforced in the controller) and return a paginated,
- * filterable feed for the audit-log viewer.
- */
+// Basic audit trail for state-changing operations. Writes are best-effort: audit failures must never fail the…
+// primary operation, so errors are logged and swallowed. This keeps the audit layer invisible to the request…
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);

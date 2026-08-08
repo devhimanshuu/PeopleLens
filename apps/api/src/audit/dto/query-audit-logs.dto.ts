@@ -7,11 +7,8 @@ import {
   type AuditAction,
   type AuditEntityType,
 } from '@peoplelens/types';
-
-/**
- * Query parameters for the audit-logs list endpoint — pagination plus
- * filters on action, entity type, and actor/entity search.
- */
+// Query parameters for the audit-logs list endpoint — pagination plus filters on action, entity type, and…
+// actor/entity search.
 export class QueryAuditLogsDto {
   @ApiPropertyOptional({ example: '1', description: 'Page number (1-based)' })
   @IsOptional()

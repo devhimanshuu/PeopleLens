@@ -7,13 +7,8 @@ import type { RequestUser } from '@app/common/interfaces/request-user.interface'
 import { AnalyticsService } from './analytics.service';
 import { QueryAnalyticsDto } from './dto/query-analytics.dto';
 import { QueryCompareDto } from './dto/query-compare.dto';
-
-/**
- * Workforce-intelligence APIs. Every view is role-scoped server-side
- * (managers see only their departments); viewers read but never receive
- * salary aggregates. All analytics are computed from the current dataset —
- * insights describe observed patterns, never predictions.
- */
+// Workforce-intelligence APIs. Every view is role-scoped server-side (managers see only their departments);…
+// viewers read but never receive salary aggregates. All analytics are computed from the current dataset —…
 @ApiTags('Analytics')
 @ApiBearerAuth('access-token')
 @Controller('analytics')

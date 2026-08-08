@@ -2,16 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { REQUEST_USER_KEY } from '../constants/app.constants';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
-
-/**
- * Global rate limiter with user-aware tracking.
- *
- * Default `ThrottlerGuard` buckets by client IP, which breaks down behind a
- * reverse proxy (every request looks like the proxy) and under shared NAT
- * (a whole office exhausts one bucket). Authenticated requests are keyed by
- * the resolved user id instead — stable per account and immune to both
- * problems. Anonymous traffic (public endpoints) falls back to the client IP.
- */
+// Global rate limiter with user-aware tracking. Default `ThrottlerGuard` buckets by client IP, which breaks…
+// down behind a reverse proxy (every request looks like the proxy) and under shared NAT (a whole office…
 @Injectable()
 export class UserAwareThrottlerGuard extends ThrottlerGuard {
   protected override async getTracker(req: Record<string, unknown>): Promise<string> {

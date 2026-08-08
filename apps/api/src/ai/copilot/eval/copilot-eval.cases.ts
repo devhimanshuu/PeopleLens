@@ -1,16 +1,7 @@
 import { Role } from '@app/common/enums/role.enum';
 import type { CopilotPlan } from '../copilot.types';
-
-/**
- * PeopleLens Copilot evaluation dataset (v1).
- *
- * Each case scripts the planning decision the model SHOULD make and asserts
- * the pipeline honors it: the right tool is executed against RBAC-scoped
- * services, refusals stop execution, and limitations surface truthfully.
- *
- * These run in CI without network access (fake provider); `run-eval.ts`
- * executes the same cases against the live database for an end-to-end check.
- */
+// PeopleLens Copilot evaluation dataset (v1). Each case scripts the planning decision the model SHOULD make and…
+// asserts the pipeline honors it: the right tool is executed against RBAC-scoped services, refusals stop…
 export interface CopilotEvalCase {
   id: string;
   question: string;

@@ -4,12 +4,8 @@ import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import { AuditService } from './audit.service';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
-
-/**
- * Audit trail — read-only, admin-only feed of state-changing operations.
- * Every create/update/delete/restore/role-change/import is written by the
- * global `AuditService`; this controller exposes the trail for review.
- */
+// Audit trail — read-only, admin-only feed of state-changing operations. Every…
+// create/update/delete/restore/role-change/import is written by the global `AuditService`; this controller…
 @ApiTags('Audit')
 @ApiBearerAuth('access-token')
 @Controller('audit-logs')

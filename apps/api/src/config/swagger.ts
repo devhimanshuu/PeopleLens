@@ -5,13 +5,8 @@ import type { INestApplication } from '@nestjs/common';
 import { API_GLOBAL_PREFIX } from '../common/constants/app.constants';
 
 const logger = new Logger('Swagger');
-
-/**
- * Bootstraps OpenAPI documentation for the API.
- *
- * Served at `{SWAGGER_PATH}` under the global prefix (default
- * `/api/v1/docs`) so the docs live next to the versioned API.
- */
+// Bootstraps OpenAPI documentation for the API. Served at `{SWAGGER_PATH}` under the global prefix (default…
+// `/api/v1/docs`) so the docs live next to the versioned API.
 export function setupSwagger(app: INestApplication): void {
   const config = app.get(ConfigService);
 

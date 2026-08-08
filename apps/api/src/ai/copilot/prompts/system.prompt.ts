@@ -1,12 +1,6 @@
 import type { CopilotTool } from '../copilot.types';
-
-/**
- * Versioned planning-phase system prompt (v1).
- *
- * Security model: this prompt is IMMUTABLE — user messages are appended as
- * data, never concatenated into it. Tool names and argument shapes are
- * validated by the backend regardless of what the model picks.
- */
+// Versioned planning-phase system prompt (v1). Security model: this prompt is IMMUTABLE — user messages are…
+// appended as data, never concatenated into it. Tool names and argument shapes are validated by the backend…
 export function buildPlanningPrompt(
   tools: CopilotTool[],
   context: { departments: string[] },

@@ -11,18 +11,8 @@ import { CopilotToolsService } from './tools/copilot-tools.service';
 import { FallbackProvider } from './llm/fallback.provider';
 import { OpenAiProvider } from './llm/openai.provider';
 import { LLM_PROVIDER, type LLMProvider } from './llm/llm-provider.token';
-
-/**
- * AI Copilot module.
- *
- * The LLM is injected behind the `LLM_PROVIDER` token so the chain is
- * swappable and trivially mockable in tests. The factory builds an ordered
- * provider chain (primary → Groq → OpenRouter; all OpenAI-compatible) and
- * wraps it in a `FallbackProvider`: when one provider rate-limits or becomes
- * unavailable, the next configured one serves the request automatically.
- * The provider never sees PostgreSQL: tools execute against the exported
- * RBAC-scoped services.
- */
+// AI Copilot module. The LLM is injected behind the `LLM_PROVIDER` token so the chain is swappable and…
+// trivially mockable in tests. The factory builds an ordered provider chain (primary → Groq → OpenRouter; all…
 @Module({
   imports: [AnalyticsModule, EmployeesModule, ImportsModule],
   controllers: [CopilotController],

@@ -1,14 +1,5 @@
-/**
- * Live copilot evaluation — runs the eval dataset against the REAL database.
- *
- * The LLM is replaced with a scripted provider (no network), so this verifies
- * the trusted pipeline end-to-end: planning → argument validation → tool
- * execution against the RBAC-scoped analytics services → grounding → response
- * provenance. Requires a seeded database with an admin (and ideally a manager)
- * user.
- *
- *   npx ts-node -r tsconfig-paths/register src/ai/copilot/eval/run-eval.ts
- */
+// Live copilot evaluation — runs the eval dataset against the REAL database. The LLM is replaced with a…
+// scripted provider (no network), so this verifies the trusted pipeline end-to-end: planning → argument…
 import { Test } from '@nestjs/testing';
 import type { CopilotResponse } from '@peoplelens/types';
 import { AppConfigModule } from '@app/config/config.module';

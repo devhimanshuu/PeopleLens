@@ -2,12 +2,8 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import type { AgeGroup, EmployeeStatus, Gender, TenureGroup } from '@peoplelens/types';
-
-/**
- * Global analytics filters — one coherent filter state that slices every
- * dashboard section server-side. The same DTO drives the overview endpoint;
- * every filter is intersected with the caller's RBAC scope.
- */
+// Global analytics filters — one coherent filter state that slices every dashboard section server-side. The…
+// same DTO drives the overview endpoint; every filter is intersected with the caller's RBAC scope.
 export class QueryAnalyticsDto {
   @ApiPropertyOptional({ description: 'Restrict to one department (scope-aware)' })
   @IsOptional()

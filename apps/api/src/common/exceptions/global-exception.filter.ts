@@ -9,14 +9,8 @@ import {
 import type { ApiErrorResponse } from '@peoplelens/types';
 import type { Request, Response } from 'express';
 import { MulterError } from 'multer';
-
-/**
- * Last-resort error boundary for HTTP requests.
- *
- * Normalizes every thrown error — `HttpException`, DTO validation failures or
- * unexpected runtime errors — into the standard error envelope and logs it
- * with the appropriate severity (warn for 4xx, error for 5xx).
- */
+// Last-resort error boundary for HTTP requests. Normalizes every thrown error — `HttpException`, DTO validation…
+// failures or unexpected runtime errors — into the standard error envelope and logs it with the appropriate…
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
@@ -71,7 +65,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const { message, error, details } = this.extractHttpError(payload, exception.message, status);
       return { ...base, statusCode: status, message, error, details };
     }
-
     // Multer (file upload) failures are not HttpExceptions — map them to a
     // clear 4xx instead of leaking as a 500.
     if (isMulterError(exception)) {
@@ -125,12 +118,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     return reverse[status] ?? `HTTP_${status}`;
   }
 }
-
-/**
- * Structural + instanceof check: matches the runtime class when it is the
- * same multer instance, and stays resilient if platform-express ever swaps
- * its upload library or the class identity changes across copies.
- */
+// Structural + instanceof check: matches the runtime class when it is the same multer instance, and stays…
+// resilient if platform-express ever swaps its upload library or the class identity changes across copies.
 function isMulterError(error: unknown): error is MulterError {
   return (
     error instanceof MulterError ||

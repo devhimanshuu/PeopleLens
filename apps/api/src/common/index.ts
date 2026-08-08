@@ -1,8 +1,5 @@
-/**
- * Common package barrel — platform-wide cross-cutting infrastructure.
- *
- * Import from `@app/common` for a single, stable entry point.
- */
+// Common package barrel — platform-wide cross-cutting infrastructure. Import from `@app/common` for a single,…
+// stable entry point.
 export * from './common.module';
 export * from './constants/app.constants';
 export * from './decorators/current-user.decorator';

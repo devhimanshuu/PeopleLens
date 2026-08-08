@@ -6,20 +6,8 @@ import {
   type LLMProvider,
   type ProviderDescriptor,
 } from './llm-provider.interface';
-
-/**
- * Provider chain with automatic failover.
- *
- * Holds an ordered list of providers (primary first). Each `complete()` call
- * walks the chain: the first configured provider that succeeds serves the
- * request; on ANY failure (rate limit, timeout, network, auth, malformed
- * response) the next configured provider is tried. Only when every provider
- * fails does the error surface — so a Groq free-tier rate limit transparently
- * falls back to OpenRouter, and vice versa.
- *
- * Security note: failover changes the serving model, never the access
- * boundary — every provider still executes the same controlled tools.
- */
+// Provider chain with automatic failover. Holds an ordered list of providers (primary first). Each `complete()`…
+// call walks the chain: the first configured provider that succeeds serves the request; on ANY failure (rate…
 export class FallbackProvider implements LLMProvider {
   private readonly logger = new Logger(FallbackProvider.name);
 

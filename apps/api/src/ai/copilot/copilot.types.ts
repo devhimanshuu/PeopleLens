@@ -30,12 +30,8 @@ export interface CopilotToolExecution {
   /** Explicit limitations to surface (e.g. out-of-scope department names). */
   limitations?: string[];
 }
-
-/**
- * One controlled analytics tool. Authorization is NOT the tool's job beyond
- * passing the actor through: every underlying service applies RBAC scope
- * server-side, so even a manipulated model cannot widen its access.
- */
+// One controlled analytics tool. Authorization is NOT the tool's job beyond passing the actor through: every…
+// underlying service applies RBAC scope server-side, so even a manipulated model cannot widen its access.
 export interface CopilotTool {
   name: CopilotToolName;
   /** Short description for the LLM's tool-selection prompt. */

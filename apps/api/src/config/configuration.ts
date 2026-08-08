@@ -12,10 +12,8 @@ export interface AppConfig {
     neonBaseUrl: string;
     /** How long a validated session stays cached in-memory (ms). */
     sessionCacheTtlMs: number;
-    /**
-     * Emails granted the Admin role at first contact and re-promoted on every
-     * session (comma-separated `ADMIN_EMAILS`, case-insensitive).
-     */
+    // Emails granted the Admin role at first contact and re-promoted on every session (comma-separated…
+    // `ADMIN_EMAILS`, case-insensitive).
     bootstrapAdminEmails: string[];
   };
   /** Global rate limiting — keyed by user id when authenticated, IP otherwise. */
@@ -59,12 +57,8 @@ export interface AppConfig {
     enabled: boolean;
   };
 }
-
-/**
- * Loads a typed configuration object once at bootstrap. Values come from the
- * environment (already validated by `env.validation.ts`); `ConfigService`
- * then exposes them type-safely via `config.get('jwt.secret')`.
- */
+// Loads a typed configuration object once at bootstrap. Values come from the environment (already validated by…
+// `env.validation.ts`); `ConfigService` then exposes them type-safely via `config.get('jwt.secret')`.
 export default (): AppConfig => ({
   env: (process.env.NODE_ENV as NodeEnv | undefined) ?? 'development',
   port: Number.parseInt(process.env.PORT ?? '3001', 10),
@@ -111,9 +105,8 @@ export default (): AppConfig => ({
   },
   trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
   swagger: {
-    // Same truthy/falsy semantics as the Joi schema so the factory and the
-    // validated contract can never disagree ('0' and 'false' are both off).
-    // Off by default in production — docs must be an explicit opt-in.
+    // Same truthy/falsy semantics as the Joi schema so the factory and the validated contract can never disagree…
+    // ('0' and 'false' are both off). Off by default in production — docs must be an explicit opt-in.
     enabled: parseBoolean(process.env.SWAGGER_ENABLED, !isProduction(process.env.NODE_ENV)),
     path: process.env.SWAGGER_PATH ?? 'docs',
   },
