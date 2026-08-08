@@ -13,12 +13,8 @@ import { EASE_OUT } from './anim';
 const GAUGE_RADIUS = 48;
 const GAUGE_LENGTH = Math.PI * GAUGE_RADIUS; // semicircle arc length
 
-/**
- * Offline fallback — a static snapshot mirroring the API contract. Rendered
- * while connecting and whenever the API is unreachable, so the landing page
- * never depends on the backend being up. Exported so stories/tests can reuse
- * the same fixture instead of duplicating the data.
- */
+// Offline fallback — a static snapshot mirroring the API contract. Rendered while connecting and whenever the…
+// API is unreachable, so the landing page never depends on the backend being up. Exported so stories/tests can…
 export const MOCK_SNAPSHOT: LiveSignalsSnapshot = {
   generatedAt: new Date(0).toISOString(),
   uptimeSeconds: 0,
@@ -132,10 +128,8 @@ export function HeroDashboard() {
         setMode('demo');
       }
     }
-
-    // Initial fetch + periodic refresh so the dashboard reconnects on its
-    // own if the API was briefly unavailable, and the signal count keeps
-    // advancing without a page reload.
+    // Initial fetch + periodic refresh so the dashboard reconnects on its own if the API was briefly unavailable,…
+    // and the signal count keeps advancing without a page reload.
     setNow(Date.now());
     void refresh();
     const refreshInterval = setInterval(() => void refresh(), 30_000);

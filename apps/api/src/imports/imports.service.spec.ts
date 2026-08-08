@@ -5,13 +5,8 @@ import { type RbacService } from '@app/common/services/rbac.service';
 import { type PrismaService } from '@app/database/prisma.service';
 import { type CsvService, type ParsedRow } from './csv.service';
 import { ImportsService } from './imports.service';
-
-/**
- * ImportsService pipeline tests — the riskiest CSV logic:
- * file-type gates, RBAC, reference resolution (department/team/manager by
- * name), duplicate detection (database + within-file), row filtering by error
- * stage, transactional insert, and the ImportHistory record.
- */
+// ImportsService pipeline tests — the riskiest CSV logic: file-type gates, RBAC, reference resolution…
+// (department/team/manager by name), duplicate detection (database + within-file), row filtering by error…
 
 const ACTOR = { sub: 'user-1', email: 'admin@peoplelens.dev', roles: ['admin'] } as never;
 
@@ -107,13 +102,8 @@ function historyRow(overrides: Partial<ImportHistory> = {}): ImportHistory {
     ...overrides,
   } as ImportHistory;
 }
-
-/**
- * Mock `employee.findMany` for BOTH pipeline calls:
- *  - call 1 (resolveReferences) selects `{ id, email }` — manager lookup;
- *  - call 2 (detectDuplicates) selects only `{ employeeCode }` or `{ email }`.
- * The two shapes are distinguished by the presence of `email` in `select`.
- */
+// Mock `employee.findMany` for BOTH pipeline calls: - call 1 (resolveReferences) selects `{ id, email }` —…
+// manager lookup; - call 2 (detectDuplicates) selects only `{ employeeCode }` or `{ email }`. The two shapes…
 /** Creates the ImportHistory row the service reads back after the insert. */
 function mockHistoryCreate(mocks: Mocks, overrides: Partial<ImportHistory> = {}): void {
   mocks.prisma.importHistory.create.mockImplementation(
@@ -374,9 +364,8 @@ describe('ImportsService', () => {
     });
 
     it('flags within-file duplicate CODES even when emails differ (no 500 from the unique index)', async () => {
-      // Two rows share EMP-1 but have different emails — a naive `email ?? code`
-      // key would miss this collision and the second insert would blow up on
-      // the unique employeeCode index, failing the whole file.
+      // Two rows share EMP-1 but have different emails — a naive `email ?? code` key would miss this collision and…
+      // the second insert would blow up on the unique employeeCode index, failing the whole file.
       const rows = [rowNoTeam(), rowNoTeam({ email: 'different@company.com' })];
       mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
       mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);

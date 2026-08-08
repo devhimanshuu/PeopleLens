@@ -24,18 +24,8 @@ const DEFAULT_BASE_URLS: Record<ProviderSettings['name'], string> = {
   groq: 'https://api.groq.com/openai/v1',
   openrouter: 'https://openrouter.ai/api/v1',
 };
-
-/**
- * Typed, validated copilot configuration. Reads the `ai` block registered by
- * `config/configuration.ts` and turns it into an ordered provider chain:
- *
- *   1. primary — AI_PROVIDER + AI_API_KEY (+ AI_MODEL / AI_BASE_URL overrides)
- *   2. groq     — GROQ_API_KEY (free tier by default)
- *   3. openrouter — OPENROUTER_API_KEY (free models by default)
- *
- * Any provider without an API key is skipped at runtime, so a user can enable
- * any subset (e.g. only Groq, or OpenAI + OpenRouter) with no config churn.
- */
+// Typed, validated copilot configuration. Reads the `ai` block registered by `config/configuration.ts` and…
+// turns it into an ordered provider chain: 1. primary — AI_PROVIDER + AI_API_KEY (+ AI_MODEL / AI_BASE_URL…
 @Injectable()
 export class CopilotConfig {
   constructor(private readonly config: ConfigService) {}

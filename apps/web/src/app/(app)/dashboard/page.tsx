@@ -56,7 +56,6 @@ export default function DashboardPage() {
   const { filters, setFilter, resetFilters, activeCount, hydrated } = useAnalyticsFilters();
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
-
   // The welcome card is a first-run hint for accounts with no linked employee
   // profile; the dismissal is per-tab-session so it returns on the next login.
   useEffect(() => {
@@ -335,11 +334,8 @@ function SectionHeading({
     </div>
   );
 }
-
-/**
- * First-run welcome card for accounts with no linked employee profile.
- * Explains the caller's role and points at the right next step.
- */
+// First-run welcome card for accounts with no linked employee profile. Explains the caller's role and points at…
+// the right next step.
 function WelcomeCard({
   role,
   name,

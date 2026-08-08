@@ -5,18 +5,8 @@ import type {
   LiveSignalsSnapshot,
 } from '@peoplelens/types';
 import { getStoredSession, syncOAuthSession } from '@/lib/auth';
-
-/**
- * Browser-facing API client.
- *
- * Every request carries the Neon Auth session token as
- * `Authorization: Bearer <token>`; the API validates it against the Neon Auth
- * server and resolves the caller's RBAC role from the local User row.
- *
- * On a 401 the client re-syncs the Neon session (silent refresh) and retries
- * the request once. All helpers unwrap the standard `{ success, message, data }`
- * envelope and throw an `ApiClientError` carrying the server message.
- */
+// Browser-facing API client. Every request carries the Neon Auth session token as `Authorization: Bearer…
+// <token>`; the API validates it against the Neon Auth server and resolves the caller's RBAC role from the…
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
 const REQUEST_TIMEOUT_MS = 15000;
@@ -52,9 +42,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const response = await fetch(`${API_URL}${path}`, {
       ...rest,
       signal: controller.signal,
-      // Include same-site cookies so the `__Secure-neon-auth.*` session cookie
-      // (HttpOnly — invisible to JS) travels with the request; the API
-      // validates sessions via that cookie.
+      // Include same-site cookies so the `__Secure-neon-auth.*` session cookie (HttpOnly — invisible to JS) travels…
+      // with the request; the API validates sessions via that cookie.
       credentials: 'include',
       headers: {
         Accept: 'application/json',
@@ -137,11 +126,8 @@ export function fetchLiveSignals(): Promise<LiveSignalsSnapshot | null> {
 
 // ── authenticated downloads (e.g. CSV template) ──────────────────────────────
 
-/**
- * Fetches an auth-protected endpoint as a Blob and triggers a browser
- * download. Plain `<a href download>` cannot attach the bearer token, so any
- * protected file must go through this helper.
- */
+// Fetches an auth-protected endpoint as a Blob and triggers a browser download. Plain `<a href download>`…
+// cannot attach the bearer token, so any protected file must go through this helper.
 export async function downloadAuthenticated(path: string, filename: string): Promise<void> {
   const authHeader = getAuthHeader();
   const response = await fetch(`${API_URL}${path}`, {

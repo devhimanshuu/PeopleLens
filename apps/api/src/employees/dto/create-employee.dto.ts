@@ -18,12 +18,8 @@ import {
 import type { EmployeeStatus, Gender } from '@peoplelens/types';
 
 const EMPLOYEE_CODE_PATTERN = /^[A-Za-z0-9._-]{2,30}$/;
-
-/**
- * Payload for creating an employee. Validation enforces the profile contract:
- * required identity fields, stable employee code, valid email, and controlled
- * enums for status/gender.
- */
+// Payload for creating an employee. Validation enforces the profile contract: required identity fields, stable…
+// employee code, valid email, and controlled enums for status/gender.
 export class CreateEmployeeDto {
   @ApiProperty({ example: 'EMP-0001', description: 'Stable, unique employee code' })
   @IsString()

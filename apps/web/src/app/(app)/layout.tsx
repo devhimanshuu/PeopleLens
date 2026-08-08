@@ -9,12 +9,8 @@ export const metadata: Metadata = {
   description:
     'PeopleLens workspace — workforce analytics, employee management, organization structure and bulk imports.',
 };
-
-/**
- * Protected workspace shell. The edge middleware already redirects
- * unauthenticated visitors to `/signin`; this layout mounts the auth +
- * toast providers and the role-aware sidebar.
- */
+// Protected workspace shell. The edge middleware already redirects unauthenticated visitors to `/signin`; this…
+// layout mounts the auth + toast providers and the role-aware sidebar.
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>

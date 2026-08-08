@@ -130,8 +130,7 @@ export default function EmployeeDetailPage() {
               <h2 className="font-display text-xl font-semibold text-foreground">
                 {fullName(employee.firstName, employee.lastName)}
               </h2>
-              {/* Record lifecycle badges take precedence over the employment
-                  status badge — a deleted record's employment state is moot. */}
+              {/* Record lifecycle badges take precedence over the employment status badge — a deleted record's employment state is moot. */}
               {employee.deletedAt ? <Badge variant="danger">Deleted</Badge> : null}
               {!employee.deletedAt ? (
                 <Badge variant={STATUS_VARIANTS[employee.status]}>

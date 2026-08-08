@@ -8,12 +8,8 @@ export class AppService {
   private readonly startedAt = Date.now();
 
   constructor(private readonly prisma: PrismaService) {}
-
-  /**
-   * Liveness + dependency health. `status` degrades when PostgreSQL is
-   * unreachable (the API itself is alive but not fully functional) so uptime
-   * monitors and the landing page can distinguish "down" from "degraded".
-   */
+  // Liveness + dependency health. `status` degrades when PostgreSQL is unreachable (the API itself is alive but…
+  // not fully functional) so uptime monitors and the landing page can distinguish "down" from "degraded".
   async getHealth(): Promise<HealthStatus> {
     const db = await this.checkDatabase();
     return {

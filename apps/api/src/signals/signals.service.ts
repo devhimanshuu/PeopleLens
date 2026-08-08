@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { LiveSignalsSnapshot } from '@peoplelens/types';
-
-/**
- * Baseline "live" workforce signals. Deterministic — no DB dependency yet
- * (Phase 2 swaps this for the Prisma data layer) — but carries real
- * timestamps and a slowly ticking signal count so the landing dashboard
- * reads as genuinely live.
- */
+// Baseline "live" workforce signals. Deterministic — no DB dependency yet (Phase 2 swaps this for the Prisma…
+// data layer) — but carries real timestamps and a slowly ticking signal count so the landing dashboard reads as…
 /** How far back the "model refreshed" timestamp should sit. */
 const MODEL_REFRESH_MINUTES = 4;
 

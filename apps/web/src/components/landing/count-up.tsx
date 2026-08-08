@@ -33,7 +33,6 @@ export function CountUp({
     });
     return () => controls.stop();
   }, [inView, to, duration]);
-
   // Fixed en-US locale via formatNumber — the runtime default locale would
   // make the animated figures render differently on a non-en-US browser.
   const formatted = formatNumber(value, {

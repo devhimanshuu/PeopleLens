@@ -47,9 +47,8 @@ export function SocialButtons() {
   async function handle(provider: OAuthProvider) {
     setLoading(provider);
     setErrorMsg(null);
-    // Default callback lands on the workspace dashboard — sending the user
-    // back to the public landing page after a successful login would strand
-    // them on the marketing site while signed in.
+    // Default callback lands on the workspace dashboard — sending the user back to the public landing page after a…
+    // successful login would strand them on the marketing site while signed in.
     const res = await signInWithOAuth(provider);
     if (res.error) {
       setErrorMsg(res.error);

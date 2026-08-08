@@ -1,15 +1,6 @@
 #!/usr/bin/env node
-/**
- * PeopleLens bootstrap script.
- *
- * - Verifies the Node version satisfies the project engines.
- * - Materializes .env files from their .env.example templates (idempotent).
- *
- * Usage: pnpm bootstrap
- *
- * Note: named "bootstrap" rather than "setup" because `pnpm setup` is a
- * reserved pnpm command.
- */
+// PeopleLens bootstrap script. - Verifies the Node version satisfies the project engines. - Materializes .env…
+// files from their .env.example templates (idempotent). Usage: pnpm bootstrap Note: named "bootstrap" rather…
 import { copyFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

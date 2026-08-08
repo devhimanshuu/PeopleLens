@@ -32,14 +32,8 @@ type AnalyticsProfileData = {
   yearsAtCompany?: number;
   totalWorkingYears?: number;
 };
-
-/**
- * Employee management — the workforce core domain.
- *
- * RBAC: admins see everything and can write; managers can write but only
- * within their assigned departments; viewers read everything but never write.
- * Listing is department-scoped for managers. Deletion is a soft delete.
- */
+// Employee management — the workforce core domain. RBAC: admins see everything and can write; managers can…
+// write but only within their assigned departments; viewers read everything but never write. Listing is…
 @Injectable()
 export class EmployeesService {
   constructor(
@@ -69,20 +63,11 @@ export class EmployeesService {
       education,
     } = query;
     const scope = await this.rbac.departmentScope(actor);
-
-    // Only writers (admin/manager) may reveal soft-deleted records — they own
-    // the audit/restore workflow. Viewers passing `includeDeleted=true` must
-    // be silently ignored: terminated/deleted profiles are not read-only
-    // data, they are internal HR records.
+    // Only writers (admin/manager) may reveal soft-deleted records — they own the audit/restore workflow. Viewers…
+    // passing `includeDeleted=true` must be silently ignored: terminated/deleted profiles are not read-only data,…
     const canIncludeDeleted = this.rbac.canWrite(actor) && includeDeleted;
-
-    // The manager scope is AUTHORITATIVE — an explicit department filter may
-    // only narrow it, never widen it. A naive `...(departmentId ? { departmentId } : {})`
-    // spread AFTER the scope key would OVERWRITE the scope constraint (duplicate
-    // object keys, last-wins), letting a manager read another department's
-    // employees by guessing ids. Intersect instead (same pattern as the
-    // dashboard and teams services): an in-scope id narrows, an out-of-scope
-    // id matches nothing (`{ in: [] }`), and scope-less actors pass through.
+    // The manager scope is AUTHORITATIVE — an explicit department filter may only narrow it, never widen it. A…
+    // naive `...(departmentId ? { departmentId } : {})` spread AFTER the scope key would OVERWRITE the scope…
     const departmentFilter: string | { in: string[] } | undefined = scope
       ? departmentId
         ? scope.includes(departmentId)
@@ -130,15 +115,8 @@ export class EmployeesService {
       totalPages: Math.ceil(total / pageSize),
     };
   }
-
-  /**
-   * Get one employee — INCLUDING soft-deleted records.
-   *
-   * Deliberately wider than the list/update paths: audit-log entries and
-   * restore workflows link here, and a soft-deleted employee must still be
-   * viewable (with its `deletedAt`) so the profile renders a restore banner
-   * instead of a dead 404. RBAC scoping still applies to managers.
-   */
+  // Get one employee — INCLUDING soft-deleted records. Deliberately wider than the list/update paths: audit-log…
+  // entries and restore workflows link here, and a soft-deleted employee must still be viewable (with its…
   async findOne(actor: RequestUser, id: string): Promise<EmployeeView> {
     const employee = await this.prisma.employee.findFirst({
       where: { id },
@@ -150,9 +128,8 @@ export class EmployeesService {
       if (scope && !scope.includes(employee.departmentId)) {
         throw new NotFoundException('Employee not found');
       }
-      // Viewers must not read soft-deleted records — only admins (restore
-      // anywhere) and managers (restore within their scope) may. A deleted
-      // record is indistinguishable from a nonexistent one for viewers.
+      // Viewers must not read soft-deleted records — only admins (restore anywhere) and managers (restore within…
+      // their scope) may. A deleted record is indistinguishable from a nonexistent one for viewers.
       if (!this.rbac.canWrite(actor) && employee.deletedAt) {
         throw new NotFoundException('Employee not found');
       }
@@ -279,17 +256,8 @@ export class EmployeesService {
     );
     return { id, deleted: true };
   }
-
-  /**
-   * Restore a soft-deleted employee — reverses `remove()` and brings the
-   * record back into active view with its org placement intact.
-   *
-   * Only a record that is actually deleted can be restored (404 otherwise).
-   * Uniqueness is re-checked against *active* records because `ensureUnique`
-   * guards creation, not restoration: if a newer employee was created with the
-   * same email/code while this record was deleted, restoring would violate the
-   * unique index — surface that as a clear conflict instead of a 500.
-   */
+  // Restore a soft-deleted employee — reverses `remove()` and brings the record back into active view with its…
+  // org placement intact. Only a record that is actually deleted can be restored (404 otherwise). Uniqueness is…
   async restore(actor: RequestUser, id: string, ip?: string): Promise<EmployeeView> {
     const employee = await this.prisma.employee.findFirst({
       where: { id, deletedAt: { not: null } },
@@ -346,13 +314,8 @@ export class EmployeesService {
       ],
     };
   }
-
-  /**
-   * Maps the optional analytics-profile DTO fields into the update/create
-   * payload. Status lifecycle handling (attrition → terminated) lives at the
-   * call sites so this helper only ever touches analytics fields — the spread
-   * can never clobber an identity field.
-   */
+  // Maps the optional analytics-profile DTO fields into the update/create payload. Status lifecycle handling…
+  // (attrition → terminated) lives at the call sites so this helper only ever touches analytics fields — the…
   private profileFromDto(
     dto: CreateEmployeeDto | UpdateEmployeeDto,
     existingAttritionDate?: Date | null,
@@ -393,17 +356,8 @@ export class EmployeesService {
     if (!employee) throw new NotFoundException('Employee not found');
     return employee;
   }
-
-  /**
-   * Uniqueness check for employee code / email.
-   *
-   * NOTE: soft-deleted rows are deliberately included. The database unique
-   * indexes are global (not partial), so a deleted employee still occupies
-   * its email/code. Excluding them here would let an insert pass validation
-   * and then blow up on the raw Prisma unique-constraint error — a 500 with
-   * no friendly message. Checking across ALL records (deleted or not) keeps
-   * the API honest and guarantees `restore` never collides either.
-   */
+  // Uniqueness check for employee code / email. NOTE: soft-deleted rows are deliberately included. The database…
+  // unique indexes are global (not partial), so a deleted employee still occupies its email/code. Excluding them…
   private async ensureUnique(
     employeeCode?: string,
     email?: string,
@@ -444,13 +398,8 @@ export class EmployeesService {
       where: { id: departmentId, deletedAt: null },
     });
     if (!department) throw new BadRequestException('Department not found');
-
-    // Enforce team↔department consistency ONLY when this update actually
-    // changes the department or the team: if the department moves, an
-    // unchanged team must belong to the new department; if the team changes,
-    // it must belong to the (possibly new) department. Pre-existing
-    // mismatches (e.g. legacy seed data) must never lock an employee out of
-    // updates to unrelated fields.
+    // Enforce team↔department consistency ONLY when this update actually changes the department or the team: if the…
+    // department moves, an unchanged team must belong to the new department; if the team changes, it must belong to…
     const teamId = dto.teamId ?? (dto.departmentId !== undefined ? existingTeamId : undefined);
     if (teamId) {
       const team = await this.prisma.team.findFirst({
@@ -463,10 +412,8 @@ export class EmployeesService {
         where: { id: dto.managerId, deletedAt: null },
       });
       if (!manager) throw new BadRequestException('Manager employee not found');
-      // Horizontal-scope guard: a manager may only reference a manager
-      // employee inside their own departments. Without this, a manager could
-      // probe for employees in other departments by id through the manager
-      // field (an IDOR-style existence leak). Admins are unrestricted.
+      // Horizontal-scope guard: a manager may only reference a manager employee inside their own departments. Without…
+      // this, a manager could probe for employees in other departments by id through the manager field (an IDOR-style…
       if (this.rbac.isManager(actor)) {
         const scope = await this.rbac.departmentScope(actor);
         if (scope && !scope.includes(manager.departmentId)) {
@@ -483,13 +430,8 @@ export class EmployeesService {
     team: { select: { id: true, name: true } },
     manager: { select: { id: true, firstName: true, lastName: true, email: true } },
   } as const;
-
-  /**
-   * Maps an employee row to the wire view. `incomeVisible` (admin/manager
-   * only) gates salary data — viewers never receive `monthlyIncome`, and the
-   * field is serialized as null so the client cannot distinguish "no data"
-   * from "hidden for your role".
-   */
+  // Maps an employee row to the wire view. `incomeVisible` (admin/manager only) gates salary data — viewers never…
+  // receive `monthlyIncome`, and the field is serialized as null so the client cannot distinguish "no data" from…
   private toView(
     e: Employee & {
       department?: { id: string; name: string } | null;

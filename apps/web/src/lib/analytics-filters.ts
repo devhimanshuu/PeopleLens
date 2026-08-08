@@ -1,13 +1,6 @@
 import type { AgeGroup, DashboardFilters, Gender, TenureGroup } from '@peoplelens/types';
-
-/**
- * Serialization helpers for the global analytics filter state.
- *
- * The SAME filter model drives the dashboard URL (`/dashboard?department=…&gender=…`),
- * the analytics API, and the employee explorer drill-down — one source of
- * truth, so a chart slice clicked on the dashboard opens the exact same
- * population in the explorer.
- */
+// Serialization helpers for the global analytics filter state. The SAME filter model drives the dashboard URL…
+// (`/dashboard?department=…&gender=…`), the analytics API, and the employee explorer drill-down — one source of…
 
 /** Valid status values (mirrors EmployeeStatus). */
 const STATUSES = ['active', 'on_leave', 'probation', 'terminated'] as const;

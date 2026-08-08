@@ -9,12 +9,8 @@ import { AuditService } from '@app/audit/audit.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { PrismaService } from '@app/database/prisma.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
-
-/**
- * User management — profile, admin-only listing and role assignment.
- * `me` is available to every authenticated user; list/role changes are
- * restricted to admins (enforced in the controller with `@Roles`).
- */
+// User management — profile, admin-only listing and role assignment. `me` is available to every authenticated…
+// user; list/role changes are restricted to admins (enforced in the controller with `@Roles`).
 @Injectable()
 export class UsersService {
   constructor(
@@ -55,20 +51,14 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-
-    // Never allow an admin to demote themselves mid-session (immediate lockout)
-    // or to demote the last active admin (org-wide lockout).
-    //
-    // Handover path (intentional, do not remove the self-guard to "fix" this):
-    // a lone admin promotes another user to admin first, then has that user
-    // demote them — keeping self-demotion blocked avoids accidental lockout.
+    // Never allow an admin to demote themselves mid-session (immediate lockout) or to demote the last active admin…
+    // (org-wide lockout). Handover path (intentional, do not remove the self-guard to "fix" this): a lone admin…
     if (userId === actor.sub) {
       throw new BadRequestException('You cannot change your own role');
     }
     if (user.role === 'admin' && dto.role !== 'admin') {
-      // NOTE: the count+update is not atomic — two concurrent demotions of the
-      // last two admins could both pass. Acceptable for an MVP; wrap in a
-      // serializable transaction if this ever needs tightening.
+      // NOTE: the count+update is not atomic — two concurrent demotions of the last two admins could both pass.…
+      // Acceptable for an MVP; wrap in a serializable transaction if this ever needs tightening.
       const activeAdminCount = await this.prisma.user.count({
         where: { role: 'admin', isActive: true },
       });

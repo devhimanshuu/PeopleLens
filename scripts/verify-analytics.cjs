@@ -1,8 +1,5 @@
-/**
- * Dev verification (plain JS): cross-checks the analytics engine's pure math
- * against independent SQL aggregations over the same database.
- *   node scripts/verify-analytics.cjs   (from repo root; apps/api/.env must exist)
- */
+// Dev verification (plain JS): cross-checks the analytics engine's pure math against independent SQL…
+// aggregations over the same database. node scripts/verify-analytics.cjs (from repo root; apps/api/.env must…
 const path = require('node:path');
 const fs = require('node:fs');
 const apiDir = path.join(__dirname, '..', 'apps', 'api');
@@ -154,9 +151,8 @@ async function main() {
     .sort((a, b) => b.r - a.r);
   console.log(`\nLargest department:   ${bySize[0].name} (${bySize[0].size})`);
   console.log(`Highest attrition:    ${byRate[0].name} (${(byRate[0].r * 100).toFixed(1)}%)`);
-  // Informational only: the insight engine (AnalyticsService) computes the
-  // largest department by headcount independently of the attrition ranking;
-  // that behavior is pinned by analytics.service.spec.ts + the live run.
+  // Informational only: the insight engine (AnalyticsService) computes the largest department by headcount…
+  // independently of the attrition ranking; that behavior is pinned by analytics.service.spec.ts + the live run.
   console.log(`  → expected insight: "${bySize[0].name} is the largest department"`);
 
   // ── Per-department attrition rate parity ────────────────────────────────

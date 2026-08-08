@@ -38,12 +38,8 @@ function EngagementDonut({
     </Card>
   );
 }
-
-/**
- * Engagement & Culture — satisfaction dimensions measured on the 1–4 scale
- * plus overtime prevalence. Charts reflect the fields actually in the dataset;
- * no survey metrics are invented.
- */
+// Engagement & Culture — satisfaction dimensions measured on the 1–4 scale plus overtime prevalence. Charts…
+// reflect the fields actually in the dataset; no survey metrics are invented.
 export function EngagementSection({ overview }: { overview: AnalyticsOverview }) {
   const { engagement } = overview;
   return (

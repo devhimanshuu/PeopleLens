@@ -71,12 +71,8 @@ export default function AuditLogsPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   /** True when the last automatic refresh failed but data is still shown. */
   const [stale, setStale] = useState(false);
-
-  // Ref mirrors for the auto-refresh timer, mutated directly inside `load` so
-  // the in-flight guard is airtight (no post-render mirror lag): skip ticks
-  // while a fetch is in flight, and only surface errors when there is nothing
-  // on screen yet — a transient background-refresh failure must never replace
-  // the table the admin is reading with an error screen, it just marks stale.
+  // Ref mirrors for the auto-refresh timer, mutated directly inside `load` so the in-flight guard is airtight (no…
+  // post-render mirror lag): skip ticks while a fetch is in flight, and only surface errors when there is nothing…
   const loadingRef = useRef(false);
   const hasDataRef = useRef(false);
 
@@ -112,7 +108,6 @@ export default function AuditLogsPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
   // Live polling: refresh every 30s while the tab is visible, and refresh
   // immediately when the user returns to a backgrounded tab.
   useEffect(() => {

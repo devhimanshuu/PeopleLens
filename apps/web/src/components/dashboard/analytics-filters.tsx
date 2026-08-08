@@ -36,12 +36,8 @@ const YES_NO = [
   { value: 'true', label: 'Yes' },
   { value: 'false', label: 'No' },
 ];
-
-/**
- * The single global filter bar for the analytics dashboard. One coherent
- * filter state feeds every section — charts never build their own disconnected
- * filters. State is URL-synced by the parent, so filtered views are shareable.
- */
+// The single global filter bar for the analytics dashboard. One coherent filter state feeds every section —…
+// charts never build their own disconnected filters. State is URL-synced by the parent, so filtered views are…
 export function AnalyticsFilters({
   filters,
   setFilter,

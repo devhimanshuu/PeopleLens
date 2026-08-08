@@ -12,12 +12,8 @@ interface CopilotContextValue {
 }
 
 const CopilotContext = createContext<CopilotContextValue | null>(null);
-
-/**
- * Lightweight global handle to the copilot drawer — lets any page (e.g. the
- * dashboard's "Ask PeopleLens" card) open the assistant and prefill a
- * question without prop-drilling through the app shell.
- */
+// Lightweight global handle to the copilot drawer — lets any page (e.g. the dashboard's "Ask PeopleLens" card)…
+// open the assistant and prefill a question without prop-drilling through the app shell.
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const queuedQuestion = useRef<string | null>(null);

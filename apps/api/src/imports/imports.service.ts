@@ -46,15 +46,8 @@ type AnalyticsProfileInput = {
   percentSalaryHike?: number | null;
   stockOptionLevel?: number | null;
 };
-
-/**
- * Bulk employee import from CSV.
- *
- * Pipeline: parse → structural validation → resolve references (department /
- * team / manager by name or email) → duplicate detection (file + database) →
- * transactional insert of the valid rows → ImportHistory record carrying the
- * per-row error report.
- */
+// Bulk employee import from CSV. Pipeline: parse → structural validation → resolve references (department /…
+// team / manager by name or email) → duplicate detection (file + database) → transactional insert of the valid…
 @Injectable()
 export class ImportsService {
   constructor(
@@ -74,9 +67,8 @@ export class ImportsService {
       throw new BadRequestException('Only CSV files are supported');
     }
     if (!this.rbac.canWrite(actor)) {
-      // Forbidden, not BadRequest — viewers hitting this (the @Roles guard
-      // normally intercepts first) must get the same 403 semantics as every
-      // other RBAC denial so the client treats it as a permissions failure.
+      // Forbidden, not BadRequest — viewers hitting this (the @Roles guard normally intercepts first) must get the…
+      // same 403 semantics as every other RBAC denial so the client treats it as a permissions failure.
       throw new ForbiddenException('Read-only access — your role cannot import employees');
     }
 
@@ -84,12 +76,8 @@ export class ImportsService {
     const { rows, errorReport } = this.csv.parse(file.buffer, file.originalname);
     const references = await this.resolveReferences(actor, rows);
     const duplicateCheck = await this.detectDuplicates(rows);
-
-    // A row is insertable only when it passes ALL three stages: row-level
-    // validation, reference resolution (department/team/manager + scope) and
-    // duplicate detection. We carry the ORIGINAL index through so resolved
-    // references stay aligned with the source rows (filtering first would
-    // shift them and silently assign wrong departments/managers).
+    // A row is insertable only when it passes ALL three stages: row-level validation, reference resolution…
+    // (department/team/manager + scope) and duplicate detection. We carry the ORIGINAL index through so resolved…
     const insertableRows = rows
       .map((row, originalIndex) => ({ row, originalIndex }))
       .filter(
@@ -187,11 +175,8 @@ export class ImportsService {
     page: number,
     pageSize: number,
   ): Promise<Paginated<ImportHistoryView>> {
-    // Scope: admins see the whole feed; managers and viewers only see imports
-    // they performed. Import history carries org data (filenames, counts,
-    // per-row error reports with employee emails/codes), so letting a manager
-    // enumerate everyone's imports would leak workforce information from
-    // departments outside their scope.
+    // Scope: admins see the whole feed; managers and viewers only see imports they performed. Import history…
+    // carries org data (filenames, counts, per-row error reports with employee emails/codes), so letting a manager…
     const where: Prisma.ImportHistoryWhereInput = this.rbac.isAdmin(actor)
       ? {}
       : { importedByUserId: actor.sub };
@@ -220,9 +205,8 @@ export class ImportsService {
       include: { importedByUser: { select: { id: true, name: true, email: true } } },
     });
     if (!history) throw new NotFoundException('Import record not found');
-    // Same scope rule as findAll — a non-admin may only read imports they
-    // performed. A NotFound (not Forbidden) keeps the resource opaque: an
-    // out-of-scope import id is indistinguishable from a nonexistent one.
+    // Same scope rule as findAll — a non-admin may only read imports they performed. A NotFound (not Forbidden)…
+    // keeps the resource opaque: an out-of-scope import id is indistinguishable from a nonexistent one.
     if (!this.rbac.isAdmin(actor) && history.importedByUserId !== actor.sub) {
       throw new NotFoundException('Import record not found');
     }
@@ -235,16 +219,8 @@ export class ImportsService {
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
-  /**
-   * Converts the CSV string profile columns into typed values for the insert.
-   *
-   * Values are nullable by design: an optional column left blank stays null so
-   * analytics report "not available" instead of a fabricated number. Boolean
-   * columns (attrition / overTime) accept Yes/No (the IBM HR convention) and
-   * the usual true/false/1/0 spellings. Status lifecycle handling (attrition
-   * → terminated) lives at the call site, so this helper never duplicates an
-   * identity field.
-   */
+  // Converts the CSV string profile columns into typed values for the insert. Values are nullable by design: an…
+  // optional column left blank stays null so analytics report "not available" instead of a fabricated number.…
   private parseAnalyticsProfile(row: CsvEmployeeRow): AnalyticsProfileInput {
     const toInt = (value: string | undefined): number | null => {
       if (value === undefined || value === '') return null;
@@ -292,10 +268,8 @@ export class ImportsService {
   }
 
   private async resolveReferences(actor: RequestUser, rows: ParsedRow[]) {
-    // Query with the ORIGINAL (trimmed) names/emails — Postgres `IN` is
-    // case-sensitive, so lowercasing the lookup values would miss rows that
-    // are stored with capitals (e.g. "Engineering"). Matching against the
-    // results is case-insensitive (see below).
+    // Query with the ORIGINAL (trimmed) names/emails — Postgres `IN` is case-sensitive, so lowercasing the lookup…
+    // values would miss rows that are stored with capitals (e.g. "Engineering"). Matching against the results is…
     const nonEmpty = (value: string | undefined): value is string => Boolean(value);
     const departmentNames = new Set(rows.map((r) => r.data.department?.trim()).filter(nonEmpty));
     const teamNames = new Set(rows.map((r) => r.data.team?.trim()).filter(nonEmpty));
@@ -342,10 +316,8 @@ export class ImportsService {
       const department = departmentName
         ? departments.find((d) => d.name.toLowerCase() === departmentName)
         : undefined;
-
-      // An employee must belong to a department (NOT NULL FK), so a row
-      // without one cannot be imported — surface it as a row error instead
-      // of letting the insert throw and abort the whole file.
+      // An employee must belong to a department (NOT NULL FK), so a row without one cannot be imported — surface it…
+      // as a row error instead of letting the insert throw and abort the whole file.
       if (!departmentName) {
         errors.push('department is required to place this employee');
       } else if (!department) {
@@ -398,10 +370,8 @@ export class ImportsService {
 
   private async detectDuplicates(rows: ParsedRow[]) {
     const duplicateErrors: ImportRowError[] = [];
-    // employeeCode and email are tracked INDEPENDENTLY — a single "email ?? code"
-    // key would miss two rows sharing a code with different emails, letting
-    // both through to the insert where the second hits the unique index and
-    // fails the whole file with a raw constraint error (a 500).
+    // employeeCode and email are tracked INDEPENDENTLY — a single "email ?? code" key would miss two rows sharing a…
+    // code with different emails, letting both through to the insert where the second hits the unique index and…
     const seenCodes = new Map<string, number>(); // normalized code → first row number
     const seenEmails = new Map<string, number>(); // normalized email → first row number
     const errorRows: Record<number, boolean> = {};
@@ -409,10 +379,8 @@ export class ImportsService {
 
     const allCodes = rows.map((r) => r.data.employeeCode).filter(Boolean) as string[];
     const allEmails = rows.map((r) => r.data.email).filter(Boolean) as string[];
-    // NOTE: soft-deleted employees are included. The unique indexes on
-    // employeeCode/email are global (not partial), so a deleted employee
-    // still occupies its identifiers — excluding them here would let a row
-    // pass duplicate detection and then fail on the raw unique constraint.
+    // NOTE: soft-deleted employees are included. The unique indexes on employeeCode/email are global (not partial),…
+    // so a deleted employee still occupies its identifiers — excluding them here would let a row pass duplicate…
     const [dbByCode, dbByEmail] = await Promise.all([
       allCodes.length > 0
         ? this.prisma.employee.findMany({
@@ -442,11 +410,8 @@ export class ImportsService {
       if (email && dbEmailSet.has(email)) {
         errors.push(`Email "${row.data.email}" already exists in the database`);
       }
-
-      // Within-file duplicates — only among rows that passed row-level
-      // validation (an invalid row never occupies its identifiers), and
-      // checked per field so code-collisions and email-collisions are both
-      // caught no matter how the fields pair up across rows.
+      // Within-file duplicates — only among rows that passed row-level validation (an invalid row never occupies its…
+      // identifiers), and checked per field so code-collisions and email-collisions are both caught no matter how the…
       if (row.errors.length === 0) {
         if (code && !dbCodeSet.has(code)) {
           const first = seenCodes.get(code);

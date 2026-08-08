@@ -18,12 +18,8 @@ const TRUST_AVATARS = [
   { initials: 'DM', className: 'from-emerald-500 to-emerald-400' },
   { initials: 'AR', className: 'from-violet-500 to-violet-400' },
 ];
-
-/**
- * Live KPI chip values. Mirrors the dashboard's fetch pattern (poll every
- * 30s) so the floating chips never contradict the dashboard beside them;
- * falls back to the shared MOCK_SNAPSHOT when the API is unreachable.
- */
+// Live KPI chip values. Mirrors the dashboard's fetch pattern (poll every 30s) so the floating chips never…
+// contradict the dashboard beside them; falls back to the shared MOCK_SNAPSHOT when the API is unreachable.
 function useLiveMetrics() {
   const [snapshot, setSnapshot] = useState(MOCK_SNAPSHOT);
 

@@ -11,12 +11,8 @@ function readinessTone(percent: number): 'success' | 'warning' | 'danger' {
   if (percent >= 70) return 'warning';
   return 'danger';
 }
-
-/**
- * Dataset Health — analytics quality depends on data quality. Shows record
- * counts, the share of analytics-ready records, and which fields are missing
- * values so admins know exactly what to enrich next.
- */
+// Dataset Health — analytics quality depends on data quality. Shows record counts, the share of analytics-ready…
+// records, and which fields are missing values so admins know exactly what to enrich next.
 export function DataQualityCard({ quality }: { quality: DataQuality }) {
   const tone = readinessTone(quality.readinessPercent);
   const radius = 34;

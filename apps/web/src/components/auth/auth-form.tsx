@@ -27,7 +27,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const isSignUp = mode === 'signup';
-
   // Already signed in (locally or via a Better Auth session, e.g. returning
   // from an OAuth callback)? Skip the form and head to the workspace.
   useEffect(() => {

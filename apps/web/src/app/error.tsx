@@ -4,14 +4,8 @@ import { AlertTriangle, Home, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-
-/**
- * App-level error boundary (Next.js `error.tsx`).
- *
- * Catches runtime errors that escape a route's own error states and renders a
- * branded recovery screen instead of a white page. Logs the error for
- * debugging while keeping the message intentionally generic for users.
- */
+// App-level error boundary (Next.js `error.tsx`). Catches runtime errors that escape a route's own error states…
+// and renders a branded recovery screen instead of a white page. Logs the error for debugging while keeping the…
 export default function ErrorPage({
   error,
   reset,

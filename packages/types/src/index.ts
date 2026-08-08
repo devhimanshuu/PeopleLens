@@ -1,11 +1,5 @@
-/**
- * PeopleLens shared domain contracts.
- *
- * Phase 2 introduces the core domain: identity, organization and workforce
- * records plus the pagination / dashboard / import shapes both applications
- * agree on. The API is the source of truth for persistence; this package is
- * the source of truth for wire shapes so web and API can never drift.
- */
+// PeopleLens shared domain contracts. Phase 2 introduces the core domain: identity, organization and workforce…
+// records plus the pagination / dashboard / import shapes both applications agree on. The API is the source of…
 
 /** Primitive values representable in JSON. */
 export type JsonPrimitive = string | number | boolean | null;
@@ -42,13 +36,8 @@ export interface SparkSeries {
   decimals: number;
   data: number[];
 }
-
-/**
- * Live workforce-signal snapshot served by `GET /api/signals/live`.
- *
- * Deterministic baseline data (no DB dependency yet) with real timestamps
- * and a slowly ticking signal count so the dashboard reads as live.
- */
+// Live workforce-signal snapshot served by `GET /api/signals/live`. Deterministic baseline data (no DB…
+// dependency yet) with real timestamps and a slowly ticking signal count so the dashboard reads as live.
 export interface LiveSignalsSnapshot {
   generatedAt: IsoDate;
   uptimeSeconds: number;
@@ -68,14 +57,8 @@ export interface LiveSignalsSnapshot {
   heatMap: number[];
   spark: SparkSeries[];
 }
-
-/**
- * Standard API response envelope.
- *
- * Every PeopleLens API response is wrapped by the global response interceptor
- * into this shape so clients rely on a single, stable contract:
- * `{ success, message, data, timestamp }`.
- */
+// Standard API response envelope. Every PeopleLens API response is wrapped by the global response interceptor…
+// into this shape so clients rely on a single, stable contract: `{ success, message, data, timestamp }`.
 export interface ApiResponse<T> {
   success: true;
   /** Human-readable summary, e.g. `OK`. */
@@ -103,10 +86,8 @@ export interface ApiErrorResponse {
   /** Optional machine-readable detail (e.g. DTO validation messages). */
   details?: unknown;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Domain enums (mirrors of the Prisma enums)
-// ─────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────── Domain enums (mirrors of the…
+// Prisma enums) ─────────────────────────────────────────────────────────────────────────────
 
 /** Platform access roles. */
 export type Role = 'admin' | 'manager' | 'viewer';
@@ -119,9 +100,7 @@ export type Gender = 'female' | 'male' | 'non_binary' | 'prefer_not_to_say';
 
 /** Outcome of a CSV bulk import. */
 export type ImportStatus = 'completed' | 'partial' | 'failed';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Identity & organization
+// ───────────────────────────────────────────────────────────────────────────── Identity & organization…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Platform account with RBAC role. */
@@ -180,9 +159,7 @@ export interface TeamSummary extends Team {
   leadEmployee?: Pick<Employee, 'id' | 'firstName' | 'lastName'> | null;
   employeeCount: number;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Workforce
+// ───────────────────────────────────────────────────────────────────────────── Workforce…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Employee record — the core workforce domain. */
@@ -207,11 +184,8 @@ export interface Employee {
   updatedAt: IsoDate;
   /** Set when the record is soft-deleted; null while active. */
   deletedAt?: IsoDate | null;
-
-  // ── Analytics & engagement profile (Phase 4) ─────────────────────────────
-  // These mirror the IBM HR-style dimensions used by the analytics engine.
-  // All are optional: records created before Phase 4 or via minimal imports
-  // simply report "not available" in analytics instead of fabricated values.
+  // ── Analytics & engagement profile (Phase 4) ───────────────────────────── These mirror the IBM HR-style…
+  // dimensions used by the analytics engine. All are optional: records created before Phase 4 or via minimal…
   /** Left the workforce (observed attrition event). */
   attrition?: boolean;
   /** When the attrition event occurred (null while employed). */
@@ -256,9 +230,7 @@ export interface EmployeeView extends Employee {
   team?: Pick<Team, 'id' | 'name'> | null;
   manager?: Pick<Employee, 'id' | 'firstName' | 'lastName' | 'email'> | null;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pagination
+// ───────────────────────────────────────────────────────────────────────────── Pagination…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Paged list payload returned by list endpoints. */
@@ -269,9 +241,7 @@ export interface Paginated<T> {
   total: number;
   totalPages: number;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Imports
+// ───────────────────────────────────────────────────────────────────────────── Imports…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** One row's validation outcome. */
@@ -302,15 +272,11 @@ export interface ImportHistory {
 export interface ImportHistoryView extends ImportHistory {
   importedBy?: Pick<User, 'id' | 'name' | 'email'> | null;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Audit trail
+// ───────────────────────────────────────────────────────────────────────────── Audit trail…
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Stable list of audited actions — the single source of truth.
- * `AuditAction` is derived from it so filters and the union can never drift.
- */
+// Stable list of audited actions — the single source of truth. `AuditAction` is derived from it so filters and…
+// the union can never drift.
 export const AUDIT_ACTIONS = [
   'create',
   'update',
@@ -322,11 +288,7 @@ export const AUDIT_ACTIONS = [
 
 /** State-changing operations recorded in the audit trail. */
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
-
-/**
- * Stable list of audited entity types — single source of truth; the
- * `AuditEntityType` union is derived from it.
- */
+// Stable list of audited entity types — single source of truth; the `AuditEntityType` union is derived from it.
 export const AUDIT_ENTITY_TYPES = ['user', 'department', 'team', 'employee', 'import'] as const;
 
 /** Entities that can be audited. */
@@ -344,9 +306,7 @@ export interface AuditLogView {
   ipAddress?: string | null;
   createdAt: IsoDate;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashboard
+// ───────────────────────────────────────────────────────────────────────────── Dashboard…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** One slice for distribution charts. */
@@ -354,12 +314,8 @@ export interface DistributionSlice {
   name: string;
   value: number;
 }
-
-/**
- * Optional dashboard slice filters — applied server-side so scoping stays
- * authoritative. `departmentId`/`teamId` for managers are intersected with
- * their assigned scope.
- */
+// Optional dashboard slice filters — applied server-side so scoping stays authoritative.…
+// `departmentId`/`teamId` for managers are intersected with their assigned scope.
 export interface DashboardFilters {
   departmentId?: string;
   teamId?: string;
@@ -399,9 +355,7 @@ export interface DashboardOverview {
   genderDistribution: DistributionSlice[];
   recentHires: EmployeeView[];
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Analytics (Phase 4)
+// ───────────────────────────────────────────────────────────────────────────── Analytics (Phase 4)…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Age buckets derived from `dateOfBirth`. */
@@ -482,12 +436,8 @@ export interface CompositionData {
 
 /** Tone of a generated insight card. */
 export type InsightSeverity = 'positive' | 'attention' | 'neutral';
-
-/**
- * A deterministic, data-derived observation. Insights describe observed
- * patterns and correlations from the current dataset — never predictions or
- * causal claims.
- */
+// A deterministic, data-derived observation. Insights describe observed patterns and correlations from the…
+// current dataset — never predictions or causal claims.
 export interface WorkforceInsight {
   id: string;
   severity: InsightSeverity;
@@ -589,9 +539,7 @@ export interface OrgHierarchy {
   nodes: OrgHierarchyNode[];
   totalEmployees: number;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AI Copilot (Phase 5)
+// ───────────────────────────────────────────────────────────────────────────── AI Copilot (Phase 5)…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** One action link surfaced with a copilot answer (drives users into the app). */

@@ -12,11 +12,8 @@ import { RbacService } from '@app/common/services/rbac.service';
 import { PrismaService } from '@app/database/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-
-/**
- * Team management — sub-units within departments. Admin-managed; managers and
- * viewers read. Team leads are employees, not accounts.
- */
+// Team management — sub-units within departments. Admin-managed; managers and viewers read. Team leads are…
+// employees, not accounts.
 @Injectable()
 export class TeamsService {
   constructor(
@@ -27,11 +24,8 @@ export class TeamsService {
 
   async findAll(actor: RequestUser, departmentId?: string): Promise<TeamSummary[]> {
     const scope = await this.rbac.departmentScope(actor);
-
-    // The manager scope is AUTHORITATIVE — an explicit department filter may
-    // only narrow it, never widen it (mirrors the dashboard/employee rules).
-    // An out-of-scope department id matches nothing rather than leaking teams
-    // from another department.
+    // The manager scope is AUTHORITATIVE — an explicit department filter may only narrow it, never widen it…
+    // (mirrors the dashboard/employee rules). An out-of-scope department id matches nothing rather than leaking…
     const departmentFilter: string | { in: string[] } | undefined = scope
       ? departmentId
         ? scope.includes(departmentId)
@@ -65,9 +59,8 @@ export class TeamsService {
       },
     });
     if (!team) throw new NotFoundException('Team not found');
-    // Resource-level check: a manager may only read teams inside their
-    // assigned departments. NotFound (not Forbidden) keeps out-of-scope ids
-    // indistinguishable from nonexistent ones.
+    // Resource-level check: a manager may only read teams inside their assigned departments. NotFound (not…
+    // Forbidden) keeps out-of-scope ids indistinguishable from nonexistent ones.
     if (!this.rbac.isAdmin(actor)) {
       const scope = await this.rbac.departmentScope(actor);
       if (scope && !scope.includes(team.departmentId)) {

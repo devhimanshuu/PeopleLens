@@ -9,29 +9,15 @@ import {
   filtersToQuery,
   queryToFilters,
 } from '@/lib/analytics-filters';
-
-/**
- * URL-synced global analytics filter state.
- *
- * Filters initialize from the URL query (so shared dashboard links and
- * drill-downs work) and every change is written back with `router.replace`
- * (scroll preserved) — the URL is the source of truth for sharing, React
- * state is the source of truth for rendering.
- *
- * `window.location.search` is read once on mount (like the employee list's
- * `?edit=` handling) to avoid the Suspense requirement of `useSearchParams`
- * during static prerender.
- */
+// URL-synced global analytics filter state. Filters initialize from the URL query (so shared dashboard links…
+// and drill-downs work) and every change is written back with `router.replace` (scroll preserved) — the URL is…
 export function useAnalyticsFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const [filters, setFilters] = useState<DashboardFilters>({});
   const [hydrated, setHydrated] = useState(false);
-
-  // Hydrate from the URL on first mount and on every popstate (browser
-  // back/forward between filtered dashboard URLs while the page stays
-  // mounted). The write-back effect below uses `router.replace`, which never
-  // pushes history, so hydration cannot create a navigation loop.
+  // Hydrate from the URL on first mount and on every popstate (browser back/forward between filtered dashboard…
+  // URLs while the page stays mounted). The write-back effect below uses `router.replace`, which never pushes…
   useEffect(() => {
     const hydrateFromUrl = () => {
       setFilters((current) => {

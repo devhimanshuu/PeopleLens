@@ -1,9 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-
-/**
- * Neon Postgres serverless HTTP client.
- * Connects directly using the DATABASE_URL environment variable.
- */
+// Neon Postgres serverless HTTP client. Connects directly using the DATABASE_URL environment variable.
 export function getDb() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {

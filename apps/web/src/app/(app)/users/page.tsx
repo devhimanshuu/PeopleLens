@@ -117,8 +117,7 @@ export default function UsersPage() {
                             aria-label={`Change role for ${user.name}`}
                             options={ROLE_OPTIONS}
                             className="h-8 w-32 text-xs"
-                            // You cannot change your own role (API enforces it) —
-                            // keep the control disabled so admins don't hit the
+                            // You cannot change your own role (API enforces it) — keep the control disabled so admins don't hit the…
                             // confusing "cannot change your own role" error.
                             disabled={user.id === profile?.id}
                           />

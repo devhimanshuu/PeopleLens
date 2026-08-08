@@ -57,12 +57,8 @@ function AttritionCard({
     </Card>
   );
 }
-
-/**
- * Retention & Attrition — answers "where is retention risk concentrated?"
- * Every chart drills down: clicking a slice opens the employee explorer
- * pre-filtered to that population.
- */
+// Retention & Attrition — answers "where is retention risk concentrated?" Every chart drills down: clicking a…
+// slice opens the employee explorer pre-filtered to that population.
 export function AttritionSection({ overview }: { overview: AnalyticsOverview }) {
   const deptIdByName = useMemo(
     () => new Map(overview.departments.map((d) => [d.name, d.id])),

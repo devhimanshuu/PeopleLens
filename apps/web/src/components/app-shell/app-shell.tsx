@@ -151,10 +151,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       setIsCollapsed(stored === 'true');
     }
   }, []);
-
-  // Track small screens so the mobile drawer is ALWAYS expanded: the desktop
-  // collapsed state is a pointer-driven convenience and must never produce an
-  // icon-only strip in the touch drawer.
+  // Track small screens so the mobile drawer is ALWAYS expanded: the desktop collapsed state is a pointer-driven…
+  // convenience and must never produce an icon-only strip in the touch drawer.
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
     const update = () => setIsMobile(!mq.matches);

@@ -21,14 +21,8 @@ const SOURCE_TONES: Record<string, string> = {
 };
 
 type SyncMode = 'loading' | 'live' | 'demo';
-
-/**
- * Live sandbox page body.
- *
- * Mirrors the hero's fetch pattern (poll every 30s) so every panel on the page
- * agrees on the same snapshot; falls back to the shared MOCK_SNAPSHOT when the
- * API is unreachable. A manual refresh button re-syncs on demand.
- */
+// Live sandbox page body. Mirrors the hero's fetch pattern (poll every 30s) so every panel on the page agrees…
+// on the same snapshot; falls back to the shared MOCK_SNAPSHOT when the API is unreachable. A manual refresh…
 export function Sandbox() {
   const [snapshot, setSnapshot] = useState<LiveSignalsSnapshot | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);

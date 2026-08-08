@@ -21,12 +21,8 @@ const SIZE_CLASSES = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
 } as const;
-
-/**
- * Accessible modal dialog: focus moved into the dialog on open, returned on
- * close, ESC and backdrop-click dismiss, body scroll lock, labelled via
- * `aria-labelledby`. Rendered through a portal.
- */
+// Accessible modal dialog: focus moved into the dialog on open, returned on close, ESC and backdrop-click…
+// dismiss, body scroll lock, labelled via `aria-labelledby`. Rendered through a portal.
 export function Dialog({
   open,
   onOpenChange,
@@ -37,9 +33,8 @@ export function Dialog({
   size = 'md',
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  // `useId` is hydration-safe (React generates a matching id on server and
-  // client for the same tree position) — unlike Math.random(), whose value
-  // would differ between the SSR render and the client's first render.
+  // `useId` is hydration-safe (React generates a matching id on server and client for the same tree position) —…
+  // unlike Math.random(), whose value would differ between the SSR render and the client's first render.
   const titleId = `dialog-title-${useId()}`;
 
   useEffect(() => {

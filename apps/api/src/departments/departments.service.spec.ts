@@ -140,7 +140,6 @@ describe('DepartmentsService', () => {
       );
     });
   });
-
   // The mutation guards use assertCanManageOrg (admin-only) — prove a viewer
   // or manager cannot create departments regardless of scope claims.
   describe('mutations — admin only', () => {

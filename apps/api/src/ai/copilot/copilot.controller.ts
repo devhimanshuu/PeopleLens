@@ -6,15 +6,8 @@ import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { CopilotService } from './copilot.service';
 import { CopilotChatDto } from './dto/copilot-chat.dto';
-
-/**
- * PeopleLens Workforce Copilot API.
- *
- * Authentication + authorization run through the global guards (Neon Auth
- * session → RBAC), so every endpoint here is protected before the copilot
- * logic runs. The copilot itself is read-only: it never mutates workforce
- * data and inherits the caller's department scope from the analytics services.
- */
+// PeopleLens Workforce Copilot API. Authentication + authorization run through the global guards (Neon Auth…
+// session → RBAC), so every endpoint here is protected before the copilot logic runs. The copilot itself is…
 @ApiTags('AI Copilot')
 @ApiBearerAuth('access-token')
 @Controller('ai/copilot')

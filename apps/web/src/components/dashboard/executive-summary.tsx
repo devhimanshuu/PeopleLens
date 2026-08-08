@@ -25,12 +25,8 @@ const STATUS_META = {
     ring: 'border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-card to-rose-500/10',
   },
 } as const;
-
-/**
- * Executive summary — the first answer a dashboard should give: is the
- * workforce healthy, what deserves attention, and where to investigate next.
- * Deterministic: derived from the observed KPIs for the current filter state.
- */
+// Executive summary — the first answer a dashboard should give: is the workforce healthy, what deserves…
+// attention, and where to investigate next. Deterministic: derived from the observed KPIs for the current…
 export function ExecutiveSummaryCard({ summary }: { summary: ExecutiveSummary }) {
   const meta = STATUS_META[summary.status];
   const Icon = meta.icon;

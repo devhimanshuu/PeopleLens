@@ -26,13 +26,8 @@ const SEVERITY_META = {
     ring: 'border-border',
   },
 };
-
-/**
- * Workforce Insights — deterministic observations derived from the current
- * dataset (patterns and correlations, never predictions). Each card carries a
- * drill-down that opens the employee explorer pre-filtered, connecting the
- * insight to the underlying records.
- */
+// Workforce Insights — deterministic observations derived from the current dataset (patterns and correlations,…
+// never predictions). Each card carries a drill-down that opens the employee explorer pre-filtered, connecting…
 export function InsightsSection({ insights }: { insights: WorkforceInsight[] }) {
   if (insights.length === 0) {
     return (

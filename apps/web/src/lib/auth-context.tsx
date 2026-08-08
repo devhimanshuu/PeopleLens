@@ -35,19 +35,8 @@ const ROLE_ORDER: Role[] = ['admin', 'manager', 'viewer'];
 function isAuthFailure(error: unknown): boolean {
   return error instanceof ApiClientError && (error.status === 401 || error.status === 403);
 }
-
-/**
- * Client-side auth provider for the app shell.
- *
- * Boots from the persisted Neon session, resolves the platform profile +
- * RBAC role from `GET /users/me`, and stores the role back into the session
- * marker so the edge middleware can gate admin-only routes. Exposes sign-out.
- *
- * IMPORTANT: a failed profile lookup only signs the user out when it is an
- * auth failure (401/403). Network errors keep the session and surface a
- * retryable `profileError` instead — the API being briefly unreachable must
- * never silently log the user out.
- */
+// Client-side auth provider for the app shell. Boots from the persisted Neon session, resolves the platform…
+// profile + RBAC role from `GET /users/me`, and stores the role back into the session marker so the edge…
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [session, setSession] = useState<NeonSession | null>(null);

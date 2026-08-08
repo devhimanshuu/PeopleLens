@@ -13,12 +13,10 @@ import { setupSwagger } from './config/swagger';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
-
   // Security & transport hardening. Helmet sets sane HTTP security headers;
   // compression shrinks JSON payloads for the analytics-heavy API.
   app.use(helmet());
   app.use(compression());
-
   // Behind a trusted reverse proxy, honor X-Forwarded-For from loopback so
   // rate limiting sees real client IPs. Never enabled for direct exposure.
   if (config.get<boolean>('trustProxy', false)) {
@@ -27,7 +25,6 @@ async function bootstrap(): Promise<void> {
     };
     expressApp.set('trust proxy', 'loopback');
   }
-
   // Assign a correlation id to every request (and response header), then
   // one-line request log (id, method, route, status, duration) — config-gated.
   app.use(requestIdMiddleware());
@@ -36,14 +33,12 @@ async function bootstrap(): Promise<void> {
   // Versioned API namespace: every route lives under /api/v1.
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
   app.enableShutdownHooks();
-
   // Explicit origin allowlist — never a reflected wildcard, since credentials
   // are allowed. Comma-separated: CORS_ORIGINS=http://localhost:3000,https://app.example.com
   app.enableCors({
     origin: config.get<string[]>('corsOrigins', ['http://localhost:3000']),
     credentials: true,
   });
-
   // Request contract validation. DTOs arrive with Phase 2; the pipe is wired
   // globally now so every future endpoint enforces its contract by default.
   app.useGlobalPipes(

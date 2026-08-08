@@ -49,12 +49,8 @@ function KpiValueCard({
     </div>
   );
 }
-
-/**
- * Workforce-overview KPI grid. Every value is computed server-side for the
- * active filter state. Metrics that cannot be derived from a current snapshot
- * are clearly labelled as such instead of showing fabricated trends.
- */
+// Workforce-overview KPI grid. Every value is computed server-side for the active filter state. Metrics that…
+// cannot be derived from a current snapshot are clearly labelled as such instead of showing fabricated trends.
 export function AnalyticsKpis({ kpis }: { kpis: AnalyticsKpis }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

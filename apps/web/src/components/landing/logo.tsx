@@ -17,11 +17,8 @@ export function Logo({
 }) {
   const isSm = size === 'sm';
   const isLg = size === 'lg';
-
-  // The sidebar + mobile topbar render two Logo instances on the same page.
-  // Fixed gradient ids would collide, and `url(#id)` resolves to the FIRST
-  // matching id in the document — making one logo's mark render with the
-  // wrong (or no) gradient. useId gives every instance unique ids.
+  // The sidebar + mobile topbar render two Logo instances on the same page. Fixed gradient ids would collide, and…
+  // `url(#id)` resolves to the FIRST matching id in the document — making one logo's mark render with the wrong…
   const gradientId = useId();
   const outerId = `pl-logo-outer-${gradientId}`;
   const innerId = `pl-logo-inner-${gradientId}`;

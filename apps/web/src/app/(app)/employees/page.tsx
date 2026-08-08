@@ -200,11 +200,8 @@ export default function EmployeesPage() {
     sortOrder,
     includeDeleted,
   ]);
-
-  // Hydrate filters from the URL query — on first mount (dashboard chart
-  // drill-downs open the explorer pre-filtered, e.g. ?attrition=true) and on
-  // every popstate (browser back/forward between drill-down URLs while the
-  // page stays mounted would otherwise keep the stale filter state).
+  // Hydrate filters from the URL query — on first mount (dashboard chart drill-downs open the explorer…
+  // pre-filtered, e.g. ?attrition=true) and on every popstate (browser back/forward between drill-down URLs while…
   useEffect(() => {
     const hydrate = () => {
       const fromUrl = queryToFilters(window.location.search);
@@ -238,10 +235,8 @@ export default function EmployeesPage() {
     window.addEventListener('popstate', hydrate);
     return () => window.removeEventListener('popstate', hydrate);
   }, []);
-
-  // Auto-open the edit dialog when arriving with ?edit=<id> (e.g. the
-  // employee profile page's "Edit Profile" action). window.location is used
-  // instead of useSearchParams so the page keeps its static prerender.
+  // Auto-open the edit dialog when arriving with ?edit=<id> (e.g. the employee profile page's "Edit Profile"…
+  // action). window.location is used instead of useSearchParams so the page keeps its static prerender.
   useEffect(() => {
     const editId = new URLSearchParams(window.location.search).get('edit');
     if (!editId) return;
@@ -301,9 +296,8 @@ export default function EmployeesPage() {
       await api.delete(`/employees/${deleting.id}`);
       toast.success(`${fullName(deleting.firstName, deleting.lastName)} removed`);
       setDeleting(null);
-      // If we just removed the only row on a page beyond the first, step back
-      // one page — otherwise the table would land on an out-of-range page and
-      // wrongly show the empty state. The page change re-triggers `load()`.
+      // If we just removed the only row on a page beyond the first, step back one page — otherwise the table would…
+      // land on an out-of-range page and wrongly show the empty state. The page change re-triggers `load()`.
       if (result && result.items.length === 1 && page > 1) {
         setPage((current) => current - 1);
       } else {

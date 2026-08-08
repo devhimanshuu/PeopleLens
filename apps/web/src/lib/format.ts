@@ -67,14 +67,8 @@ export const PERFORMANCE_LABELS: Record<number, string> = {
   3: 'Good',
   4: 'Excellent',
 };
-
-/**
- * Formats a number with en-US grouping (e.g. 12,847).
- *
- * The single source of truth for number formatting — components must never
- * call `toLocaleString()` directly, because the runtime default locale makes
- * output non-deterministic between the server and a non-en-US browser.
- */
+// Formats a number with en-US grouping (e.g. 12,847). The single source of truth for number formatting —…
+// components must never call `toLocaleString()` directly, because the runtime default locale makes output…
 export function formatNumber(value: number, options: Intl.NumberFormatOptions = {}): string {
   return value.toLocaleString('en-US', options);
 }
@@ -86,20 +80,14 @@ export function formatDate(iso: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-
-/**
- * Formats a time of day with a fixed locale (e.g. "5:32 PM") — tooltips/labels.
- */
+// Formats a time of day with a fixed locale (e.g. "5:32 PM") — tooltips/labels.
 export function formatTime(iso: string | Date | null | undefined): string {
   const date = toDate(iso);
   if (!date) return '—';
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
-
-/**
- * Formats a full date + time with a fixed locale (e.g. "Aug 8, 2026, 6:32 PM")
- * — audit-style timestamps and tooltips.
- */
+// Formats a full date + time with a fixed locale (e.g. "Aug 8, 2026, 6:32 PM") — audit-style timestamps and…
+// tooltips.
 export function formatDateTime(iso: string | Date | null | undefined): string {
   const date = toDate(iso);
   if (!date) return '—';
@@ -137,11 +125,8 @@ export function formatRelative(iso: string | null | undefined): string {
 export function fullName(first: string, last: string): string {
   return `${first} ${last}`.trim();
 }
-
-/**
- * Formats a 0–1 ratio as a percentage (e.g. `0.206` → `20.6%`).
- * `null` renders as `—` so "not calculable" never looks like zero.
- */
+// Formats a 0–1 ratio as a percentage (e.g. `0.206` → `20.6%`). `null` renders as `—` so "not calculable" never…
+// looks like zero.
 export function formatPercent(ratio: number | null | undefined, digits = 1): string {
   if (ratio === null || ratio === undefined) return '—';
   return `${(ratio * 100).toFixed(digits)}%`;

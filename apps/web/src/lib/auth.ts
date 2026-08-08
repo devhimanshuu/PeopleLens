@@ -1,11 +1,5 @@
-/**
- * Auth facade for PeopleLens, backed by Neon Auth (Managed Better Auth).
- *
- * The Better Auth session lives in its own HTTP-only cookies (set via the
- * /api/auth proxy). We additionally mirror a minimal marker into localStorage
- * + a plain cookie so the header indicator and the edge middleware guard on
- * /signin & /signup keep working without touching the auth server.
- */
+// Auth facade for PeopleLens, backed by Neon Auth (Managed Better Auth). The Better Auth session lives in its…
+// own HTTP-only cookies (set via the /api/auth proxy). We additionally mirror a minimal marker into…
 
 import { authClient } from '@/lib/auth/client';
 import type { Role } from '@peoplelens/types';
@@ -33,13 +27,8 @@ const SESSION_STORAGE_KEY = 'peoplelens_session';
 /** Mirrors the session to a cookie so server-side middleware can read it (Edge runtime has no localStorage). */
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-/**
- * The raw session token is kept ONLY in module memory. Persisting it to
- * localStorage would hand an XSS attacker a credential that outlives the
- * page; the API accepts the HttpOnly `__Secure-neon-auth.*` cookie anyway
- * (sent automatically with `credentials: 'include'`), so after a reload the
- * Bearer header simply isn't needed — the cookie authenticates the request.
- */
+// The raw session token is kept ONLY in module memory. Persisting it to localStorage would hand an XSS attacker…
+// a credential that outlives the page; the API accepts the HttpOnly `__Secure-neon-auth.*` cookie anyway (sent…
 let memoryToken: string | undefined;
 
 /** Get current stored session from localStorage / cookies if in browser */
@@ -57,12 +46,8 @@ export function getStoredSession(): NeonSession | null {
     return null;
   }
 }
-
-/**
- * Store session locally in browser (and mirror it to a cookie for the
- * server-side middleware guard on /signin and /signup). The raw token never
- * touches localStorage — see `memoryToken` above.
- */
+// Store session locally in browser (and mirror it to a cookie for the server-side middleware guard on /signin…
+// and /signup). The raw token never touches localStorage — see `memoryToken` above.
 export function setStoredSession(session: NeonSession | null) {
   memoryToken = session?.token;
   if (typeof window === 'undefined') return;
@@ -75,14 +60,8 @@ export function setStoredSession(session: NeonSession | null) {
   }
   syncSessionCookie(session);
 }
-
-/**
- * Mirrors a minimal session marker to a cookie so Next.js middleware (Edge
- * runtime — no localStorage) can redirect signed-in users away from auth
- * pages server-side. The full session stays in localStorage; the cookie only
- * carries identity + expiry. SameSite=Lax: only needed for same-site
- * navigation. `Secure` is added automatically over https.
- */
+// Mirrors a minimal session marker to a cookie so Next.js middleware (Edge runtime — no localStorage) can…
+// redirect signed-in users away from auth pages server-side. The full session stays in localStorage; the cookie…
 function syncSessionCookie(session: NeonSession | null): void {
   if (typeof document === 'undefined') return;
   const base = `${SESSION_STORAGE_KEY}=`;
@@ -116,19 +95,8 @@ function toNeonSession(
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
   };
 }
-
-/**
- * Pull the current session from the Better Auth server and mirror it into the
- * local session marker. Returns the session (or null when signed out).
- *
- * Used after OAuth redirects and on 401-refresh so the header + middleware
- * see the new session. Preserves any previously resolved role.
- *
- * Robustness rule: a TRANSIENT failure (network error / auth server down)
- * must never destroy a valid stored session — we keep the local marker and
- * return it so the user stays signed in. Only an explicit "no session"
- * response (or a fatal error with no stored session) clears the marker.
- */
+// Pull the current session from the Better Auth server and mirror it into the local session marker. Returns the…
+// session (or null when signed out). Used after OAuth redirects and on 401-refresh so the header + middleware…
 export async function syncOAuthSession(): Promise<NeonSession | null> {
   if (typeof window === 'undefined') return null;
   const previous = getStoredSession();
@@ -181,14 +149,8 @@ export async function signInWithEmail(
     return { error: 'Could not reach the authentication service. Please try again.' };
   }
 }
-
-/**
- * Register a new user with Email, Password, and Name via Managed Better Auth.
- *
- * When Neon Auth requires email verification, sign-up succeeds but NO session
- * is issued — redirecting to the workspace would dead-end, so this surfaces a
- * clear "verify your email" message instead.
- */
+// Register a new user with Email, Password, and Name via Managed Better Auth. When Neon Auth requires email…
+// verification, sign-up succeeds but NO session is issued — redirecting to the workspace would dead-end, so…
 export async function signUpWithEmail(
   email: string,
   password: string,
@@ -203,9 +165,8 @@ export async function signUpWithEmail(
     if (error) return { error: error.message || 'Failed to register' };
     if (!data?.user) return { error: 'Failed to register' };
     if (!data.token) {
-      // Neon issues no session until the email is verified — keep the message
-      // vendor-neutral for end users; setup guidance lives in the README and
-      // on the sign-in page.
+      // Neon issues no session until the email is verified — keep the message vendor-neutral for end users; setup…
+      // guidance lives in the README and on the sign-in page.
       return { error: 'Account created — please verify your email, then sign in.' };
     }
     const session = toNeonSession(data.user, data.token);
@@ -215,14 +176,8 @@ export async function signUpWithEmail(
     return { error: 'Could not reach the authentication service. Please try again.' };
   }
 }
-
-/**
- * Start an OAuth sign-in with Google or GitHub. The SDK redirects the browser
- * to the provider; on success Managed Better Auth lands the user back on
- * `callbackURL` with a session established. Defaults to the workspace
- * dashboard — landing on the public marketing page after login would show the
- * landing site to a signed-in user.
- */
+// Start an OAuth sign-in with Google or GitHub. The SDK redirects the browser to the provider; on success…
+// Managed Better Auth lands the user back on `callbackURL` with a session established. Defaults to the…
 export async function signInWithOAuth(
   provider: OAuthProvider,
   callbackURL = '/dashboard',

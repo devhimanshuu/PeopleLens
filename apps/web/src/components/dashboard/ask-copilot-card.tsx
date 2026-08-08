@@ -4,12 +4,8 @@ import type { DashboardFilters, FilterOptions } from '@peoplelens/types';
 import { Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import { useCopilot } from '@/components/copilot/copilot-context';
-
-/**
- * "Ask PeopleLens" card — the copilot's front door on the dashboard. The
- * suggestions are contextual: when a department filter is active the card
- * proposes questions scoped to that department.
- */
+// "Ask PeopleLens" card — the copilot's front door on the dashboard. The suggestions are contextual: when a…
+// department filter is active the card proposes questions scoped to that department.
 export function AskCopilotCard({
   filters,
   options,

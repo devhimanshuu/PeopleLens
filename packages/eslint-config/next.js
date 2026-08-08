@@ -12,4 +12,20 @@ const compat = new FlatCompat({
 const nextConfigs = compat.extends('next/core-web-vitals', 'next/typescript');
 
 /** Flat config for Next.js (App Router) workspaces. */
-export default [...base, ...nextConfigs];
+export default [
+  ...base,
+  ...nextConfigs,
+  {
+    settings: {
+      next: {
+        rootDir: ['apps/web/', './'],
+      },
+    },
+    rules: {
+      '@next/next/no-html-link-for-pages': [
+        'error',
+        ['apps/web/src/app', 'apps/web/app', 'src/app', 'app'],
+      ],
+    },
+  },
+];

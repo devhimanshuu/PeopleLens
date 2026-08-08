@@ -43,12 +43,8 @@ function CompositionCard({ title, children }: { title: string; children: React.R
     </Card>
   );
 }
-
-/**
- * Workforce Composition — where people sit, in what roles, and how the
- * workforce is distributed by gender, age, education and tenure. Clicking any
- * slice filters the employee explorer to that population.
- */
+// Workforce Composition — where people sit, in what roles, and how the workforce is distributed by gender, age,…
+// education and tenure. Clicking any slice filters the employee explorer to that population.
 export function CompositionSection({ overview }: { overview: AnalyticsOverview }) {
   const navigate = useExplorerNavigation();
   const deptIdByName = useMemo(

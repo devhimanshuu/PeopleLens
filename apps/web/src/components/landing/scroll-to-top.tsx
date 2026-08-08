@@ -5,13 +5,8 @@ import type { ComponentProps, MouseEvent } from 'react';
 const SCROLL_DURATION_MS = 600;
 /** ease-out cubic — fast start, gentle landing. */
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
-
-/**
- * Anchor that smooth-scrolls to the top with a fixed, eased duration —
- * independent of the page's CSS `scroll-behavior`, so the timing feels
- * consistent everywhere. Falls back to the browser default (and to the
- * `#top` hash for no-JS) and honors `prefers-reduced-motion`.
- */
+// Anchor that smooth-scrolls to the top with a fixed, eased duration — independent of the page's CSS…
+// `scroll-behavior`, so the timing feels consistent everywhere. Falls back to the browser default (and to the…
 export function ScrollToTopLink({ className, children, ...props }: ComponentProps<'a'>) {
   function handleClick(event: MouseEvent<HTMLAnchorElement>): void {
     event.preventDefault();

@@ -18,20 +18,17 @@ export function Footer() {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent dark:via-indigo-400/40"
       />
-      {/* Indigo bloom spilling down from the top edge — stronger in dark where
-          near-black swallows low alphas (decorative) */}
+      {/* Indigo bloom spilling down from the top edge — stronger in dark where near-black swallows low alphas (decorative) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(60%_100%_at_50%_0%,--theme(--color-indigo-500/0.12),transparent_70%)] dark:bg-[radial-gradient(60%_100%_at_50%_0%,--theme(--color-indigo-400/0.16),transparent_70%)]"
       />
-      {/* Cyan bloom rising from the bottom edge — echoes the watermark's cyan accent
-          (decorative) */}
+      {/* Cyan bloom rising from the bottom edge — echoes the watermark's cyan accent (decorative) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[radial-gradient(60%_100%_at_50%_100%,--theme(--color-cyan-500/0.09),transparent_70%)] dark:bg-[radial-gradient(60%_100%_at_50%_100%,--theme(--color-cyan-400/0.12),transparent_70%)]"
       />
-      {/* Giant background watermark — sits BEHIND all footer content and takes
-          zero layout space. Links back to the top; glows and shimmers on hover. */}
+      {/* Giant background watermark — sits BEHIND all footer content and takes zero layout space. Links back to the top; glows and shimmers on hover. */}
       <div className="absolute inset-0 z-0 flex select-none items-end justify-center overflow-hidden">
         {/* Radial brand glow so the watermark melts into the background (decorative only) */}
         <div
@@ -49,8 +46,7 @@ export function Footer() {
             className="relative block -mb-[0.18em] [mask-image:linear-gradient(to_top,black_55%,transparent_96%)] [-webkit-mask-image:linear-gradient(to_top,black_55%,transparent_96%)]"
           >
             <p className="watermark-glow relative text-center font-display text-[clamp(6rem,18vw,17rem)] font-bold leading-[0.85] tracking-tighter">
-              {/* Premium brand-gradient wordmark — neutral → indigo → cyan across the whole
-                  word, low-opacity watermark that brightens on hover */}
+              {/* Premium brand-gradient wordmark — neutral → indigo → cyan across the whole word, low-opacity watermark that brightens on hover */}
               <span className="bg-gradient-to-r from-foreground/[0.1] via-indigo-500/[0.15] to-cyan-500/[0.13] bg-clip-text text-transparent duration-300 group-hover:from-foreground/[0.2] group-hover:via-indigo-500/[0.3] group-hover:to-cyan-500/[0.26] dark:from-foreground/[0.13] dark:via-indigo-300/[0.2] dark:to-cyan-400/[0.17] dark:group-hover:from-foreground/[0.24] dark:group-hover:via-indigo-300/[0.36] dark:group-hover:to-cyan-400/[0.32]">
                 PeopleLens
               </span>
@@ -142,10 +138,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-border/40 pt-6 pb-10 sm:flex-row sm:items-center">
-          {/* `suppressHydrationWarning`: the year is time-dependent — the server
-              renders it at request time and the client at hydration time. They can
-              disagree (a request straddling a year boundary), which is exactly the
-              case React documents for this attribute. The rest of the tree is stable. */}
+          {/* `suppressHydrationWarning`: the year is time-dependent — the server renders it at request time and the client… at hydration time. They can disagree (a request straddling a year boundary), which is exactly the case React… */}
           <p className="text-xs text-muted-foreground/70" suppressHydrationWarning>
             © {new Date().getFullYear()} PeopleLens. All rights reserved.
           </p>

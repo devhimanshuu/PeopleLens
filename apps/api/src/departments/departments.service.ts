@@ -12,11 +12,8 @@ import { RbacService } from '@app/common/services/rbac.service';
 import { PrismaService } from '@app/database/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
-
-/**
- * Department management — org hierarchy, manager assignment, soft delete.
- * Only admins may mutate organization structure; managers and viewers read.
- */
+// Department management — org hierarchy, manager assignment, soft delete. Only admins may mutate organization…
+// structure; managers and viewers read.
 @Injectable()
 export class DepartmentsService {
   constructor(
@@ -26,9 +23,8 @@ export class DepartmentsService {
   ) {}
 
   async findAll(actor: RequestUser): Promise<DepartmentSummary[]> {
-    // Scope: managers only see the departments they manage. Viewers keep
-    // read-only access to the full org (documented product rule), so the
-    // scope filter applies to managers only — the same model as employees.
+    // Scope: managers only see the departments they manage. Viewers keep read-only access to the full org…
+    // (documented product rule), so the scope filter applies to managers only — the same model as employees.
     const scope = await this.rbac.departmentScope(actor);
     const departments = await this.prisma.department.findMany({
       where: { deletedAt: null, ...(scope ? { id: { in: scope } } : {}) },
@@ -212,21 +208,15 @@ export class DepartmentsService {
     if (managerUserId) {
       const manager = await this.prisma.user.findUnique({ where: { id: managerUserId } });
       if (!manager) throw new BadRequestException('Assigned manager user not found');
-      // A department manager must actually hold a management role — assigning
-      // a viewer would create a dead assignment (their scope only kicks in for
-      // the Manager role) and mislead the org chart.
+      // A department manager must actually hold a management role — assigning a viewer would create a dead assignment…
+      // (their scope only kicks in for the Manager role) and mislead the org chart.
       if (manager.role !== 'manager' && manager.role !== 'admin') {
         throw new BadRequestException('Department managers must hold the Manager or Admin role');
       }
     }
   }
-
-  /**
-   * True when setting `parentId` on `id` would close a cycle (the new parent
-   * is `id` itself or one of its descendants). Walks the ancestor chain of
-   * the proposed parent — a department that is its own ancestor can never be
-   * a valid parent.
-   */
+  // True when setting `parentId` on `id` would close a cycle (the new parent is `id` itself or one of its…
+  // descendants). Walks the ancestor chain of the proposed parent — a department that is its own ancestor can…
   private async wouldCreateCycle(id: string, parentId: string): Promise<boolean> {
     let current: string | null = parentId;
     const visited = new Set<string>();

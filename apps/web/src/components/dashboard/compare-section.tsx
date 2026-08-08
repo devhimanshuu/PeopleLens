@@ -17,12 +17,8 @@ interface CompareSectionProps {
 }
 
 const MAX_COMPARE = 5;
-
-/**
- * Department Comparison — select up to five departments and read headcount,
- * attrition, tenure, income, overtime, satisfaction and performance
- * side-by-side. Best/worst values are highlighted so differences surface fast.
- */
+// Department Comparison — select up to five departments and read headcount, attrition, tenure, income,…
+// overtime, satisfaction and performance side-by-side. Best/worst values are highlighted so differences surface…
 export function CompareSection({
   departments,
   selection,
@@ -39,7 +35,6 @@ export function CompareSection({
     if (selection.length >= MAX_COMPARE) return;
     onToggle(id);
   };
-
   // Best/worst per metric across the selected departments (higher-is-better
   // vs lower-is-better differ per metric).
   const extremes = (() => {

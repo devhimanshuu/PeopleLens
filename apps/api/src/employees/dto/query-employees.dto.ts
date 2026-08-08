@@ -15,11 +15,8 @@ export const EMPLOYEE_SORT_FIELDS = [
 ] as const;
 
 export type EmployeeSortField = (typeof EMPLOYEE_SORT_FIELDS)[number];
-
-/**
- * Query parameters for the employees list endpoint — combines pagination,
- * free-text search, structured filters, and sorting.
- */
+// Query parameters for the employees list endpoint — combines pagination, free-text search, structured filters,…
+// and sorting.
 export class QueryEmployeesDto {
   @ApiPropertyOptional({ example: '1', description: 'Page number (1-based)' })
   @IsOptional()
@@ -75,9 +72,8 @@ export class QueryEmployeesDto {
     description: 'Include soft-deleted employees (for audit/restore workflows)',
   })
   @IsOptional()
-  // Explicit parse instead of `@Type(() => Boolean)`: the Boolean constructor
-  // treats ANY non-empty string (including 'false') as truthy, which would
-  // silently flip this flag. Accept only the literal 'true' or a boolean.
+  // Explicit parse instead of `@Type(() => Boolean)`: the Boolean constructor treats ANY non-empty string…
+  // (including 'false') as truthy, which would silently flip this flag. Accept only the literal 'true' or a…
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   includeDeleted?: boolean;

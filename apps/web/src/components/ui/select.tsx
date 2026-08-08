@@ -12,11 +12,7 @@ interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>
   placeholder?: string;
   children?: React.ReactNode;
 }
-
-/**
- * Styled native `<select>` — accessible by construction (keyboard, screen
- * readers) and dependency-free.
- */
+// Styled native `<select>` — accessible by construction (keyboard, screen readers) and dependency-free.
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, options, placeholder, children, ...props }, ref) => (
     <div className="relative">

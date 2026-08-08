@@ -22,13 +22,8 @@ export interface CopilotMetricsSnapshot {
   /** Last error category — no message text, no user content. */
   lastErrorKind: string | null;
 }
-
-/**
- * Lightweight in-memory AI observability. Counters only — no prompts, answers
- * or tool payloads are retained, so sensitive workforce content never lands
- * in operational state. Resets on process restart (acceptable for a single
- * instance; a production deployment would export these to a metrics backend).
- */
+// Lightweight in-memory AI observability. Counters only — no prompts, answers or tool payloads are retained, so…
+// sensitive workforce content never lands in operational state. Resets on process restart (acceptable for a…
 @Injectable()
 export class CopilotMetricsService {
   private providers: ProviderDescriptor[] = [];

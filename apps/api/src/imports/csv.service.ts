@@ -44,12 +44,8 @@ export const CSV_HEADERS = [
 ] as const;
 
 export type CsvHeader = (typeof CSV_HEADERS)[number];
-
-/**
- * Header aliases for columns that do not round-trip through whitespace/case
- * stripping. `Hire Date` → `hiredate` can never normalize to `hiredAt`, so
- * natural-language variants are mapped explicitly to the canonical key.
- */
+// Header aliases for columns that do not round-trip through whitespace/case stripping. `Hire Date` → `hiredate`…
+// can never normalize to `hiredAt`, so natural-language variants are mapped explicitly to the canonical key.
 const HEADER_ALIASES: Record<string, CsvHeader> = {
   hiredate: 'hiredAt',
   datehired: 'hiredAt',
@@ -99,14 +95,8 @@ export interface ParseResult {
   rows: ParsedRow[];
   errorReport: ImportRowError[];
 }
-
-/**
- * Parses and row-validates a CSV buffer into normalized employee rows.
- *
- * Structural rules (header presence/columns) fail the whole import; per-row
- * rules (missing required fields, bad enums, malformed dates) are collected
- * into an error report so a single bad row never blocks a good file.
- */
+// Parses and row-validates a CSV buffer into normalized employee rows. Structural rules (header…
+// presence/columns) fail the whole import; per-row rules (missing required fields, bad enums, malformed dates)…
 @Injectable()
 export class CsvService {
   parse(buffer: Buffer, originalName: string): ParseResult {

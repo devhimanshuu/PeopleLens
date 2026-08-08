@@ -16,12 +16,8 @@ interface OrgChartProps {
   error: string | null;
   onRetry: () => void;
 }
-
-/**
- * Organization hierarchy — departments → teams → employees as an
- * expandable tree. Built client-side from one scoped API response (no graph
- * database, no per-node round trips). Search filters employees instantly.
- */
+// Organization hierarchy — departments → teams → employees as an expandable tree. Built client-side from one…
+// scoped API response (no graph database, no per-node round trips). Search filters employees instantly.
 export function OrgChart({ data, loading, error, onRetry }: OrgChartProps) {
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());

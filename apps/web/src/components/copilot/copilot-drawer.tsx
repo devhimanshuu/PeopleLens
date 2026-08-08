@@ -492,11 +492,8 @@ function toChatMessage(view: CopilotMessageView): ChatMessage {
     createdAt: view.createdAt,
   };
 }
-
-/**
- * Tiny markdown renderer — headings, bullets, numbered lists, bold, inline
- * code and internal links. No dangerouslySetInnerHTML, no new dependency.
- */
+// Tiny markdown renderer — headings, bullets, numbered lists, bold, inline code and internal links. No…
+// dangerouslySetInnerHTML, no new dependency.
 function Markdown({ text }: { text: string }) {
   const lines = text.split('\n');
   const blocks: React.ReactNode[] = [];

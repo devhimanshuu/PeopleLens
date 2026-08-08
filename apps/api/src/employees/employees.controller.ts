@@ -17,18 +17,14 @@ import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-// Value imports — NOT type-only: the global ValidationPipe resolves the DTO
-// class from emitted `design:paramtypes` metadata; a type-only import erases
-// it to `Function` and silently disables validation for these endpoints.
+// Value imports — NOT type-only: the global ValidationPipe resolves the DTO class from emitted…
+// `design:paramtypes` metadata; a type-only import erases it to `Function` and silently disables validation for…
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { QueryEmployeesDto } from './dto/query-employees.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeesService } from './employees.service';
-
-/**
- * Employee records — the workforce core domain. Admin + manager roles write;
- * viewers read. Managers are scoped to their assigned departments.
- */
+// Employee records — the workforce core domain. Admin + manager roles write; viewers read. Managers are scoped…
+// to their assigned departments.
 @ApiTags('Employees')
 @ApiBearerAuth('access-token')
 @Controller('employees')
