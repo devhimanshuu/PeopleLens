@@ -2,6 +2,7 @@
 
 import { animate, useInView } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
+import { formatNumber } from '@/lib/format';
 import { EASE_OUT } from './anim';
 
 export function CountUp({
@@ -33,7 +34,9 @@ export function CountUp({
     return () => controls.stop();
   }, [inView, to, duration]);
 
-  const formatted = value.toLocaleString(undefined, {
+  // Fixed en-US locale via formatNumber — the runtime default locale would
+  // make the animated figures render differently on a non-en-US browser.
+  const formatted = formatNumber(value, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });

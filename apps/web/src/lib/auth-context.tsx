@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { Role, User } from '@peoplelens/types';
 import {
   createContext,
@@ -48,6 +49,7 @@ function isAuthFailure(error: unknown): boolean {
  * never silently log the user out.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [session, setSession] = useState<NeonSession | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -89,6 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setProfileError(null);
         setInitializing(false);
+        // The marker cookie lied (or the Neon session expired) — don't leave
+        // the user staring at an empty workspace; bounce to the sign-in page.
+        router.replace('/signin');
         return;
       }
 
@@ -102,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [refreshProfile]);
+  }, [refreshProfile, router]);
 
   const signOut = useCallback(async () => {
     await signOutNeon();

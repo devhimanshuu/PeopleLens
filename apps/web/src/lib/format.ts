@@ -25,12 +25,54 @@ export const GENDER_LABELS: Record<Gender, string> = {
   prefer_not_to_say: 'Prefer not to say',
 };
 
+/**
+ * Formats a number with en-US grouping (e.g. 12,847).
+ *
+ * The single source of truth for number formatting — components must never
+ * call `toLocaleString()` directly, because the runtime default locale makes
+ * output non-deterministic between the server and a non-en-US browser.
+ */
+export function formatNumber(value: number, options: Intl.NumberFormatOptions = {}): string {
+  return value.toLocaleString('en-US', options);
+}
+
 /** Formats an ISO date as a short human date (e.g. Jun 1, 2023). */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/**
+ * Formats a time of day with a fixed locale (e.g. "5:32 PM") — tooltips/labels.
+ */
+export function formatTime(iso: string | Date | null | undefined): string {
+  const date = toDate(iso);
+  if (!date) return '—';
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+/**
+ * Formats a full date + time with a fixed locale (e.g. "Aug 8, 2026, 6:32 PM")
+ * — audit-style timestamps and tooltips.
+ */
+export function formatDateTime(iso: string | Date | null | undefined): string {
+  const date = toDate(iso);
+  if (!date) return '—';
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function toDate(value: string | Date | null | undefined): Date | null {
+  if (!value) return null;
+  const date = typeof value === 'string' ? new Date(value) : value;
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /** Formats an ISO date relative to now (e.g. "3d ago"). */
@@ -51,9 +93,4 @@ export function formatRelative(iso: string | null | undefined): string {
 /** Formats a full name from first/last. */
 export function fullName(first: string, last: string): string {
   return `${first} ${last}`.trim();
-}
-
-/** Formats an employee count with a label. */
-export function pluralize(count: number, singular: string, plural?: string): string {
-  return `${count.toLocaleString()} ${count === 1 ? singular : (plural ?? `${singular}s`)}`;
 }

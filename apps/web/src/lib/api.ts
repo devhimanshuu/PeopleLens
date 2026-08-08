@@ -52,6 +52,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const response = await fetch(`${API_URL}${path}`, {
       ...rest,
       signal: controller.signal,
+      // Include same-site cookies so the `__Secure-neon-auth.*` session cookie
+      // (HttpOnly — invisible to JS) travels with the request; the API
+      // validates sessions via that cookie.
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -141,6 +145,7 @@ export function fetchLiveSignals(): Promise<LiveSignalsSnapshot | null> {
 export async function downloadAuthenticated(path: string, filename: string): Promise<void> {
   const authHeader = getAuthHeader();
   const response = await fetch(`${API_URL}${path}`, {
+    credentials: 'include',
     headers: {
       Accept: 'text/csv, application/octet-stream',
       ...(authHeader ? { Authorization: authHeader } : {}),

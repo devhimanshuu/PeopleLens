@@ -1,113 +1,245 @@
 # PeopleLens — Architecture
 
-This document captures the architectural intent of the PeopleLens platform and
-the reasoning behind the decisions made in Phase 1 (Foundation). It is the
-source of truth engineers should consult before introducing new structure.
+This document describes the _implemented_ system (Phases 1–3), not just the
+intent. Engineers should read this before changing cross-cutting behavior.
 
-## 1. Why a monorepo?
+---
 
-PeopleLens will grow into several applications and shared libraries: a customer
-web app, an API service, and later potentially admin tools, worker processes,
-and reporting apps — all sharing data contracts, UI primitives, and engineering
-conventions.
-
-| Concern                          | Polyrepo                                 | Monorepo                          |
-| -------------------------------- | ---------------------------------------- | --------------------------------- |
-| Shared type contracts            | versioned packages, release choreography | one PR changes web + API together |
-| Cross-cutting refactors          | multi-repo PR trains                     | atomic single PR                  |
-| Tooling (lint, format, tsconfig) | drift between repos                      | single source of truth            |
-| CI complexity                    | N pipelines                              | one pipeline, one task graph      |
-| Onboarding                       | N setups                                 | one `pnpm install`                |
-
-The trade-off (larger repository, careful CI) is managed with two rules:
-
-1. **Dependency direction:** `apps/` may depend on `packages/`; packages never
-   depend on apps.
-2. **Deployable boundaries:** each app owns its runtime config (env, build,
-   deployment). No app imports another app.
-
-## 2. Repository layout
+## 1. System overview
 
 ```
-apps/      Deployable units (web, api). Thin: routing, composition, runtime config.
-packages/  Reusable libraries. No business logic in Phase 1.
-docs/      Architecture & decisions.
-scripts/   Dependency-free repository tooling.
-.github/   Contribution templates + dependency automation.
+┌─────────────────────────────┐        ┌──────────────────────────────┐
+│          apps/web           │        │        Neon Auth             │
+│   Next.js 15 · App Router   │        │  Managed Better Auth         │
+│                             │        │  (identity provider)         │
+│  sign-in/sign-up · OAuth    │───────▶│  email/password · Google/Git │
+│  session marker (cookie)    │        └──────────────────────────────┘
+└──────────────┬──────────────┘
+               │  Authorization: Bearer <neon-session-token>
+               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         apps/api  (NestJS 11, /api/v1)                       │
+│                                                                             │
+│  Global guards (ordered):                                                    │
+│   1. ThrottlerGuard   — per-user (auth) / per-IP (anonymous) rate limits    │
+│   2. SessionGuard     — validates token against Neon Auth `get-session`     │
+│   3. RolesGuard       — @Roles(admin|manager|viewer) metadata               │
+│                                                                             │
+│  Controllers → Services → RbacService (department scoping) → PrismaService │
+└───────────────────────────────────────┬─────────────────────────────────────┘
+                                        ▼
+                            PostgreSQL (Prisma ORM)
+                            User · Department · Team · Employee ·
+                            ImportHistory · AuditLog
 ```
 
-## 3. Why these technologies
+Two request paths share one client:
 
-### Next.js 15 (App Router) + React 19
+- **Web → Neon Auth** — authentication. The web app owns sign-in/sign-up
+  (email/password + Google/GitHub). Neon issues the session (HTTP-only cookies
+  set via the `/api/auth` proxy) and the web app mirrors a _marker_ (identity +
+  expiry + role) into `localStorage` + a plain cookie so the edge middleware can
+  do UX redirects without hitting the auth server.
+- **Web → API** — authorization. The browser sends its HttpOnly
+  `__Secure-neon-auth.session_token` cookie with every request
+  (`credentials: 'include'`); the API forwards that cookie to Neon's
+  `get-session` endpoint — the same request pattern the Neon SDK's own proxy
+  uses, which is the only form Neon's managed server accepts. A
+  `Authorization: Bearer <session-value>` fallback keeps non-browser API
+  clients working. The validated identity is mapped to a local `User` row and
+  the platform role is resolved. **The backend never trusts anything the
+  frontend claims about the user.**
 
-React Server Components enable the API-adjacent data fetching pattern the
-dashboards of Phase 4 will need, with per-route code splitting. Next 15 is the
-current stable line; the monorepo deliberately does not chase Next 16 yet.
+## 2. Authentication vs authorization
 
-### NestJS 11
+| Concern             | Owner          | Mechanism                                            |
+| ------------------- | -------------- | ---------------------------------------------------- |
+| _Who is the user?_  | Neon Auth      | Session token validated server-side on every request |
+| _What may they do?_ | PeopleLens API | `User.role` + `RbacService` scope rules              |
 
-Nest's modular DI design maps 1:1 to domain modules (Workforce Health,
-Performance, Org Structure, Reporting). Each domain becomes an independently
-testable module with its own controllers, services, and providers — a clean
-foundation for future bounded contexts.
+No passwords, tokens, or authentication secrets are stored in the PeopleLens
+database. The local `User` row holds only application data: email (join key),
+display name, role, and status.
 
-### PostgreSQL 16 + Prisma 6
+**Identity mapping** (first-contact provisioning):
 
-Postgres is the correct relational engine for workforce data (relational
-integrity, JSONB for survey payloads, window functions for analytics). Prisma 6
-provides typed clients and migration files. Prisma is pinned to 6.x: the 7.x
-generator/adapter model is too new to be the stable enterprise base. Phase 2
-introduces the actual models; Phase 1 only initializes the schema skeleton.
+```
+Neon Auth user ──(validated session)──▶ find local User by email
+                                          ├─ exists → use its role/status
+                                          └─ missing → create (first account
+                                             becomes admin; later sign-ups
+                                             become viewers) and proceed
+```
 
-### Tailwind CSS 4 + shadcn/ui
+## 3. RBAC model
 
-Design tokens live as CSS variables (light + dark) so future theming is a
-variable change, not a class hunt. `components.json` wires shadcn conventions
-(aliases, utils, icon library) so new primitives are one command away.
+Three roles, enforced at the **service layer** (never by hidden buttons):
 
-### pnpm + Turborepo
+| Role        | Write access                        | Scope                                                       |
+| ----------- | ----------------------------------- | ----------------------------------------------------------- |
+| **admin**   | Everything                          | Whole organization                                          |
+| **manager** | Create/update/delete/import/restore | Only departments where `Department.managerUserId = user.id` |
+| **viewer**  | None                                | Read-only everywhere                                        |
 
-pnpm's strict, content-addressed store gives disk-efficient installs and
-enforces workspace boundaries; Turborepo caches build/lint/typecheck/test tasks
-and will later enable remote caching in CI.
+`RbacService` is the single decision point:
 
-### Quality gates
+- `assertCanWrite(user, departmentId?)` — rejects viewers, and rejects managers
+  operating outside their assigned departments.
+- `departmentScope(user)` — the department ids a manager may see; `null` for
+  admins/viewers (no scoping).
+- `isDepartmentInScope(user, departmentId)` — used for single-record checks.
 
-ESLint 9 flat config (single package, three variants), Prettier, EditorConfig,
-Husky hooks (`pre-commit` → lint-staged, `commit-msg` → commitlint). Conventional
-Commits keep releases and changelogs automatable.
+**Resource-level authorization** — role checks are never the end of the story.
+`EmployeesService.findOne`/`update`/`remove`/`restore` verify the _specific
+record_ is inside the manager's scope. The dashboard and list endpoints apply
+the scope to the query's `where` clause. The CSV import rejects rows whose
+department is outside the importer's scope.
 
-## 4. Conventions
+## 4. Request pipeline
 
-- **TypeScript:** strict in every workspace, enforced via shared presets in
-  `packages/config/tsconfig/`.
-- **Path aliases:** `@/*` in web (native), `@app/*` in the API. The API
-  registers `tsconfig-paths` in `src/index.ts` before bootstrapping, so the
-  alias resolves at runtime, not just for the typechecker. Jest maps the alias
-  via `moduleNameMapper`.
-- **Environment:** `.env.example` files are the templates; `pnpm bootstrap`
-  materializes local copies. Never commit real secrets.
-- **Shared contracts:** put cross-app shapes in `@peoplelens/types`; domain
-  models stay in the API until a provider boundary demands otherwise.
+```
+middleware (Express)
+  request-id      → X-Request-Id header + req.id (correlation)
+  request-logger  → one line per request: [id] METHOD path → status (ms)
+global pipes
+  ValidationPipe  → whitelist + forbidNonWhitelisted + transform
+guards (APP_GUARD, in order)
+  Throttler → Session → Roles
+interceptors
+  ResponseInterceptor → { success, message, data, timestamp }
+  GlobalExceptionFilter → { success:false, statusCode, message, error,
+                            path, requestId?, details? }
+```
 
-## 5. Evolution plan
+Error semantics: `401` = missing/invalid/expired session; `403` = authenticated
+but not permitted; `422`-style messages from DTO validation arrive as `400`
+with a `details` array. Stack traces are logged server-side and never returned.
 
-| Phase | Change                     | Architectural impact                                                                                                          |
-| ----- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 2     | Prisma models + migrations | `PrismaModule` as a shared provider; typed client via `@app/*` alias                                                          |
-| 3     | AuthN/Z                    | Auth module + guards; role-based access control on every route group                                                          |
-| 4     | Domain modules             | One Nest module per domain; web feature slices per dashboard                                                                  |
-| 5+    | Scale                      | Horizontal API replicas, read replicas, background jobs, event-driven sync from HRIS, observability (structured logs, traces) |
+## 5. CSV import pipeline
 
-Nothing in the Phase 1 foundation constrains these outcomes: the seams
-(module boundaries, contract types, env-first config, transpiled UI package)
-were placed exactly where growth will need them.
+```
+upload (≤10 MB, .csv)
+   │
+   ▼
+CsvService.parse        — structural: header presence, non-empty, parseable
+   │                      (fail-fast, whole-file)
+   ▼
+row validation          — required fields, email format, enum membership,
+   │                      date parseability (per-row, collected not fatal)
+   ▼
+resolveReferences       — department / team by name, manager by email;
+                          manager scope is enforced here
+   ▼
+detectDuplicates        — within file + against database (incl. soft-deleted)
+   │
+   ▼
+$transaction            — sequential inserts of insertable rows only
+   │
+   ▼
+ImportHistory row       — status (completed | partial | failed) + per-row
+                          error report (row number, code/email, messages)
+   │
+   ▼
+audit record            — action 'import', entity 'import'
+```
 
-## 6. Known deferrals (by design)
+A single bad row never blocks a good file, and a good file never partially
+corrupts state: only rows passing all three stages (validation, references,
+duplicates) are inserted, inside one transaction. Import history is retained
+for replay and audit.
 
-- **Docker / Compose:** removed from Phase 1 per team decision; PostgreSQL and
-  containerization will be reintroduced when the data layer lands.
-- **Database models, authentication, dashboards:** explicitly out of scope until
-  their phases.
-- **CI pipeline:** the task graph is defined in `turbo.json`; CI wiring is the
-  first item of the next phase.
+## 6. Data model highlights
+
+- **`Employee`** — `deletedAt` soft delete keeps history/audit/dashboards
+  intact; `employeeCode`/`email` unique globally (so deleted rows still occupy
+  their identifiers — the API checks this explicitly). Indexed on
+  `departmentId`, `teamId`, `managerId`, `status`, `hiredAt`, `deletedAt`,
+  and `(firstName, lastName)`.
+- **`Department`** — self-referencing hierarchy (`parentId`), assigned manager
+  (`managerUserId` → RBAC scope), unique on `(name, deletedAt)`.
+- **`Team`** — belongs to a department (cascade delete), unique on
+  `(name, departmentId, deletedAt)`.
+- **`AuditLog`** — actor, action, entity type/id, JSON details, IP, timestamp;
+  indexed for the filterable feed. Writes are best-effort (never fail the
+  primary operation).
+- **`ImportHistory`** — outcome of every CSV import incl. the error report.
+
+### Index review (why each index exists)
+
+Every index maps to a real query pattern in the code — none are speculative:
+
+| Index                                                                            | Serves                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Employee(departmentId)`                                                         | The hottest filter: the employees list, dashboard distribution, manager department scoping, and CSV reference resolution all filter by department                                                                           |
+| `Employee(teamId)`                                                               | Employee list `?teamId=` filter and team→employees lookups                                                                                                                                                                  |
+| `Employee(managerId)`                                                            | Reporting-line navigation (`manager` / `reports` self-relation) and `managerId` assignment checks                                                                                                                           |
+| `Employee(status)`                                                               | List `?status=` filter and the dashboard status distribution                                                                                                                                                                |
+| `Employee(hiredAt)`                                                              | The "recent hires" list (ordered by hire date)                                                                                                                                                                              |
+| `Employee(deletedAt)`                                                            | Soft-deleted records are excluded on every list/read (`deletedAt: null`); a partial index would be ideal but Prisma's global-unique design keeps the simple column index                                                    |
+| `Employee(firstName, lastName)`                                                  | Name-prefix lookups and the employee table's common ordering patterns; the free-text `contains` search is a `%term%` scan a B-tree cannot accelerate (acceptable at this scale — a trigram index would be the upgrade path) |
+| `Employee(employeeCode)`, `Employee(email)`                                      | Unique constraints — also the duplicate-detection lookups in CSV import                                                                                                                                                     |
+| `Department(parentId)`                                                           | Org-hierarchy traversal (children of a parent)                                                                                                                                                                              |
+| `Department(managerUserId)`                                                      | RBAC scope lookup: which departments a manager is assigned to                                                                                                                                                               |
+| `Department(deletedAt)`                                                          | Excluding soft-deleted departments on list/import reference resolution                                                                                                                                                      |
+| `Team(departmentId)`                                                             | Teams-by-department list and import team resolution                                                                                                                                                                         |
+| `Team(deletedAt)`                                                                | Excluding soft-deleted teams                                                                                                                                                                                                |
+| `ImportHistory(importedByUserId)`, `ImportHistory(createdAt)`                    | Import history feed (ordered by created, filtered by importer)                                                                                                                                                              |
+| `AuditLog(entityType, entityId)`, `AuditLog(actorUserId)`, `AuditLog(createdAt)` | The audit feed's filters and sort                                                                                                                                                                                           |
+| `User(role)`, `User(email)`                                                      | Role listing (`/users`) and identity lookup by email (join key with Neon)                                                                                                                                                   |
+
+Unique constraints doubled as indexes: `Employee.employeeCode`, `Employee.email`,
+`Employee.userId`, `Department(name, deletedAt)`, `Team(name, departmentId,
+deletedAt)`.
+
+**Query hygiene** — list endpoints use `include` with narrow `select`s (only
+fields the view needs), the dashboard aggregates in SQL, and import reference
+lookups batch by `IN` clauses instead of per-row queries. The only N+1-shaped
+spot (per-row `employee.create` inside the import transaction) is deliberate:
+it produces exact per-row outcomes and stays transactional.
+
+## 7. Observability
+
+- `GET /api/v1/health` — liveness + `db: up|down` probe (`SELECT 1`); the
+  status degrades to `degraded` when Postgres is unreachable. Public and
+  exempt from rate limiting.
+- Request logging with correlation ids (`X-Request-Id` round-trips through
+  responses and the error envelope).
+- Config-gated: `REQUEST_LOGGING_ENABLED`, `TRUST_PROXY` (X-Forwarded-For),
+  `SWAGGER_ENABLED` (off in production by default).
+
+## 8. Frontend architecture
+
+Feature-based slices under `apps/web/src`:
+
+```
+app/(app)/         protected workspace routes (grouped under the app shell)
+app/signin|signup  auth pages (Neon client)
+components/        app-shell · dashboard · employees · ui kit
+lib/               api client · auth facade · auth-context · format utils
+middleware.ts      edge route guards (UX layer; API is the security boundary)
+```
+
+The `useAsync` hook standardizes loading/error/data states per screen; skeletons
+and empty states guide every fetch. The `api` client attaches the session token,
+unwraps the response envelope, and retries once after a 401 session re-sync.
+
+## 9. Decisions & trade-offs
+
+| Decision                         | Rationale                                            | Cost                                                    |
+| -------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| Neon Auth as IdP                 | No bespoke password handling; focus on authorization | Vendor lock-in for identity                             |
+| Marker cookie for guards         | Edge middleware can't read `localStorage`            | UX-only; must never be treated as security              |
+| 60s in-memory session cache      | Avoids per-request Neon round-trips                  | Revoked tokens valid ≤60s                               |
+| Soft deletes with global uniques | History + audit survive removal                      | Deleted rows keep identifiers; restore checks conflicts |
+| Per-row inserts in imports       | Exact per-row outcomes, transactional                | Slower than `createMany` for huge files                 |
+| No React Query yet               | `useAsync` suffices at this scale                    | Manual refetch wiring                                   |
+
+## 10. Evolution plan
+
+| Phase  | Scope                                                                                   |
+| ------ | --------------------------------------------------------------------------------------- |
+| 1–2 ✅ | Foundation + MVP (auth/RBAC, org, employees, dashboard, CSV, landing)                   |
+| 3 ✅   | Production readiness: security review, health checks, filters, request ids, docs, tests |
+| 4      | AI assistant, predictive analytics, workforce insights                                  |
+| 5      | Reports, notifications, email service, workflow automation                              |
+| 6      | Integrations, billing, multi-tenancy, background jobs                                   |

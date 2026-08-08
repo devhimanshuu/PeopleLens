@@ -88,14 +88,39 @@ keep the web and API models from drifting.
    └───────────────────────────────────────────────────────────┘
 ```
 
-**Authentication flow:** the web app owns sign-in/sign-up via Neon Auth. The API
-validates each request's session token against Neon and maps the confirmed
-identity to a local `User` row — the source of truth for the platform role.
-First-contact provisioning means the very first account to sign in becomes an
-**admin**; every later sign-up is a **viewer** until an admin promotes them.
-Emails listed in the optional `ADMIN_EMAILS` env var are always provisioned (or
-re-promoted) as admins — the durable way to grant specific identities full
-access across environments and reseeds.
+**Authentication flow:** the web app owns sign-in/sign-up via Neon Auth (email/
+password + Google/GitHub). Neon sets HttpOnly session cookies through the
+`/api/auth` proxy; the API validates every request by forwarding the
+`__Secure-neon-auth.session_token` cookie to Neon's `get-session` endpoint (the
+same request pattern the SDK's own proxy uses). The confirmed identity maps to a
+local `User` row — the source of truth for the platform role. First-contact
+provisioning means the very first account to sign in becomes an **admin**; every
+later sign-up is a **viewer** until an admin promotes them. Emails listed in the
+optional `ADMIN_EMAILS` env var are always provisioned (or re-promoted) as
+admins — the durable way to grant specific identities full access across
+environments and reseeds.
+
+### Demo walkthrough (for reviewers)
+
+1. **Start the platform** — `pnpm dev`, then open http://localhost:3000.
+2. **Sign in** — use Google/GitHub, or register with email/password. The seed
+   data is ready on the first sign-in: 10 departments, 8 teams, 42 employees.
+3. **Explore the dashboard** — KPI cards, department/status/gender charts,
+   recent hires, and global slice filters (department/status/gender).
+4. **Browse employees** — search, filter, sort, paginate, open a profile,
+   edit, and soft-delete/restore from the profile banner.
+5. **Import a dataset** — download the CSV template from **CSV Import**, add
+   rows (try one with a bad email and a duplicate code), upload it, and read
+   the import summary with the per-row error report.
+6. **See RBAC in action** — the first account is **Admin** (all menu items).
+   Promote a second account to **Manager** and assign it a department; that
+   account sees only its departments and can only write inside them. A third
+   account stays a **Viewer** — read-only everywhere.
+7. **Audit everything** — as admin, open **Audit Log** (auto-refreshes) to
+   see every create/update/delete/restore/import/role-change with the actor.
+
+> The seeded workspace contains real workforce data, so no reviewer ever lands
+> on an empty dashboard.
 
 ## Repository Structure
 
@@ -248,17 +273,28 @@ numbers it cannot back with data.
 
 ## Testing
 
-Backend unit tests cover the highest-risk business logic:
+Backend unit tests (Jest) cover the highest-risk business logic:
 
 - **RBAC** — role write-gates, department scoping, resource-level checks
 - **Employees** — CRUD, soft delete/restore, unique constraint handling
 - **Dashboard** — manager scoping and slice filters cannot leak outside scope
-- **CSV** — parsing, row-level validation, duplicate detection
-- **Audit** — best-effort recording
-- **Health** — DB-up and degraded states
+- **CSV** — parsing, row-level validation, duplicate detection, the full
+  import pipeline (reference resolution, within-file + DB duplicates,
+  transactional insert, per-row error reports)
+- **Auth** — Neon session validation, bootstrap-admin provisioning
+- **DTO metadata** — regression guard ensuring `design:paramtypes` survives
+  compilation so validation can never be silently disabled again
+- **Audit** — best-effort recording · **Health** — DB-up and degraded states
 
-Run them with `pnpm test`. The GitHub Actions workflow runs
-**typecheck → lint → test → build** on every push and pull request.
+Frontend unit tests (Vitest + Testing Library) cover:
+
+- **Formatting** — locale-independent number/date/relative-time output
+- **RBAC gating** — the `hasMinRole` hierarchy used for UI role checks
+- **Auth form** — sign-in/sign-up rendering, HTML validation attributes,
+  successful submit → dashboard navigation, error display
+
+Run them with `pnpm test` (root runs both apps). The GitHub Actions workflow
+runs **typecheck → lint → test → build** on every push and pull request.
 
 ## Deployment
 

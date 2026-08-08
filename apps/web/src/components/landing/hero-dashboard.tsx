@@ -5,6 +5,7 @@ import { Activity, TrendingUp, Users } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { DepartmentTone, HealthStatus, LiveSignalsSnapshot } from '@peoplelens/types';
 import { fetchHealth, fetchLiveSignals } from '@/lib/api';
+import { formatNumber } from '@/lib/format';
 import { CountUp } from './count-up';
 import { Sparkline } from './sparkline';
 import { EASE_OUT } from './anim';
@@ -335,7 +336,7 @@ export function HeroDashboard() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-5 py-3 text-xs text-muted-foreground/80">
           <p className="flex items-center gap-1.5">
             <Users className="size-3.5 text-indigo-400" aria-hidden />
-            {data.signalsTotal.toLocaleString()} live signals unified across{' '}
+            {formatNumber(data.signalsTotal)} live signals unified across{' '}
             {data.signalsBySource.length} sources
           </p>
           <p className="flex items-center gap-1.5">

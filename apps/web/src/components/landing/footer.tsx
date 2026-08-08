@@ -142,7 +142,11 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-border/40 pt-6 pb-10 sm:flex-row sm:items-center">
-          <p className="text-xs text-muted-foreground/70">
+          {/* `suppressHydrationWarning`: the year is time-dependent — the server
+              renders it at request time and the client at hydration time. They can
+              disagree (a request straddling a year boundary), which is exactly the
+              case React documents for this attribute. The rest of the tree is stable. */}
+          <p className="text-xs text-muted-foreground/70" suppressHydrationWarning>
             © {new Date().getFullYear()} PeopleLens. All rights reserved.
           </p>
           <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs text-muted-foreground">

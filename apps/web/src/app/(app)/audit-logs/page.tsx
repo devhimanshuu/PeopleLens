@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { api } from '@/lib/api';
-import { formatRelative } from '@/lib/format';
+import { formatDateTime, formatRelative, formatTime } from '@/lib/format';
 
 const PAGE_SIZE = 25;
 
@@ -162,7 +162,7 @@ export default function AuditLogsPage() {
             {lastUpdated ? (
               <span
                 className="hidden text-xs text-muted-foreground sm:inline"
-                title={`Last refreshed ${lastUpdated.toLocaleTimeString()}`}
+                title={`Last refreshed ${formatTime(lastUpdated)}`}
               >
                 Updated {formatRelative(lastUpdated.toISOString())}
               </span>
@@ -256,7 +256,7 @@ export default function AuditLogsPage() {
                     <TableRow key={log.id}>
                       <TableCell
                         className="whitespace-nowrap text-sm text-muted-foreground"
-                        title={new Date(log.createdAt).toLocaleString()}
+                        title={formatDateTime(log.createdAt)}
                       >
                         {formatRelative(log.createdAt)}
                       </TableCell>

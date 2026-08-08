@@ -21,11 +21,14 @@ export type IsoDate = string;
 
 /** Shape returned by `GET /api/health`. */
 export interface HealthStatus {
-  status: 'ok';
+  /** `degraded` when a backing dependency (Postgres) is unreachable. */
+  status: 'ok' | 'degraded';
   service: string;
   version: string;
   timestamp: IsoDate;
   uptimeSeconds: number;
+  /** Database connectivity: `up` when `SELECT 1` succeeds. */
+  db: 'up' | 'down';
 }
 
 /** Brand tone used by the department breakdown visualization. */
@@ -95,6 +98,8 @@ export interface ApiErrorResponse {
   error: string;
   /** Request path that produced the error. */
   path: string;
+  /** Correlation id — matches the server-side `X-Request-Id` header. */
+  requestId?: string;
   /** Optional machine-readable detail (e.g. DTO validation messages). */
   details?: unknown;
 }
@@ -307,6 +312,18 @@ export interface DistributionSlice {
   value: number;
 }
 
+/**
+ * Optional dashboard slice filters — applied server-side so scoping stays
+ * authoritative. `departmentId`/`teamId` for managers are intersected with
+ * their assigned scope.
+ */
+export interface DashboardFilters {
+  departmentId?: string;
+  teamId?: string;
+  status?: EmployeeStatus;
+  gender?: Gender;
+}
+
 /** Aggregated KPI + distribution payload for the analytics dashboard. */
 export interface DashboardOverview {
   kpis: {
@@ -316,6 +333,8 @@ export interface DashboardOverview {
     totalManagers: number;
     totalTeams: number;
   };
+  /** Department options for the filter UI (id + name), already scope-aware. */
+  departments: Array<Pick<Department, 'id' | 'name'>>;
   departmentDistribution: DistributionSlice[];
   employeeStatus: DistributionSlice[];
   genderDistribution: DistributionSlice[];

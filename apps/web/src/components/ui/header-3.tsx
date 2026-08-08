@@ -238,10 +238,19 @@ export function Header() {
             <ThemeToggle />
             {session ? (
               <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+                <span
+                  className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300"
+                  title={session.user.email}
+                >
                   <span className="size-1.5 rounded-full bg-emerald-400" />
                   {session.user.name || session.user.email}
                 </span>
+                <Button size="sm" className="group relative overflow-hidden" asChild>
+                  <Link href="/dashboard">
+                    <span aria-hidden className="btn-shine absolute inset-0" />
+                    <span className="relative">Open dashboard</span>
+                  </Link>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -306,17 +315,24 @@ export function Header() {
           </NavigationMenu>
           <div className="flex flex-col gap-2">
             {session ? (
-              <Button
-                variant="outline"
-                className="w-full bg-transparent"
-                onClick={async () => {
-                  await signOutNeon();
-                  setSession(null);
-                  setOpen(false);
-                }}
-              >
-                Sign Out ({session.user.name || session.user.email})
-              </Button>
+              <>
+                <Button className="w-full" asChild>
+                  <Link href="/dashboard" onClick={() => setOpen(false)}>
+                    Open dashboard
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  onClick={async () => {
+                    await signOutNeon();
+                    setSession(null);
+                    setOpen(false);
+                  }}
+                >
+                  Sign Out ({session.user.name || session.user.email})
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="outline" className="w-full bg-transparent" asChild>

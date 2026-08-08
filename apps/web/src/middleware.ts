@@ -15,8 +15,24 @@ import { type NextRequest, NextResponse } from 'next/server';
  *
  * NOTE: the marker cookie is a UX guard, not a security boundary — it mirrors
  * the Neon session client-side. The API enforces real RBAC on every request.
+ *
+ * OAuth callback handling: after a Google/GitHub round-trip Neon Auth lands
+ * the browser back on the app with a `neon_auth_session_verifier` query
+ * param. The client must call `getSession()` while that param is in the URL
+ * to complete the handshake, so:
+ *  - protected routes carrying the verifier are allowed through (the
+ *    workspace's AuthProvider performs the sync), and
+ *  - if we must redirect to /signin, the verifier is preserved so the
+ *    sign-in page's session-sync effect can finish the job.
  */
 const SESSION_COOKIE_KEY = 'peoplelens_session';
+
+/**
+ * Query param Neon Auth appends to the callback URL after OAuth sign-in.
+ * Matches `NEON_AUTH_SESSION_VERIFIER_PARAM_NAME` in @neondatabase/auth — if
+ * the SDK ever renames it, update both sides together.
+ */
+const SESSION_VERIFIER_PARAM = 'neon_auth_session_verifier';
 
 const APP_ROUTES = [
   '/dashboard',
@@ -37,10 +53,16 @@ export function middleware(request: NextRequest): NextResponse {
   if (pathname === '/') {
     // Signed-in visitors get the workspace, not the marketing site. (The
     // marker cookie is only set by client-side JS, so a fresh OAuth callback
-    // lands here before it exists — /signin's session-sync effect then
+    // lands here before it exists — the landing page's session-sync then
     // completes the hop to the dashboard.)
     if (sessionCookie && !isExpired(sessionCookie)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      // Preserve a fresh OAuth session verifier even when an old marker
+      // cookie is still valid (e.g. switching accounts) so the new session
+      // is actually consumed by the workspace's AuthProvider.
+      const url = new URL('/dashboard', request.url);
+      const verifier = request.nextUrl.searchParams.get(SESSION_VERIFIER_PARAM);
+      if (verifier) url.searchParams.set(SESSION_VERIFIER_PARAM, verifier);
+      return NextResponse.redirect(url);
     }
     return NextResponse.next();
   }
@@ -53,11 +75,22 @@ export function middleware(request: NextRequest): NextResponse {
   }
 
   if (APP_ROUTES.includes(pathname)) {
+    const hasSessionVerifier = request.nextUrl.searchParams.has(SESSION_VERIFIER_PARAM);
     if (!sessionCookie || isExpired(sessionCookie)) {
+      // A fresh OAuth callback carries the session verifier — let the client
+      // complete the handshake (AuthProvider -> getSession) instead of
+      // bouncing, and never drop the verifier on a /signin redirect.
+      if (hasSessionVerifier) return NextResponse.next();
       const url = new URL('/signin', request.url);
       url.searchParams.set('next', pathname);
+      const verifier = request.nextUrl.searchParams.get(SESSION_VERIFIER_PARAM);
+      if (verifier) url.searchParams.set(SESSION_VERIFIER_PARAM, verifier);
       return NextResponse.redirect(url);
     }
+    // Note: the verifier pass-through above skips the admin-only check — the
+    // role is resolved client-side after the handshake. That's fine: this
+    // middleware is a UX guard, not a security boundary (the API enforces
+    // real RBAC), and OAuth callbacks always target /dashboard anyway.
     if (ADMIN_ONLY_ROUTES.includes(pathname) && !hasRole(sessionCookie, 'admin')) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }

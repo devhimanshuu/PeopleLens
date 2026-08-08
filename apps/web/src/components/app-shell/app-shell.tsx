@@ -114,7 +114,7 @@ const ROLE_LABEL: Record<string, string> = {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { role, profile, initializing, signOut } = useAuth();
+  const { role, profile, initializing, profileError, refreshProfile, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -124,6 +124,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const roleType = role ?? 'viewer';
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/');
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -240,27 +245,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="h-2.5 w-16 rounded bg-muted-foreground/15" />
                 </div>
               ) : profile ? (
-                <div className="flex items-center gap-3 rounded-lg p-2">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-xs font-bold text-white">
-                    {initials(profile.name || profile.email)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{profile.name}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {ROLE_LABEL[profile.role] ?? profile.role}
-                    </p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 rounded-lg p-2">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-xs font-bold text-white">
+                      {initials(profile.name || profile.email)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{profile.name}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {ROLE_LABEL[profile.role] ?? profile.role}
+                      </p>
+                    </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      void signOut();
-                      router.replace('/');
-                    }}
-                    aria-label="Sign out"
+                    onClick={() => void handleSignOut()}
+                    aria-label="Sign out of PeopleLens"
                     title="Sign out"
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <LogOut className="size-4" aria-hidden />
+                    Sign out
+                  </button>
+                </div>
+              ) : profileError ? (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                  <p className="text-[11px] leading-relaxed text-destructive">
+                    {'Could not load your profile — '}
+                    {profileError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void refreshProfile()}
+                    className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Retry
                   </button>
                 </div>
               ) : null}

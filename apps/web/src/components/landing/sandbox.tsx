@@ -5,6 +5,7 @@ import { Activity, RefreshCw, ShieldCheck, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { HealthStatus, LiveSignalsSnapshot } from '@peoplelens/types';
 import { fetchHealth, fetchLiveSignals } from '@/lib/api';
+import { formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { EASE_OUT } from './anim';
 import { GlowOrb, GridPattern, NoiseOverlay } from './decor';
@@ -149,7 +150,7 @@ export function Sandbox() {
               <h2 className="text-sm font-semibold text-foreground">Signals by source</h2>
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Activity className="size-3.5 text-cyan-400" aria-hidden />
-                {totalSignals.toLocaleString()} total
+                {formatNumber(totalSignals)} total
               </p>
             </div>
             <div className="mt-5 space-y-4">
@@ -158,7 +159,7 @@ export function Sandbox() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-foreground/80">{source.source}</span>
                     <span className="text-muted-foreground/80">
-                      {source.count.toLocaleString()} ·{' '}
+                      {formatNumber(source.count)} ·{' '}
                       {((source.count / totalSignals) * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -193,8 +194,8 @@ export function Sandbox() {
               </li>
               <li className="flex gap-2.5">
                 <Activity className="mt-0.5 size-4 shrink-0 text-indigo-400" aria-hidden />
-                {data.headcount.toLocaleString()} employees monitored across{' '}
-                {data.departments.length} departments
+                {formatNumber(data.headcount)} employees monitored across {data.departments.length}{' '}
+                departments
               </li>
               <li className="flex gap-2.5">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-cyan-400" aria-hidden />

@@ -154,6 +154,9 @@ export async function signInWithEmail(
     const { data, error } = await authClient.signIn.email({ email, password });
     if (error) return { error: error.message || 'Failed to sign in' };
     if (!data?.user) return { error: 'Failed to sign in' };
+    // The SDK returns the session token top-level on email sign-in
+    // (`{ token, user }`); `session` only exists on getSession responses.
+    if (!data.token) return { error: 'Failed to sign in' };
     const session = toNeonSession(data.user, data.token);
     setStoredSession(session);
     return { session };

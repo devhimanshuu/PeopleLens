@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { api, ApiClientError, downloadAuthenticated } from '@/lib/api';
-import { formatDate, formatRelative } from '@/lib/format';
+import { formatDate, formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export default function ImportsPage() {
@@ -174,23 +174,23 @@ export default function ImportsPage() {
         <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <SummaryCard
             label="Total rows"
-            value={result.totalRows.toLocaleString()}
+            value={formatNumber(result.totalRows)}
             tone="text-foreground"
           />
           <SummaryCard
             label="Imported"
-            value={result.successCount.toLocaleString()}
+            value={formatNumber(result.successCount)}
             tone="text-emerald-500"
             icon={<CheckCircle2 className="size-4 text-emerald-500" aria-hidden />}
           />
           <SummaryCard
             label="Duplicates"
-            value={result.duplicateCount.toLocaleString()}
+            value={formatNumber(result.duplicateCount)}
             tone="text-amber-500"
           />
           <SummaryCard
             label="Failed"
-            value={result.failedCount.toLocaleString()}
+            value={formatNumber(result.failedCount)}
             tone="text-rose-500"
             icon={<XCircle className="size-4 text-rose-500" aria-hidden />}
           />

@@ -15,6 +15,8 @@ import {
   CartesianGrid,
 } from 'recharts';
 import type { LucideIcon } from 'lucide-react';
+// Value import for formatting — grouped with the other app imports below.
+import { formatNumber } from '@/lib/format';
 
 const CHART_COLORS = [
   '#6366f1',
@@ -55,7 +57,7 @@ export function KpiCard({
         </span>
       </div>
       <p className="mt-3 font-display text-3xl font-semibold tracking-tight text-foreground">
-        {value.toLocaleString()}
+        {formatNumber(value)}
       </p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
@@ -115,7 +117,7 @@ function ChartTooltip({
       <p className="font-medium text-foreground">{label}</p>
       {payload.map((entry, index) => (
         <p key={index} className="mt-0.5 text-muted-foreground">
-          <span className="font-medium text-foreground">{entry.value.toLocaleString()}</span>{' '}
+          <span className="font-medium text-foreground">{formatNumber(entry.value)}</span>{' '}
           {entry.name}
         </p>
       ))}
@@ -131,7 +133,7 @@ export function DepartmentDistributionChart({ data }: { data: DistributionSlice[
     );
   }
   return (
-    <div className="h-64 w-full">
+    <div className="h-64 w-full" role="img" aria-label="Department distribution bar chart">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid horizontal={false} stroke="var(--border)" strokeDasharray="3 3" />
@@ -172,7 +174,11 @@ export function DistributionDonut({ data, title }: { data: DistributionSlice[]; 
     );
   }
   return (
-    <div className="flex h-64 flex-col items-center">
+    <div
+      className="flex h-64 flex-col items-center"
+      role="img"
+      aria-label={`${title} distribution donut chart`}
+    >
       <div className="relative h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -194,7 +200,7 @@ export function DistributionDonut({ data, title }: { data: DistributionSlice[]; 
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-display text-2xl font-semibold text-foreground">
-            {total.toLocaleString()}
+            {formatNumber(total)}
           </span>
           <span className="text-[11px] uppercase tracking-wide text-muted-foreground">total</span>
         </div>
@@ -208,9 +214,7 @@ export function DistributionDonut({ data, title }: { data: DistributionSlice[]; 
               aria-hidden
             />
             <span className="truncate">{slice.name}</span>
-            <span className="ml-auto font-medium text-foreground">
-              {slice.value.toLocaleString()}
-            </span>
+            <span className="ml-auto font-medium text-foreground">{formatNumber(slice.value)}</span>
           </li>
         ))}
       </ul>

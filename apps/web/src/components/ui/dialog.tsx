@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +37,10 @@ export function Dialog({
   size = 'md',
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const titleId = useRef(`dialog-title-${Math.random().toString(36).slice(2)}`).current;
+  // `useId` is hydration-safe (React generates a matching id on server and
+  // client for the same tree position) — unlike Math.random(), whose value
+  // would differ between the SSR render and the client's first render.
+  const titleId = `dialog-title-${useId()}`;
 
   useEffect(() => {
     if (!open) return;

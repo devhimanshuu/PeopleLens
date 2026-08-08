@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -46,7 +47,18 @@ const ICON_COLORS: Record<ToastVariant, string> = {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [mounted, setMounted] = useState(false);
   const nextId = useRef(1);
+
+  // The toasts mount into a portal on `document.body`, which does not exist
+  // during SSR. Rendering the portal on the client's *first* render while the
+  // server HTML has nothing there would fail hydration (React expects the
+  // hydrated tree to match). Flipping `mounted` in an effect guarantees both
+  // the server and the initial client render produce `null`, and the portal
+  // appears only after hydration completes.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     setToasts((current) => current.filter((t) => t.id !== id));
@@ -75,7 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {typeof document !== 'undefined'
+      {mounted
         ? createPortal(
             <div
               aria-live="polite"
