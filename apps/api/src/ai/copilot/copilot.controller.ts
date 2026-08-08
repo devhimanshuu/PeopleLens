@@ -1,5 +1,17 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Sse,
+} from '@nestjs/common';
+import type { MessageEvent } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Observable } from 'rxjs';
 import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
@@ -22,6 +34,20 @@ export class CopilotController {
   })
   chat(@CurrentUser() user: RequestUser, @Body() dto: CopilotChatDto) {
     return this.copilot.chat(user, dto);
+  }
+
+  @Post('chat/stream')
+  @Sse('chat/stream')
+  @ApiOperation({
+    summary: 'Ask the Workforce Copilot a question with real-time SSE streaming',
+    description:
+      'Emits real-time SSE events (tokens, tool_start, tool_result, done) as the answer generates.',
+  })
+  chatStream(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: CopilotChatDto,
+  ): Observable<MessageEvent> {
+    return this.copilot.chatStream(user, dto) as unknown as Observable<MessageEvent>;
   }
 
   @Get('capabilities')

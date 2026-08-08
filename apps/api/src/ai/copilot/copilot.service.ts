@@ -8,6 +8,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { Observable, Subject } from 'rxjs';
 import Joi from 'joi';
 import type {
   CopilotCapabilities,
@@ -194,7 +195,127 @@ export class CopilotService {
       }),
       execution.suggestions,
       execution.limitations ?? [],
+      execution.data,
     );
+  }
+
+  /** Real-time event streaming turn over Server-Sent Events (SSE). */
+  chatStream(
+    user: RequestUser,
+    dto: CopilotChatRequest,
+  ): Observable<{ data: Record<string, unknown> }> {
+    const subject = new Subject<{ data: Record<string, unknown> }>();
+
+    (async () => {
+      try {
+        const started = Date.now();
+        this.metrics.recordRequestStarted();
+
+        if (!this.provider.isConfigured()) {
+          throw this.fail('unconfigured', started);
+        }
+
+        const message = dto.message?.trim() ?? '';
+        if (!message) {
+          throw new BadRequestException('Please enter a question for the copilot.');
+        }
+
+        const decision = this.rateLimiter.check(user.sub);
+        if (!decision.allowed) {
+          this.metrics.recordRateLimited();
+          throw new HttpException(
+            `You have reached the copilot request limit. Please try again in ${decision.retryAfterSeconds}s.`,
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+
+        const conversation = await this.resolveConversation(user, dto.conversationId);
+        const history = await this.loadHistory(conversation.id);
+        const available = this.tools.availableFor(user);
+        const context = await this.tools.buildPlanningContext(user);
+
+        const { plan, provider, model } = await this.plan(
+          available,
+          context.departments,
+          history,
+          message,
+        );
+
+        if (plan.intent === 'tool' && plan.tool) {
+          subject.next({ data: { type: 'tool_start', toolName: plan.tool } });
+        }
+
+        let response: CopilotResponse;
+        const tool = plan.tool ? this.tools.find(plan.tool) : undefined;
+        if (tool && plan.intent === 'tool') {
+          const { value: args } = tool.inputSchema.validate(plan.arguments ?? {}, {
+            abortEarly: false,
+          });
+          const execution = await tool.execute(user, args ?? {});
+          subject.next({
+            data: {
+              type: 'tool_result',
+              toolName: tool.name,
+              data: execution.data,
+              deepLinks: execution.deepLinks,
+              suggestions: execution.suggestions,
+            },
+          });
+
+          const grounded = await this.ground(message, tool.name, execution);
+          await this.saveTurn(conversation.id, message, grounded.answer, tool.name);
+
+          response = this.responseFor(
+            conversation.id,
+            grounded.answer,
+            execution.deepLinks,
+            this.provenance(tool.name, execution, {
+              provider: grounded.provider ?? provider,
+              model: grounded.model ?? model,
+            }),
+            execution.suggestions,
+            execution.limitations ?? [],
+            execution.data,
+          );
+        } else {
+          const answer =
+            plan.intent === 'refuse'
+              ? plan.refusal?.trim() || FALLBACK_ANSWER
+              : plan.answer?.trim() || FALLBACK_ANSWER;
+
+          await this.saveTurn(conversation.id, message, answer);
+          response = this.responseFor(
+            conversation.id,
+            answer,
+            [],
+            this.provenance(undefined, undefined, { provider, model }),
+            FALLBACK_SUGGESTIONS,
+          );
+        }
+
+        // Stream answer token by token
+        const words = response.answer.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          const chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+          subject.next({ data: { type: 'token', content: chunk } });
+          await new Promise((r) => setTimeout(r, 15));
+        }
+
+        subject.next({ data: { type: 'done', response } });
+        this.metrics.recordSuccess(
+          Date.now() - started,
+          response.provenance.toolUsed,
+          response.provenance.provider,
+        );
+        subject.complete();
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        subject.next({ data: { type: 'error', error: errorMsg } });
+        subject.complete();
+      }
+    })();
+
+    return subject.asObservable();
   }
 
   // ── LLM calls ──────────────────────────────────────────────────────────────
@@ -313,7 +434,12 @@ export class CopilotService {
         data: { conversationId, role: 'user', content: userMessage },
       }),
       this.prisma.aiMessage.create({
-        data: { conversationId, role: 'assistant', content: answer, toolName: toolName ?? null },
+        data: {
+          conversationId,
+          role: 'assistant',
+          content: answer,
+          toolName: toolName ?? null,
+        },
       }),
       this.prisma.aiConversation.update({
         where: { id: conversationId },
@@ -374,6 +500,7 @@ export class CopilotService {
     provenance: CopilotProvenance,
     suggestions: string[],
     limitations: string[] = [],
+    toolData?: unknown,
   ): CopilotResponse {
     return {
       conversationId,
@@ -382,6 +509,7 @@ export class CopilotService {
       provenance,
       limitations,
       suggestions,
+      toolData,
       createdAt: new Date().toISOString(),
     };
   }

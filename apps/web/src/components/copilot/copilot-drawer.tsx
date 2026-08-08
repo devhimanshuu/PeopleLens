@@ -1,9 +1,8 @@
-'use client';
-
-import type { CopilotDeepLink, CopilotMessageView, CopilotResponse } from '@peoplelens/types';
+import type { CopilotDeepLink, CopilotMessageView, CopilotStreamEvent } from '@peoplelens/types';
 import { Bot, Copy, Loader2, Send, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiClientError } from '@/lib/api';
@@ -11,7 +10,7 @@ import {
   clearCopilotConversation,
   fetchCopilotCapabilities,
   fetchCopilotConversation,
-  sendCopilotMessage,
+  streamCopilotMessage,
 } from '@/lib/copilot-api';
 import { cn } from '@/lib/utils';
 import { useCopilot } from './copilot-context';
@@ -21,6 +20,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   toolName?: string | null;
+  toolData?: unknown;
   provider?: string;
   model?: string;
   deepLinks?: CopilotDeepLink[];
@@ -42,6 +42,7 @@ export function CopilotDrawer() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
@@ -106,6 +107,7 @@ export function CopilotDrawer() {
       sendingRef.current = true;
       setBusy(true);
       setError(null);
+      setActiveTool(null);
 
       const userMessage: ChatMessage = {
         id: `local-${Date.now()}`,
@@ -113,32 +115,77 @@ export function CopilotDrawer() {
         content: question,
         createdAt: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, userMessage]);
+
+      const assistantMsgId = `resp-${Date.now()}`;
+      const initialAssistantMessage: ChatMessage = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, userMessage, initialAssistantMessage]);
       setInput('');
 
       try {
-        const response: CopilotResponse = await sendCopilotMessage({
-          message: question,
-          conversationId: conversationId ?? undefined,
-        });
-        setConversationId(response.conversationId);
-        window.localStorage.setItem(CONVERSATION_KEY, response.conversationId);
-        setMessages((prev) => [
-          ...prev,
+        await streamCopilotMessage(
           {
-            id: `resp-${Date.now()}`,
-            role: 'assistant',
-            content: response.answer,
-            toolName: response.provenance.toolUsed,
-            provider: response.provenance.provider,
-            model: response.provenance.model,
-            deepLinks: response.deepLinks,
-            suggestions: response.suggestions,
-            createdAt: response.createdAt,
+            message: question,
+            conversationId: conversationId ?? undefined,
           },
-        ]);
-        setSuggestions(
-          response.suggestions.length > 0 ? response.suggestions : DEFAULT_SUGGESTIONS,
+          (event: CopilotStreamEvent) => {
+            if (event.type === 'tool_start') {
+              setActiveTool(event.toolName);
+            } else if (event.type === 'tool_result') {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        toolName: event.toolName,
+                        toolData: event.data,
+                        deepLinks: event.deepLinks,
+                        suggestions: event.suggestions,
+                      }
+                    : m,
+                ),
+              );
+              if (event.suggestions?.length) {
+                setSuggestions(event.suggestions);
+              }
+            } else if (event.type === 'token') {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId ? { ...m, content: m.content + event.content } : m,
+                ),
+              );
+            } else if (event.type === 'done') {
+              setConversationId(event.response.conversationId);
+              window.localStorage.setItem(CONVERSATION_KEY, event.response.conversationId);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        content: event.response.answer,
+                        toolName: event.response.provenance.toolUsed,
+                        provider: event.response.provenance.provider,
+                        model: event.response.provenance.model,
+                        deepLinks: event.response.deepLinks,
+                        suggestions: event.response.suggestions,
+                        toolData: event.response.toolData,
+                      }
+                    : m,
+                ),
+              );
+              if (event.response.suggestions?.length) {
+                setSuggestions(event.response.suggestions);
+              }
+              setActiveTool(null);
+            } else if (event.type === 'error') {
+              setError(event.error);
+            }
+          },
         );
       } catch (err) {
         const message =
@@ -146,10 +193,13 @@ export function CopilotDrawer() {
             ? err.message
             : 'PeopleLens Copilot is temporarily unavailable.';
         setError(message);
-        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== userMessage.id && m.id !== assistantMsgId),
+        );
       } finally {
         sendingRef.current = false;
         setBusy(false);
+        setActiveTool(null);
       }
     },
     [busy, conversationId, input],
@@ -261,7 +311,7 @@ export function CopilotDrawer() {
                   onCopy={() => void copyMessage(message.content)}
                 />
               ))}
-              {busy ? <ThinkingBubble /> : null}
+              {busy ? <ThinkingBubble activeTool={activeTool} /> : null}
             </div>
           )}
 
@@ -406,13 +456,15 @@ function EmptyState({
   );
 }
 
-function ThinkingBubble() {
+function ThinkingBubble({ activeTool }: { activeTool?: string | null }) {
   return (
     <div className="flex items-end gap-2">
       <BotAvatar />
       <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-border/60 bg-muted/40 px-3 py-2.5">
         <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden />
-        <span className="text-[13px] text-muted-foreground">Analyzing workforce data…</span>
+        <span className="text-[13px] text-muted-foreground">
+          {activeTool ? `Executing tool: ${activeTool}…` : 'Analyzing workforce data…'}
+        </span>
       </div>
     </div>
   );
@@ -424,6 +476,130 @@ function BotAvatar() {
       <Sparkles className="size-3.5" aria-hidden />
     </span>
   );
+}
+
+function GenerativeUIWidget({
+  toolName,
+  toolData,
+}: {
+  toolName?: string | null;
+  toolData?: unknown;
+}) {
+  if (!toolData || !toolName) return null;
+
+  const dataObj = toolData as Record<string, unknown>;
+
+  if (toolName === 'compareDepartments' && Array.isArray(dataObj.comparison)) {
+    const list = dataObj.comparison as Array<{
+      department: string;
+      headcount: number;
+      attritionRate: number;
+      overtimeRate: number;
+    }>;
+    return (
+      <div className="mt-3 rounded-xl border border-indigo-500/25 bg-indigo-950/20 p-3 shadow-sm">
+        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-400">
+          <Sparkles className="size-3" /> Visual Department Comparison
+        </p>
+        <div className="h-44 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={list} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <XAxis dataKey="department" tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0f172a',
+                  borderColor: '#334155',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#f8fafc',
+                }}
+              />
+              <Bar dataKey="headcount" name="Headcount" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="attritionRate"
+                name="Attrition %"
+                fill="#f43f5e"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar dataKey="overtimeRate" name="Overtime %" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
+  if (toolName === 'getWorkforceOverview' && dataObj.overview) {
+    const overview = dataObj.overview as {
+      headcount: number;
+      active: number;
+      attritionRate: number;
+      overtimeRate: number;
+    };
+    return (
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-border/80 bg-background/80 p-2.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Total Headcount
+          </p>
+          <p className="text-lg font-bold text-foreground">{overview.headcount ?? 0}</p>
+        </div>
+        <div className="rounded-lg border border-border/80 bg-background/80 p-2.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Active Employees
+          </p>
+          <p className="text-lg font-bold text-emerald-500">{overview.active ?? 0}</p>
+        </div>
+        <div className="rounded-lg border border-border/80 bg-background/80 p-2.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Attrition Rate
+          </p>
+          <p className="text-lg font-bold text-rose-500">{overview.attritionRate ?? 0}%</p>
+        </div>
+        <div className="rounded-lg border border-border/80 bg-background/80 p-2.5 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Overtime Rate
+          </p>
+          <p className="text-lg font-bold text-cyan-500">{overview.overtimeRate ?? 0}%</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (toolName === 'searchEmployees' && Array.isArray(dataObj.employees)) {
+    const employees = (
+      dataObj.employees as Array<{ id: string; name: string; title: string; department: string }>
+    ).slice(0, 4);
+    return (
+      <div className="mt-3 space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Matching Employee Cohort ({employees.length})
+        </p>
+        <div className="grid grid-cols-1 gap-1.5">
+          {employees.map((emp) => (
+            <Link
+              key={emp.id}
+              href={`/employees/${emp.id}`}
+              className="flex items-center justify-between rounded-lg border border-border/70 bg-background/80 px-3 py-2 text-xs transition-colors hover:border-primary/50"
+            >
+              <div>
+                <p className="font-semibold text-foreground">{emp.name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {emp.title} · {emp.department}
+                </p>
+              </div>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                View
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function MessageBubble({ message, onCopy }: { message: ChatMessage; onCopy: () => void }) {
@@ -445,6 +621,8 @@ function MessageBubble({ message, onCopy }: { message: ChatMessage; onCopy: () =
           <div className="copilot-markdown text-sm leading-relaxed text-foreground">
             <Markdown text={message.content} />
           </div>
+
+          <GenerativeUIWidget toolName={message.toolName} toolData={message.toolData} />
 
           {message.deepLinks && message.deepLinks.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-2.5">

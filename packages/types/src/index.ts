@@ -573,6 +573,8 @@ export interface CopilotResponse {
   limitations: string[];
   /** Deterministic follow-up questions for this answer. */
   suggestions: string[];
+  /** Raw structured data returned by tool for Generative UI rendering. */
+  toolData?: unknown;
   createdAt: IsoDate;
 }
 
@@ -589,8 +591,23 @@ export interface CopilotMessageView {
   role: 'user' | 'assistant';
   content: string;
   toolName?: string | null;
+  toolData?: unknown;
   createdAt: IsoDate;
 }
+
+/** Real-time SSE streaming events emitted by the Copilot API. */
+export type CopilotStreamEvent =
+  | { type: 'token'; content: string }
+  | { type: 'tool_start'; toolName: string }
+  | {
+      type: 'tool_result';
+      toolName: string;
+      data: unknown;
+      deepLinks: CopilotDeepLink[];
+      suggestions: string[];
+    }
+  | { type: 'done'; response: CopilotResponse }
+  | { type: 'error'; error: string };
 
 /** One provider in the copilot's fallback chain. */
 export interface CopilotProviderInfo {
