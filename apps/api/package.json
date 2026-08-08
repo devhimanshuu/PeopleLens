@@ -29,7 +29,7 @@
     "@nestjs/swagger": "^11.4.6",
     "@nestjs/throttler": "^6.5.0",
     "@peoplelens/types": "workspace:*",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^7.9.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "compression": "^1.8.1",
