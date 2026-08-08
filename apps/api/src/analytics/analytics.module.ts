@@ -11,5 +11,7 @@ import { AnalyticsService } from './analytics.service';
 @Module({
   controllers: [AnalyticsController],
   providers: [AnalyticsService, AnalyticsRepository],
+  // Exported so the AI Copilot can call the analytics engine as a trusted tool.
+  exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 // Value import, not `type`: Reflector is a Nest-provided DI token resolved
 // from emitted decorator metadata (`design:paramtypes`).
-import { type Reflector } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { type NeonAuthService } from '@app/auth/neon-auth.service';
+import { NeonAuthService } from '@app/auth/neon-auth.service';
 import { IS_PUBLIC_KEY, REQUEST_USER_KEY } from '../constants/app.constants';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import type { RequestUser } from '../interfaces/request-user.interface';

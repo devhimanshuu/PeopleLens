@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { HealthStatus } from '@peoplelens/types';
-import { type PrismaService } from '@app/database/prisma.service';
+import { PrismaService } from '@app/database/prisma.service';
 
 @Injectable()
 export class AppService {

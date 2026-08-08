@@ -24,11 +24,11 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CurrentUser } from '@app/common/decorators/current-user.decorator';
-import { type PaginationDto } from '@app/common/dto/pagination.dto';
+import { PaginationDto } from '@app/common/dto/pagination.dto';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type ImportsService } from './imports.service';
+import { ImportsService } from './imports.service';
 
 /** CSV bulk import — upload, history, error reports and template. */
 @ApiTags('Imports')

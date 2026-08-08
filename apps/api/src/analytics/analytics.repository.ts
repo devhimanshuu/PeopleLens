@@ -7,7 +7,7 @@ import type {
   OrgHierarchy,
   OrgHierarchyNode,
 } from '@peoplelens/types';
-import { type PrismaService } from '@app/database/prisma.service';
+import { PrismaService } from '@app/database/prisma.service';
 import { buildAnalyticsWhere } from '@app/common/utils/analytics.util';
 
 /** Employee projection the analytics engine reads — nothing more. */

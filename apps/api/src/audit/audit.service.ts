@@ -7,7 +7,7 @@ import type {
   JsonValue,
   Paginated,
 } from '@peoplelens/types';
-import { type PrismaService } from '@app/database/prisma.service';
+import { PrismaService } from '@app/database/prisma.service';
 import type { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 
 /** Entity types that can be audited. */

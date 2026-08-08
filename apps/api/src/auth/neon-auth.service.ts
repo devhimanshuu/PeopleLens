@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { type ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import type { User } from '@prisma/client';
-import { type PrismaService } from '@app/database/prisma.service';
+import { PrismaService } from '@app/database/prisma.service';
 import type { Role } from '@app/common/enums/role.enum';
 
 /** Session cache entry: the principal we attach to the request. */

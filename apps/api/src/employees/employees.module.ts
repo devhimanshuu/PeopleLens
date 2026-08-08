@@ -6,5 +6,7 @@ import { EmployeesService } from './employees.service';
 @Module({
   controllers: [EmployeesController],
   providers: [EmployeesService],
+  // Exported so the AI Copilot can search employees as a trusted, RBAC-scoped tool.
+  exports: [EmployeesService],
 })
 export class EmployeesModule {}

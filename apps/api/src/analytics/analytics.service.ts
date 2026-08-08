@@ -17,7 +17,7 @@ import type {
 } from '@peoplelens/types';
 import { AGE_GROUPS, TENURE_GROUPS } from '@peoplelens/types';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type RbacService } from '@app/common/services/rbac.service';
+import { RbacService } from '@app/common/services/rbac.service';
 import {
   ageGroupOf,
   average,
@@ -27,7 +27,7 @@ import {
   tenureYears,
 } from '@app/common/utils/analytics.util';
 import {
-  type AnalyticsRepository,
+  AnalyticsRepository,
   type AnalyticsEmployeeRow,
   type LastImportRow,
 } from './analytics.repository';

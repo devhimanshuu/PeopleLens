@@ -5,10 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { User } from '@peoplelens/types';
-import { type AuditService } from '@app/audit/audit.service';
+import { AuditService } from '@app/audit/audit.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type PrismaService } from '@app/database/prisma.service';
-import { type UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { PrismaService } from '@app/database/prisma.service';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 
 /**
  * User management — profile, admin-only listing and role assignment.

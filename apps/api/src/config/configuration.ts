@@ -25,6 +25,30 @@ export interface AppConfig {
     /** Maximum requests per key per window. */
     max: number;
   };
+  /** AI Copilot (Phase 5) — provider chain + cost controls. */
+  ai: {
+    /** Primary provider name: openai | groq | openrouter. */
+    provider: string;
+    /** Empty when not configured — the copilot reports "unavailable" instead of failing the dashboard. */
+    apiKey: string;
+    /** Empty → provider-specific free-model default (see CopilotConfig). */
+    model: string;
+    /** Empty → provider-specific default endpoint (see CopilotConfig). */
+    baseUrl: string;
+    /** Fallback providers (OpenAI-compatible), tried after the primary. */
+    groq: { apiKey: string; model: string; baseUrl: string };
+    openrouter: { apiKey: string; model: string; baseUrl: string };
+    /** Per-user copilot requests per minute (sliding window). */
+    requestsPerMinute: number;
+    /** Longest accepted user message (chars) — input cost control. */
+    maxInputChars: number;
+    /** Provider call timeout in ms. */
+    timeoutMs: number;
+    /** Transient-failure retries per provider call. */
+    maxRetries: number;
+    /** Max tokens per completion. */
+    maxTokens: number;
+  };
   /** Trust X-Forwarded-For from loopback proxies (behind a reverse proxy). */
   trustProxy: boolean;
   swagger: {
@@ -60,6 +84,30 @@ export default (): AppConfig => ({
   rateLimit: {
     ttlMs: Number.parseInt(process.env.RATE_LIMIT_TTL_MS ?? '60000', 10),
     max: Number.parseInt(process.env.RATE_LIMIT_MAX ?? '120', 10),
+  },
+  ai: {
+    provider: (process.env.AI_PROVIDER ?? 'openai').trim().toLowerCase(),
+    apiKey: process.env.AI_API_KEY ?? '',
+    model: process.env.AI_MODEL ?? '',
+    baseUrl: (process.env.AI_BASE_URL ?? '').replace(/\/+$/, ''),
+    groq: {
+      apiKey: process.env.GROQ_API_KEY ?? '',
+      model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+      baseUrl: (process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1').replace(/\/+$/, ''),
+    },
+    openrouter: {
+      apiKey: process.env.OPENROUTER_API_KEY ?? '',
+      model: process.env.OPENROUTER_MODEL ?? 'meta-llama/llama-3.3-70b-instruct:free',
+      baseUrl: (process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1').replace(
+        /\/+$/,
+        '',
+      ),
+    },
+    requestsPerMinute: Number.parseInt(process.env.AI_REQUESTS_PER_MINUTE ?? '10', 10),
+    maxInputChars: Number.parseInt(process.env.AI_MAX_INPUT_CHARS ?? '4000', 10),
+    timeoutMs: Number.parseInt(process.env.AI_TIMEOUT_MS ?? '30000', 10),
+    maxRetries: Number.parseInt(process.env.AI_MAX_RETRIES ?? '2', 10),
+    maxTokens: Number.parseInt(process.env.AI_MAX_TOKENS ?? '2000', 10),
   },
   trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
   swagger: {

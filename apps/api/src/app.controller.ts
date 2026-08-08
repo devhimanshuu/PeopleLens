@@ -5,7 +5,7 @@ import { Public } from '@app/common/decorators/public.decorator';
 // Nest resolves it via emitted decorator metadata (`design:paramtypes`). A
 // type-only import is elided at runtime, leaving an unresolvable `undefined`
 // in the metadata (breaks DI in tests and any non-tsc transpiler).
-import { type AppService } from './app.service';
+import { AppService } from './app.service';
 
 @Controller()
 export class AppController {

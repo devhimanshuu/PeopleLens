@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/app-shell/page-header';
 import { AnalyticsFilters } from '@/components/dashboard/analytics-filters';
 import { AnalyticsKpis } from '@/components/dashboard/analytics-kpis';
+import { AskCopilotCard } from '@/components/dashboard/ask-copilot-card';
 import { AttritionSection } from '@/components/dashboard/attrition-section';
 import { CompareSection } from '@/components/dashboard/compare-section';
 import { CompositionSection } from '@/components/dashboard/composition-section';
@@ -172,6 +173,9 @@ export default function DashboardPage() {
       ) : overview ? (
         <div className="space-y-8">
           <ExecutiveSummaryCard summary={overview.executiveSummary} />
+
+          {/* Ask PeopleLens — the copilot's front door on the dashboard */}
+          <AskCopilotCard filters={filters} options={filterOptions} />
 
           {/* Global filters — one coherent state feeding every section below */}
           <AnalyticsFilters

@@ -8,6 +8,7 @@ import { RolesGuard } from '@app/common/guards/roles.guard';
 import { SessionGuard } from '@app/common/guards/session.guard';
 import { AnalyticsModule } from '@app/analytics/analytics.module';
 import { AuditModule } from '@app/audit/audit.module';
+import { CopilotModule } from '@app/ai/copilot/copilot.module';
 import { AppController } from '@app/app.controller';
 import { AppService } from '@app/app.service';
 import { AuthModule } from '@app/auth/auth.module';
@@ -54,6 +55,8 @@ import { UsersModule } from '@app/users/users.module';
     DashboardModule,
     AnalyticsModule,
     SignalsModule,
+    // Phase 5 — AI Workforce Copilot (read-only, RBAC-inherited tools).
+    CopilotModule,
     // Global per-IP rate limiting — window/limit from env, applies to every
     // route unless annotated with @SkipThrottle().
     ThrottlerModule.forRootAsync({

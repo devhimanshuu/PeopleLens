@@ -590,6 +590,77 @@ export interface OrgHierarchy {
   totalEmployees: number;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Copilot (Phase 5)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One action link surfaced with a copilot answer (drives users into the app). */
+export interface CopilotDeepLink {
+  label: string;
+  href: string;
+}
+
+/** Where an answer came from — grounding + provenance for trust. */
+export interface CopilotProvenance {
+  source: string;
+  /** Analytics tool that grounded the answer. */
+  toolUsed?: string;
+  /** Number of records the tool analyzed. */
+  recordsAnalyzed?: number;
+  lastImportedAt?: IsoDate;
+  /** Which LLM provider/model actually served the answer (fallback visibility). */
+  provider?: string;
+  model?: string;
+}
+
+/** Copilot answer for one chat turn. */
+export interface CopilotResponse {
+  conversationId: EntityId;
+  /** Markdown answer — structured, grounded, deterministic-sourced. */
+  answer: string;
+  /** Action links (dashboard/explorer/profile) the user can click. */
+  deepLinks: CopilotDeepLink[];
+  provenance: CopilotProvenance;
+  /** Explicit dataset-limitation notes instead of fabricated metrics. */
+  limitations: string[];
+  /** Deterministic follow-up questions for this answer. */
+  suggestions: string[];
+  createdAt: IsoDate;
+}
+
+/** Request body for `POST /ai/copilot/chat`. */
+export interface CopilotChatRequest {
+  /** Omit to start a new conversation. */
+  conversationId?: EntityId;
+  message: string;
+}
+
+/** One stored copilot message (conversation history). */
+export interface CopilotMessageView {
+  id: EntityId;
+  role: 'user' | 'assistant';
+  content: string;
+  toolName?: string | null;
+  createdAt: IsoDate;
+}
+
+/** One provider in the copilot's fallback chain. */
+export interface CopilotProviderInfo {
+  name: string;
+  model: string;
+  /** Whether this provider has an API key configured. */
+  configured: boolean;
+}
+
+/** What the copilot can do — lets the UI degrade gracefully when unconfigured. */
+export interface CopilotCapabilities {
+  /** True when at least one provider in the chain is configured. */
+  configured: boolean;
+  /** Ordered fallback chain (primary first). */
+  providers: CopilotProviderInfo[];
+  suggestedQuestions: string[];
+}
+
 /** Raw CSV row as parsed from an uploaded file. */
 export interface CsvEmployeeRow {
   employeeCode?: string;

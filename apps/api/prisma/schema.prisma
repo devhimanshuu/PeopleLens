@@ -17,6 +17,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Connection string also supplied via prisma.config.ts for newer CLIs;
+  // kept here so the Prisma 6 CLI resolves the datasource at migrate time.
+  url      = env("DATABASE_URL")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,9 +80,42 @@ model User {
 
   imports  ImportHistory[]
   auditLogs AuditLog[]
+  aiConversations AiConversation[]
 
   @@index([role])
   @@index([email])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI copilot (Phase 5)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One copilot conversation thread. Owned by a user; messages are stored only
+/// when necessary for lightweight context — never auth tokens, API keys or
+/// raw tool payloads.
+model AiConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AiMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+/// One copilot message (user question or assistant answer). `toolName` records
+/// which analytics tool grounded the answer so history shows provenance.
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  toolName       String?
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { type PrismaService } from '@app/database/prisma.service';
+import { PrismaService } from '@app/database/prisma.service';
 import { Role } from '../enums/role.enum';
 import type { RequestUser } from '../interfaces/request-user.interface';
 

@@ -20,10 +20,10 @@ import type { RequestUser } from '@app/common/interfaces/request-user.interface'
 // Value imports — NOT type-only: the global ValidationPipe resolves the DTO
 // class from emitted `design:paramtypes` metadata; a type-only import erases
 // it to `Function` and silently disables validation for these endpoints.
-import { type CreateEmployeeDto } from './dto/create-employee.dto';
-import { type QueryEmployeesDto } from './dto/query-employees.dto';
-import { type UpdateEmployeeDto } from './dto/update-employee.dto';
-import { type EmployeesService } from './employees.service';
+import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { QueryEmployeesDto } from './dto/query-employees.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { EmployeesService } from './employees.service';
 
 /**
  * Employee records — the workforce core domain. Admin + manager roles write;

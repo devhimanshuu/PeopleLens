@@ -12,11 +12,11 @@ import type {
   Paginated,
 } from '@peoplelens/types';
 import { Prisma, type EmployeeStatus, type ImportHistory } from '@prisma/client';
-import { type AuditService } from '@app/audit/audit.service';
+import { AuditService } from '@app/audit/audit.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type RbacService } from '@app/common/services/rbac.service';
-import { type PrismaService } from '@app/database/prisma.service';
-import { type CsvService, type ParsedRow } from './csv.service';
+import { RbacService } from '@app/common/services/rbac.service';
+import { PrismaService } from '@app/database/prisma.service';
+import { CsvService, type ParsedRow } from './csv.service';
 
 /** Analytics-profile columns accepted by the CSV pipeline — all nullable. */
 type AnalyticsProfileInput = {

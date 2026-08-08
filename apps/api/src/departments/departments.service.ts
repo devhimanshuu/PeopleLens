@@ -6,12 +6,12 @@ import {
 } from '@nestjs/common';
 import type { Department, Prisma } from '@prisma/client';
 import type { DepartmentSummary, User } from '@peoplelens/types';
-import { type AuditService } from '@app/audit/audit.service';
+import { AuditService } from '@app/audit/audit.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type RbacService } from '@app/common/services/rbac.service';
-import { type PrismaService } from '@app/database/prisma.service';
-import { type CreateDepartmentDto } from './dto/create-department.dto';
-import { type UpdateDepartmentDto } from './dto/update-department.dto';
+import { RbacService } from '@app/common/services/rbac.service';
+import { PrismaService } from '@app/database/prisma.service';
+import { CreateDepartmentDto } from './dto/create-department.dto';
+import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 /**
  * Department management — org hierarchy, manager assignment, soft delete.

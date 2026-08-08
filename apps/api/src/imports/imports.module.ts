@@ -7,5 +7,7 @@ import { ImportsService } from './imports.service';
 @Module({
   controllers: [ImportsController],
   providers: [ImportsService, CsvService],
+  // Exported so the AI Copilot can surface import history / data quality.
+  exports: [ImportsService],
 })
 export class ImportsModule {}

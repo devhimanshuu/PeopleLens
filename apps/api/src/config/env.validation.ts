@@ -36,6 +36,37 @@ export const envValidationSchema = Joi.object({
   RATE_LIMIT_TTL_MS: Joi.number().integer().positive().default(60000),
   RATE_LIMIT_MAX: Joi.number().integer().positive().default(120),
 
+  // ── AI Copilot (Phase 5) ────────────────────────────────────────────────────
+  // Optional: without any API key the copilot reports "unavailable" and the
+  // rest of the product is untouched. The primary provider is defined by
+  // AI_PROVIDER + AI_API_KEY (any OpenAI-compatible endpoint via AI_BASE_URL);
+  // GROQ_* / OPENROUTER_* define automatic fallbacks in the chain — when one
+  // provider rate-limits or becomes unavailable the next configured one takes
+  // over. Provider defaults target free models where available.
+  AI_PROVIDER: Joi.string().valid('openai', 'groq', 'openrouter').default('openai'),
+  AI_API_KEY: Joi.string().allow('').default(''),
+  AI_MODEL: Joi.string().allow('').default(''),
+  AI_BASE_URL: Joi.string().uri({ allowRelative: false }).allow('').default(''),
+  AI_REQUESTS_PER_MINUTE: Joi.number().integer().positive().default(10),
+  AI_MAX_INPUT_CHARS: Joi.number().integer().positive().default(4000),
+  AI_TIMEOUT_MS: Joi.number().integer().positive().default(30000),
+  AI_MAX_RETRIES: Joi.number().integer().min(0).max(5).default(2),
+  AI_MAX_TOKENS: Joi.number().integer().positive().default(2000),
+
+  // Fallback providers in the chain (both OpenAI-compatible).
+  GROQ_API_KEY: Joi.string().allow('').default(''),
+  GROQ_MODEL: Joi.string().allow('').default('llama-3.3-70b-versatile'),
+  GROQ_BASE_URL: Joi.string()
+    .uri({ allowRelative: false })
+    .allow('')
+    .default('https://api.groq.com/openai/v1'),
+  OPENROUTER_API_KEY: Joi.string().allow('').default(''),
+  OPENROUTER_MODEL: Joi.string().allow('').default('meta-llama/llama-3.3-70b-instruct:free'),
+  OPENROUTER_BASE_URL: Joi.string()
+    .uri({ allowRelative: false })
+    .allow('')
+    .default('https://openrouter.ai/api/v1'),
+
   // Set to true when the API runs behind a trusted reverse proxy so
   // X-Forwarded-For from loopback proxies is honored for rate limiting.
   TRUST_PROXY: Joi.boolean().truthy('true', '1').falsy('false', '0').default(false),

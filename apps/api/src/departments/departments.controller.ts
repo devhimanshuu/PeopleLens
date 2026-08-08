@@ -16,9 +16,9 @@ import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type DepartmentsService } from './departments.service';
-import { type CreateDepartmentDto } from './dto/create-department.dto';
-import { type UpdateDepartmentDto } from './dto/update-department.dto';
+import { DepartmentsService } from './departments.service';
+import { CreateDepartmentDto } from './dto/create-department.dto';
+import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 /** Organization structure — departments, hierarchy and manager assignment. */
 @ApiTags('Departments')

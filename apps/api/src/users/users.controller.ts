@@ -5,8 +5,8 @@ import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type UpdateUserRoleDto } from './dto/update-user-role.dto';
-import { type UsersService } from './users.service';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UsersService } from './users.service';
 
 /** Users — profile and admin role management. */
 @ApiTags('Users')

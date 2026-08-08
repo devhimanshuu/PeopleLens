@@ -4,9 +4,9 @@ import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 // Value imports — NOT type-only: the global ValidationPipe resolves the DTO
 // class from emitted `design:paramtypes` metadata (see security audit).
-import { type AnalyticsService } from './analytics.service';
-import { type QueryAnalyticsDto } from './dto/query-analytics.dto';
-import { type QueryCompareDto } from './dto/query-compare.dto';
+import { AnalyticsService } from './analytics.service';
+import { QueryAnalyticsDto } from './dto/query-analytics.dto';
+import { QueryCompareDto } from './dto/query-compare.dto';
 
 /**
  * Workforce-intelligence APIs. Every view is role-scoped server-side

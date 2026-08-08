@@ -3,7 +3,7 @@ import { Public } from '@app/common/decorators/public.decorator';
 // Value import, not `type`: Nest resolves the controller's dependency via
 // emitted decorator metadata (`design:paramtypes`). A type-only import is
 // elided at runtime, leaving an unresolvable `undefined` in the metadata.
-import { type SignalsService } from './signals.service';
+import { SignalsService } from './signals.service';
 
 @Controller('signals')
 export class SignalsController {

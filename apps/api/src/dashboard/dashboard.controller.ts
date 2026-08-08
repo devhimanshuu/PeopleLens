@@ -2,8 +2,8 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type DashboardService } from './dashboard.service';
-import { type QueryDashboardDto } from './dto/query-dashboard.dto';
+import { DashboardService } from './dashboard.service';
+import { QueryDashboardDto } from './dto/query-dashboard.dto';
 
 /** Analytics dashboard — KPIs and distributions, role-scoped. */
 @ApiTags('Dashboard')

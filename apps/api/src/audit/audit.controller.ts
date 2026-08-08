@@ -2,8 +2,8 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
-import { type AuditService } from './audit.service';
-import { type QueryAuditLogsDto } from './dto/query-audit-logs.dto';
+import { AuditService } from './audit.service';
+import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 
 /**
  * Audit trail — read-only, admin-only feed of state-changing operations.

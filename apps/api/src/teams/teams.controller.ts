@@ -17,9 +17,9 @@ import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type CreateTeamDto } from './dto/create-team.dto';
-import { type UpdateTeamDto } from './dto/update-team.dto';
-import { type TeamsService } from './teams.service';
+import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateTeamDto } from './dto/update-team.dto';
+import { TeamsService } from './teams.service';
 
 /** Teams — sub-units within departments. */
 @ApiTags('Teams')

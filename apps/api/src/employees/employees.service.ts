@@ -6,14 +6,14 @@ import {
 } from '@nestjs/common';
 import type { Employee, Prisma } from '@prisma/client';
 import type { EmployeeView, Paginated } from '@peoplelens/types';
-import { type AuditService } from '@app/audit/audit.service';
+import { AuditService } from '@app/audit/audit.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
-import { type RbacService } from '@app/common/services/rbac.service';
+import { RbacService } from '@app/common/services/rbac.service';
 import { buildGroupFilter } from '@app/common/utils/analytics.util';
-import { type PrismaService } from '@app/database/prisma.service';
-import { type CreateEmployeeDto } from './dto/create-employee.dto';
-import { type QueryEmployeesDto } from './dto/query-employees.dto';
-import { type UpdateEmployeeDto } from './dto/update-employee.dto';
+import { PrismaService } from '@app/database/prisma.service';
+import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { QueryEmployeesDto } from './dto/query-employees.dto';
+import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
 /** Analytics-profile fields writable via create/update — spread into Prisma data. */
 type AnalyticsProfileData = {
