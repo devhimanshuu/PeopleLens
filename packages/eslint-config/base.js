@@ -39,5 +39,11 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'error',
     },
   },
+  {
+    files: ['**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   prettier,
 );

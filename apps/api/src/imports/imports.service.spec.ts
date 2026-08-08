@@ -373,6 +373,58 @@ describe('ImportsService', () => {
       expect(result.duplicateCount).toBe(1);
     });
 
+    it('flags within-file duplicate CODES even when emails differ (no 500 from the unique index)', async () => {
+      // Two rows share EMP-1 but have different emails — a naive `email ?? code`
+      // key would miss this collision and the second insert would blow up on
+      // the unique employeeCode index, failing the whole file.
+      const rows = [rowNoTeam(), rowNoTeam({ email: 'different@company.com' })];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue([]);
+      mockEmployeeFindMany(mocks); // no DB dupes
+      mocks.prisma.employee.create.mockResolvedValue({ id: 'emp-1' });
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<number>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, {
+        status: 'partial',
+        successCount: 1,
+        failedCount: 1,
+        duplicateCount: 1,
+      });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      expect(mocks.prisma.employee.create).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe('partial');
+      expect(result.duplicateCount).toBe(1);
+      expect(result.failedCount).toBe(1);
+      expect(result.errorReport?.[0]?.errors.join(' ')).toContain('duplicates row 2');
+    });
+
+    it('flags within-file duplicate EMAILS even when codes differ', async () => {
+      const rows = [rowNoTeam(), rowNoTeam({ employeeCode: 'EMP-2', email: 'alex@company.com' })];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue([]);
+      mockEmployeeFindMany(mocks);
+      mocks.prisma.employee.create.mockResolvedValue({ id: 'emp-1' });
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<number>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, {
+        status: 'partial',
+        successCount: 1,
+        failedCount: 1,
+        duplicateCount: 1,
+      });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      expect(mocks.prisma.employee.create).toHaveBeenCalledTimes(1);
+      expect(result.duplicateCount).toBe(1);
+    });
+
     it('keeps a row out when a referenced department is missing', async () => {
       const rows = [rowNoTeam({ department: 'Nope Corp' })];
       mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });

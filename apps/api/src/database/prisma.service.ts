@@ -18,7 +18,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private connected = false;
 
   constructor(config: ConfigService) {
-    super({ datasources: { db: { url: config.getOrThrow<string>('databaseUrl') } } });
+    super({ datasourceUrl: config.getOrThrow<string>('databaseUrl') });
   }
 
   async onModuleInit(): Promise<void> {

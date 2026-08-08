@@ -207,6 +207,47 @@ export interface Employee {
   updatedAt: IsoDate;
   /** Set when the record is soft-deleted; null while active. */
   deletedAt?: IsoDate | null;
+
+  // ── Analytics & engagement profile (Phase 4) ─────────────────────────────
+  // These mirror the IBM HR-style dimensions used by the analytics engine.
+  // All are optional: records created before Phase 4 or via minimal imports
+  // simply report "not available" in analytics instead of fabricated values.
+  /** Left the workforce (observed attrition event). */
+  attrition?: boolean;
+  /** When the attrition event occurred (null while employed). */
+  attritionDate?: IsoDate | null;
+  /** Monthly income in USD — gated to admin/manager roles in API views. */
+  monthlyIncome?: number | null;
+  /** 1 (low) – 4 (high). */
+  jobSatisfaction?: number | null;
+  /** 1 (low) – 4 (high). */
+  environmentSatisfaction?: number | null;
+  /** 1 (low) – 4 (high). */
+  relationshipSatisfaction?: number | null;
+  /** 1 (low) – 4 (high). */
+  workLifeBalance?: number | null;
+  /** Works beyond standard hours. */
+  overTime?: boolean | null;
+  /** 1 (low) – 4 (high). */
+  performanceRating?: number | null;
+  /** 1 (below) – 5 (doctorate). */
+  education?: number | null;
+  /** e.g. Life Sciences, Marketing, Technical Degree. */
+  educationField?: string | null;
+  /** 1 (entry) – 5 (executive). */
+  jobLevel?: number | null;
+  yearsAtCompany?: number | null;
+  yearsInCurrentRole?: number | null;
+  yearsSinceLastPromotion?: number | null;
+  yearsWithCurrManager?: number | null;
+  totalWorkingYears?: number | null;
+  distanceFromHome?: number | null;
+  maritalStatus?: string | null;
+  businessTravel?: string | null;
+  numCompaniesWorked?: number | null;
+  trainingTimesLastYear?: number | null;
+  percentSalaryHike?: number | null;
+  stockOptionLevel?: number | null;
 }
 
 /** Employee joined with org context for listings and detail views. */
@@ -253,6 +294,8 @@ export interface ImportHistory {
   errorReport?: ImportRowError[] | null;
   importedByUserId: EntityId;
   createdAt: IsoDate;
+  /** Processing time in milliseconds. */
+  durationMs?: number | null;
 }
 
 /** Import record joined with the actor's identity. */
@@ -322,6 +365,22 @@ export interface DashboardFilters {
   teamId?: string;
   status?: EmployeeStatus;
   gender?: Gender;
+  // ── Phase 4 analytics dimensions ──────────────────────────────────────────
+  jobTitle?: string;
+  overTime?: boolean;
+  attrition?: boolean;
+  /** 1–4 satisfaction level. */
+  jobSatisfaction?: number;
+  /** 1–4 satisfaction level (drill-down filter for the engagement charts). */
+  environmentSatisfaction?: number;
+  /** 1–4 satisfaction level (drill-down filter for the engagement charts). */
+  relationshipSatisfaction?: number;
+  /** 1–4 work-life balance level (drill-down filter for the engagement charts). */
+  workLifeBalance?: number;
+  ageGroup?: AgeGroup;
+  tenureGroup?: TenureGroup;
+  /** 1–5 education level. */
+  education?: number;
 }
 
 /** Aggregated KPI + distribution payload for the analytics dashboard. */
@@ -341,6 +400,196 @@ export interface DashboardOverview {
   recentHires: EmployeeView[];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Analytics (Phase 4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Age buckets derived from `dateOfBirth`. */
+export type AgeGroup = '<25' | '25-34' | '35-44' | '45-54' | '55+';
+
+/** Tenure buckets derived from `hiredAt` (years). */
+export type TenureGroup = '<1' | '1-2' | '3-5' | '6-10' | '10+';
+
+/** Label + order for the age-bucket axis. */
+export const AGE_GROUPS: AgeGroup[] = ['<25', '25-34', '35-44', '45-54', '55+'];
+
+/** Label + order for the tenure-bucket axis. */
+export const TENURE_GROUPS: TenureGroup[] = ['<1', '1-2', '3-5', '6-10', '10+'];
+
+/** Satisfaction dimensions used by the engagement views. */
+export type SatisfactionDimension =
+  'jobSatisfaction' | 'environmentSatisfaction' | 'relationshipSatisfaction' | 'workLifeBalance';
+
+/** Workforce-overview KPIs. `null` = not calculable from the current dataset. */
+export interface AnalyticsKpis {
+  totalEmployees: number;
+  activeEmployees: number;
+  /** Observed attrition rate (0–1), null when no records carry attrition data. */
+  attritionRate: number | null;
+  averageTenureYears: number | null;
+  averageAge: number | null;
+  /** Gated to admin/manager roles. */
+  averageMonthlyIncome: number | null;
+  overtimeRate: number | null;
+  /** 1–4. */
+  averagePerformanceRating: number | null;
+  totalDepartments: number;
+  totalManagers: number;
+  totalTeams: number;
+  /** True when trends require history the dataset does not contain. */
+  snapshot: boolean;
+}
+
+/** One attrition grouping: headcount + observed leavers + rate. */
+export interface AttritionSlice {
+  name: string;
+  headcount: number;
+  attritionCount: number;
+  /** 0–1, null when the slice has no attrition data. */
+  attritionRate: number | null;
+}
+
+/** Attrition views answering "where is retention risk concentrated?". */
+export interface AttritionBreakdown {
+  byDepartment: AttritionSlice[];
+  byJobRole: AttritionSlice[];
+  byAgeGroup: AttritionSlice[];
+  byTenure: AttritionSlice[];
+  byOverTime: AttritionSlice[];
+  byJobSatisfaction: AttritionSlice[];
+}
+
+/** Engagement & culture views — distributions + averages per dimension. */
+export interface EngagementData {
+  jobSatisfaction: DistributionSlice[];
+  environmentSatisfaction: DistributionSlice[];
+  relationshipSatisfaction: DistributionSlice[];
+  workLifeBalance: DistributionSlice[];
+  averageJobSatisfaction: number | null;
+  averageWorkLifeBalance: number | null;
+  overtimeRate: number | null;
+}
+
+/** Workforce-composition views. */
+export interface CompositionData {
+  department: DistributionSlice[];
+  jobRole: DistributionSlice[];
+  gender: DistributionSlice[];
+  age: DistributionSlice[];
+  education: DistributionSlice[];
+  tenure: DistributionSlice[];
+}
+
+/** Tone of a generated insight card. */
+export type InsightSeverity = 'positive' | 'attention' | 'neutral';
+
+/**
+ * A deterministic, data-derived observation. Insights describe observed
+ * patterns and correlations from the current dataset — never predictions or
+ * causal claims.
+ */
+export interface WorkforceInsight {
+  id: string;
+  severity: InsightSeverity;
+  title: string;
+  body: string;
+  /** Where the "investigate" action takes the user (e.g. the explorer). */
+  drillDown?: {
+    path: string;
+    params: Record<string, string>;
+  };
+}
+
+/** Deterministic executive summary computed from the current filter state. */
+export interface ExecutiveSummary {
+  /** Overall workforce-health read, derived from observed metrics. */
+  status: 'healthy' | 'stable' | 'attention';
+  headline: string;
+  /** Concise attention areas (top observed patterns). */
+  keyAreas: string[];
+  updatedAt: IsoDate;
+}
+
+/** One department row in the comparison view. */
+export interface DepartmentComparison {
+  departmentId: EntityId;
+  name: string;
+  headcount: number;
+  attritionRate: number | null;
+  averageTenureYears: number | null;
+  /** Gated to admin/manager roles. */
+  averageMonthlyIncome: number | null;
+  overtimeRate: number | null;
+  averageJobSatisfaction: number | null;
+  averagePerformanceRating: number | null;
+}
+
+/** Dataset-health indicator — analytics quality depends on data quality. */
+export interface DataQuality {
+  totalRecords: number;
+  /** Records with no critical missing fields. */
+  validRecords: number;
+  /** 0–100 readiness score. */
+  readinessPercent: number;
+  missingFields: Array<{ field: string; label: string; count: number }>;
+  duplicateRecords: number;
+  deletedRecords: number;
+  lastImport: {
+    id: EntityId;
+    fileName: string;
+    status: ImportStatus;
+    totalRows: number;
+    successCount: number;
+    failedCount: number;
+    createdAt: IsoDate;
+  } | null;
+}
+
+/** The complete Phase-4 analytics payload for one filter state. */
+export interface AnalyticsOverview {
+  kpis: AnalyticsKpis;
+  /** Scope-aware department filter options. */
+  departments: Array<Pick<Department, 'id' | 'name'>>;
+  attrition: AttritionBreakdown;
+  engagement: EngagementData;
+  composition: CompositionData;
+  insights: WorkforceInsight[];
+  executiveSummary: ExecutiveSummary;
+  dataQuality: DataQuality;
+}
+
+/** Filter-option lists for the global analytics filter bar. */
+export interface FilterOptions {
+  departments: Array<Pick<Department, 'id' | 'name'>>;
+  jobTitles: string[];
+  ageGroups: AgeGroup[];
+  tenureGroups: TenureGroup[];
+  educationLevels: Array<{ value: number; label: string }>;
+}
+
+/** One node in the organization hierarchy tree. */
+export interface OrgHierarchyNode {
+  id: string;
+  type: 'department' | 'team' | 'employee';
+  name: string;
+  subtitle?: string | null;
+  children: OrgHierarchyNode[];
+  employee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    jobTitle: string;
+    status: EmployeeStatus;
+    departmentId: EntityId;
+  } | null;
+}
+
+/** Organization hierarchy payload (departments → teams → employees). */
+export interface OrgHierarchy {
+  nodes: OrgHierarchyNode[];
+  totalEmployees: number;
+}
+
 /** Raw CSV row as parsed from an uploaded file. */
 export interface CsvEmployeeRow {
   employeeCode?: string;
@@ -356,4 +605,31 @@ export interface CsvEmployeeRow {
   department?: string;
   team?: string;
   managerEmail?: string;
+
+  // ── Analytics & engagement profile (Phase 4) ─────────────────────────────
+  attrition?: string;
+  /** When attrition occurred (ISO date). */
+  attritionDate?: string;
+  monthlyIncome?: string;
+  jobSatisfaction?: string;
+  environmentSatisfaction?: string;
+  relationshipSatisfaction?: string;
+  workLifeBalance?: string;
+  overTime?: string;
+  performanceRating?: string;
+  education?: string;
+  educationField?: string;
+  jobLevel?: string;
+  yearsAtCompany?: string;
+  yearsInCurrentRole?: string;
+  yearsSinceLastPromotion?: string;
+  yearsWithCurrManager?: string;
+  totalWorkingYears?: string;
+  distanceFromHome?: string;
+  maritalStatus?: string;
+  businessTravel?: string;
+  numCompaniesWorked?: string;
+  trainingTimesLastYear?: string;
+  percentSalaryHike?: string;
+  stockOptionLevel?: string;
 }

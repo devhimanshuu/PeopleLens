@@ -291,7 +291,7 @@ export function CommandPalette({
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="mx-auto mt-24 w-[min(42rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+        className="mx-auto mt-16 w-[min(42rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:mt-24"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Search input */}

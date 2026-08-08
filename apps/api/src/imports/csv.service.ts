@@ -17,6 +17,30 @@ export const CSV_HEADERS = [
   'department',
   'team',
   'managerEmail',
+  // Phase 4 analytics & engagement profile (IBM HR-style dimensions).
+  'attrition',
+  'monthlyIncome',
+  'jobSatisfaction',
+  'environmentSatisfaction',
+  'relationshipSatisfaction',
+  'workLifeBalance',
+  'overTime',
+  'performanceRating',
+  'education',
+  'educationField',
+  'jobLevel',
+  'yearsAtCompany',
+  'yearsInCurrentRole',
+  'yearsSinceLastPromotion',
+  'yearsWithCurrManager',
+  'totalWorkingYears',
+  'distanceFromHome',
+  'maritalStatus',
+  'businessTravel',
+  'numCompaniesWorked',
+  'trainingTimesLastYear',
+  'percentSalaryHike',
+  'stockOptionLevel',
 ] as const;
 
 export type CsvHeader = (typeof CSV_HEADERS)[number];
@@ -34,6 +58,34 @@ const HEADER_ALIASES: Record<string, CsvHeader> = {
 
 const GENDERS = ['female', 'male', 'non_binary', 'prefer_not_to_say'] as const;
 const STATUSES = ['active', 'on_leave', 'probation', 'terminated'] as const;
+/** Accepted "yes" values for boolean columns (attrition / overTime). */
+const YES_VALUES = new Set(['yes', 'y', 'true', '1']);
+/** Accepted "no" values for boolean columns. */
+const NO_VALUES = new Set(['no', 'n', 'false', '0', '']);
+/** Columns that must be an integer in 1..4 when present. */
+const LEVEL_1_4: CsvHeader[] = [
+  'jobSatisfaction',
+  'environmentSatisfaction',
+  'relationshipSatisfaction',
+  'workLifeBalance',
+  'performanceRating',
+];
+/** Columns that must be a non-negative integer when present. */
+const NON_NEGATIVE_INT: CsvHeader[] = [
+  'monthlyIncome',
+  'education',
+  'jobLevel',
+  'yearsAtCompany',
+  'yearsInCurrentRole',
+  'yearsSinceLastPromotion',
+  'yearsWithCurrManager',
+  'totalWorkingYears',
+  'distanceFromHome',
+  'numCompaniesWorked',
+  'trainingTimesLastYear',
+  'percentSalaryHike',
+  'stockOptionLevel',
+];
 
 /** One parsed + validated row. */
 export interface ParsedRow {
@@ -115,6 +167,29 @@ export class CsvService {
       department: 'Engineering',
       team: 'Platform',
       managerEmail: 'taylor.lee@company.com',
+      attrition: 'No',
+      monthlyIncome: '9800',
+      jobSatisfaction: '4',
+      environmentSatisfaction: '3',
+      relationshipSatisfaction: '4',
+      workLifeBalance: '3',
+      overTime: 'No',
+      performanceRating: '3',
+      education: '3',
+      educationField: 'Technical Degree',
+      jobLevel: '3',
+      yearsAtCompany: '5',
+      yearsInCurrentRole: '2',
+      yearsSinceLastPromotion: '1',
+      yearsWithCurrManager: '3',
+      totalWorkingYears: '9',
+      distanceFromHome: '8',
+      maritalStatus: 'Married',
+      businessTravel: 'Travel_Rarely',
+      numCompaniesWorked: '3',
+      trainingTimesLastYear: '2',
+      percentSalaryHike: '14',
+      stockOptionLevel: '1',
     };
     const escape = (value: string) =>
       value.includes(',') ? `"${value.replace(/"/g, '""')}"` : value;
@@ -152,6 +227,30 @@ export class CsvService {
       department: get('department'),
       team: get('team'),
       managerEmail: get('managerEmail')?.toLowerCase(),
+      // Analytics & engagement profile.
+      attrition: get('attrition')?.toLowerCase(),
+      monthlyIncome: get('monthlyIncome'),
+      jobSatisfaction: get('jobSatisfaction'),
+      environmentSatisfaction: get('environmentSatisfaction'),
+      relationshipSatisfaction: get('relationshipSatisfaction'),
+      workLifeBalance: get('workLifeBalance'),
+      overTime: get('overTime')?.toLowerCase(),
+      performanceRating: get('performanceRating'),
+      education: get('education'),
+      educationField: get('educationField'),
+      jobLevel: get('jobLevel'),
+      yearsAtCompany: get('yearsAtCompany'),
+      yearsInCurrentRole: get('yearsInCurrentRole'),
+      yearsSinceLastPromotion: get('yearsSinceLastPromotion'),
+      yearsWithCurrManager: get('yearsWithCurrManager'),
+      totalWorkingYears: get('totalWorkingYears'),
+      distanceFromHome: get('distanceFromHome'),
+      maritalStatus: get('maritalStatus'),
+      businessTravel: get('businessTravel'),
+      numCompaniesWorked: get('numCompaniesWorked'),
+      trainingTimesLastYear: get('trainingTimesLastYear'),
+      percentSalaryHike: get('percentSalaryHike'),
+      stockOptionLevel: get('stockOptionLevel'),
     };
   }
 
@@ -190,6 +289,47 @@ export class CsvService {
       errors.push('hiredAt is required');
     } else if (Number.isNaN(Date.parse(row.hiredAt))) {
       errors.push(`hiredAt "${row.hiredAt}" is not a valid date (expected YYYY-MM-DD)`);
+    }
+
+    // Analytics profile validation.
+    if (
+      row.attrition !== undefined &&
+      !YES_VALUES.has(row.attrition) &&
+      !NO_VALUES.has(row.attrition)
+    ) {
+      errors.push(`attrition "${row.attrition}" must be Yes or No`);
+    }
+    if (
+      row.overTime !== undefined &&
+      !YES_VALUES.has(row.overTime) &&
+      !NO_VALUES.has(row.overTime)
+    ) {
+      errors.push(`overTime "${row.overTime}" must be Yes or No`);
+    }
+    for (const field of LEVEL_1_4) {
+      const raw = row[field];
+      if (raw === undefined) continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1 || n > 4) {
+        errors.push(`${field} "${raw}" must be a whole number from 1 to 4`);
+      }
+    }
+    for (const field of NON_NEGATIVE_INT) {
+      const raw = row[field];
+      if (raw === undefined) continue;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0) {
+        errors.push(`${field} "${raw}" must be a non-negative whole number`);
+      }
+      if (field === 'education' && n > 5) {
+        errors.push(`education "${raw}" must be from 1 to 5`);
+      }
+      if (field === 'jobLevel' && n > 5) {
+        errors.push(`jobLevel "${raw}" must be from 1 to 5`);
+      }
+      if (field === 'percentSalaryHike' && n > 100) {
+        errors.push(`percentSalaryHike "${raw}" must be at most 100`);
+      }
     }
 
     return errors;

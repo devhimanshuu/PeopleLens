@@ -17,7 +17,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -181,6 +180,47 @@ model Employee {
   // Team leads are employees too.
   ledTeams Team[] @relation("TeamLead")
 
+  // ── Analytics & engagement profile (Phase 4) ─────────────────────────────
+  // IBM HR-style dimensions powering the workforce-intelligence engine. All
+  // nullable so legacy rows and minimal imports report "not available" in
+  // analytics rather than fabricated values.
+  /// Observed attrition event (Yes/No in source datasets).
+  attrition Boolean @default(false)
+  /// When the attrition event occurred (null while employed).
+  attritionDate DateTime?
+  /// Monthly income in USD — gated to admin/manager roles in API views.
+  monthlyIncome Int?
+  /// 1 (low) – 4 (high).
+  jobSatisfaction Int?
+  /// 1 (low) – 4 (high).
+  environmentSatisfaction Int?
+  /// 1 (low) – 4 (high).
+  relationshipSatisfaction Int?
+  /// 1 (low) – 4 (high).
+  workLifeBalance Int?
+  /// Works beyond standard hours.
+  overTime Boolean @default(false)
+  /// 1 (low) – 4 (high).
+  performanceRating Int?
+  /// 1 (below) – 5 (doctorate).
+  education Int?
+  /// e.g. Life Sciences, Marketing, Technical Degree.
+  educationField String?
+  /// 1 (entry) – 5 (executive).
+  jobLevel Int?
+  yearsAtCompany Int?
+  yearsInCurrentRole Int?
+  yearsSinceLastPromotion Int?
+  yearsWithCurrManager Int?
+  totalWorkingYears Int?
+  distanceFromHome Int?
+  maritalStatus String?
+  businessTravel String?
+  numCompaniesWorked Int?
+  trainingTimesLastYear Int?
+  percentSalaryHike Int?
+  stockOptionLevel Int?
+
   @@index([departmentId])
   @@index([teamId])
   @@index([managerId])
@@ -188,6 +228,14 @@ model Employee {
   @@index([hiredAt])
   @@index([deletedAt])
   @@index([firstName, lastName])
+  // Analytics query paths: attrition is the core risk dimension; the
+  // satisfaction/income filters in the explorer and analytics engine read
+  // these columns regularly on the scoped employee set.
+  @@index([attrition])
+  @@index([overTime])
+  @@index([jobSatisfaction])
+  @@index([monthlyIncome])
+  @@index([jobTitle])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,6 +256,8 @@ model ImportHistory {
   importedByUserId String
   importedByUser   User     @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
   createdAt    DateTime     @default(now())
+  /// Processing time in milliseconds (import-history view).
+  durationMs   Int?
 
   @@index([importedByUserId])
   @@index([createdAt])

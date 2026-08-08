@@ -164,7 +164,9 @@ export default function DepartmentsPage() {
                     </div>
                   </div>
                   {isAdmin ? (
-                    <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    // Actions stay visible on touch devices (no hover) and are
+                    // revealed on hover only from sm up, where a pointer exists.
+                    <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
                       <Button
                         variant="ghost"
                         size="icon"

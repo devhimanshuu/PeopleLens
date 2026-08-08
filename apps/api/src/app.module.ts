@@ -6,6 +6,7 @@ import { UserAwareThrottlerGuard } from '@app/common/guards/throttle.guard';
 import { RbacModule } from '@app/common/services/rbac.module';
 import { RolesGuard } from '@app/common/guards/roles.guard';
 import { SessionGuard } from '@app/common/guards/session.guard';
+import { AnalyticsModule } from '@app/analytics/analytics.module';
 import { AuditModule } from '@app/audit/audit.module';
 import { AppController } from '@app/app.controller';
 import { AppService } from '@app/app.service';
@@ -51,6 +52,7 @@ import { UsersModule } from '@app/users/users.module';
     TeamsModule,
     ImportsModule,
     DashboardModule,
+    AnalyticsModule,
     SignalsModule,
     // Global per-IP rate limiting — window/limit from env, applies to every
     // route unless annotated with @SkipThrottle().

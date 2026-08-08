@@ -4,6 +4,7 @@ import type {
   Department,
   EmployeeStatus,
   EmployeeView,
+  FilterOptions,
   Gender,
   Paginated,
   Team,
@@ -44,7 +45,17 @@ import { useToast } from '@/components/ui/toast';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth, useCanWrite } from '@/lib/auth-context';
-import { formatDate, GENDER_LABELS, STATUS_LABELS, STATUS_VARIANTS, fullName } from '@/lib/format';
+import { queryToFilters } from '@/lib/analytics-filters';
+import {
+  AGE_GROUP_LABELS,
+  formatDate,
+  GENDER_LABELS,
+  SATISFACTION_LABELS,
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  TENURE_GROUP_LABELS,
+  fullName,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
@@ -63,6 +74,15 @@ export default function EmployeesPage() {
   const [teamId, setTeamId] = useState('');
   const [status, setStatus] = useState<EmployeeStatus | ''>('');
   const [gender, setGender] = useState<Gender | ''>('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [overTime, setOverTime] = useState('');
+  const [attrition, setAttrition] = useState('');
+  const [jobSatisfaction, setJobSatisfaction] = useState('');
+  const [environmentSatisfaction, setEnvironmentSatisfaction] = useState('');
+  const [relationshipSatisfaction, setRelationshipSatisfaction] = useState('');
+  const [workLifeBalance, setWorkLifeBalance] = useState('');
+  const [ageGroup, setAgeGroup] = useState('');
+  const [tenureGroup, setTenureGroup] = useState('');
   const [sortBy, setSortBy] = useState<SortField>('hiredAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [includeDeleted, setIncludeDeleted] = useState(false);
@@ -70,6 +90,7 @@ export default function EmployeesPage() {
   const [result, setResult] = useState<Paginated<EmployeeView> | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [jobTitles, setJobTitles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,12 +103,14 @@ export default function EmployeesPage() {
 
   const loadReferences = useCallback(async () => {
     try {
-      const [depts, teamsResult] = await Promise.all([
+      const [depts, teamsResult, filterOptions] = await Promise.all([
         api.get<Department[]>('/departments'),
         api.get<Team[]>('/teams'),
+        api.get<FilterOptions>('/analytics/filters'),
       ]);
       setDepartments(depts);
       setTeams(teamsResult);
+      setJobTitles(filterOptions.jobTitles);
     } catch {
       // Reference load failure is non-fatal; forms will show empty selects.
     }
@@ -108,6 +131,16 @@ export default function EmployeesPage() {
       if (teamId) params.set('teamId', teamId);
       if (status) params.set('status', status);
       if (gender) params.set('gender', gender);
+      if (jobTitle) params.set('jobTitle', jobTitle);
+      if (overTime) params.set('overTime', overTime);
+      if (attrition) params.set('attrition', attrition);
+      if (jobSatisfaction) params.set('jobSatisfaction', jobSatisfaction);
+      if (environmentSatisfaction) params.set('environmentSatisfaction', environmentSatisfaction);
+      if (relationshipSatisfaction)
+        params.set('relationshipSatisfaction', relationshipSatisfaction);
+      if (workLifeBalance) params.set('workLifeBalance', workLifeBalance);
+      if (ageGroup) params.set('ageGroup', ageGroup);
+      if (tenureGroup) params.set('tenureGroup', tenureGroup);
       if (includeDeleted) params.set('includeDeleted', 'true');
       const data = await api.get<Paginated<EmployeeView>>(`/employees?${params.toString()}`);
       setResult(data);
@@ -116,7 +149,26 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, departmentId, teamId, status, gender, sortBy, sortOrder, includeDeleted]);
+  }, [
+    page,
+    search,
+    departmentId,
+    teamId,
+    status,
+    gender,
+    jobTitle,
+    overTime,
+    attrition,
+    jobSatisfaction,
+    environmentSatisfaction,
+    relationshipSatisfaction,
+    workLifeBalance,
+    ageGroup,
+    tenureGroup,
+    sortBy,
+    sortOrder,
+    includeDeleted,
+  ]);
 
   useEffect(() => {
     void loadReferences();
@@ -129,7 +181,63 @@ export default function EmployeesPage() {
   // Reset to page 1 when filters change.
   useEffect(() => {
     setPage(1);
-  }, [search, departmentId, teamId, status, gender, sortBy, sortOrder, includeDeleted]);
+  }, [
+    search,
+    departmentId,
+    teamId,
+    status,
+    gender,
+    jobTitle,
+    overTime,
+    attrition,
+    jobSatisfaction,
+    environmentSatisfaction,
+    relationshipSatisfaction,
+    workLifeBalance,
+    ageGroup,
+    tenureGroup,
+    sortBy,
+    sortOrder,
+    includeDeleted,
+  ]);
+
+  // Hydrate filters from the URL query — on first mount (dashboard chart
+  // drill-downs open the explorer pre-filtered, e.g. ?attrition=true) and on
+  // every popstate (browser back/forward between drill-down URLs while the
+  // page stays mounted would otherwise keep the stale filter state).
+  useEffect(() => {
+    const hydrate = () => {
+      const fromUrl = queryToFilters(window.location.search);
+      setDepartmentId(fromUrl.departmentId ?? '');
+      setTeamId(fromUrl.teamId ?? '');
+      setStatus(fromUrl.status ?? '');
+      setGender(fromUrl.gender ?? '');
+      setJobTitle(fromUrl.jobTitle ?? '');
+      setOverTime(fromUrl.overTime === undefined ? '' : String(fromUrl.overTime));
+      setAttrition(fromUrl.attrition === undefined ? '' : String(fromUrl.attrition));
+      setJobSatisfaction(
+        fromUrl.jobSatisfaction === undefined ? '' : String(fromUrl.jobSatisfaction),
+      );
+      setEnvironmentSatisfaction(
+        fromUrl.environmentSatisfaction === undefined
+          ? ''
+          : String(fromUrl.environmentSatisfaction),
+      );
+      setRelationshipSatisfaction(
+        fromUrl.relationshipSatisfaction === undefined
+          ? ''
+          : String(fromUrl.relationshipSatisfaction),
+      );
+      setWorkLifeBalance(
+        fromUrl.workLifeBalance === undefined ? '' : String(fromUrl.workLifeBalance),
+      );
+      setAgeGroup(fromUrl.ageGroup ?? '');
+      setTenureGroup(fromUrl.tenureGroup ?? '');
+    };
+    hydrate();
+    window.addEventListener('popstate', hydrate);
+    return () => window.removeEventListener('popstate', hydrate);
+  }, []);
 
   // Auto-open the edit dialog when arriving with ?edit=<id> (e.g. the
   // employee profile page's "Edit Profile" action). window.location is used
@@ -319,6 +427,93 @@ export default function EmployeesPage() {
                 label: GENDER_LABELS[g],
               }))}
             />
+            <Select
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="All job titles"
+              aria-label="Filter by job title"
+              options={jobTitles.map((title) => ({ value: title, label: title }))}
+            />
+            <Select
+              value={attrition}
+              onChange={(e) => setAttrition(e.target.value)}
+              placeholder="All attrition"
+              aria-label="Filter by attrition"
+              options={[
+                { value: 'true', label: 'Left (attrition)' },
+                { value: 'false', label: 'Retained' },
+              ]}
+            />
+            <Select
+              value={overTime}
+              onChange={(e) => setOverTime(e.target.value)}
+              placeholder="All overtime"
+              aria-label="Filter by overtime"
+              options={[
+                { value: 'true', label: 'Works overtime' },
+                { value: 'false', label: 'No overtime' },
+              ]}
+            />
+            <Select
+              value={jobSatisfaction}
+              onChange={(e) => setJobSatisfaction(e.target.value)}
+              placeholder="All job satisfaction"
+              aria-label="Filter by job satisfaction"
+              options={Object.entries(SATISFACTION_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
+            <Select
+              value={environmentSatisfaction}
+              onChange={(e) => setEnvironmentSatisfaction(e.target.value)}
+              placeholder="All env. satisfaction"
+              aria-label="Filter by environment satisfaction"
+              options={Object.entries(SATISFACTION_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
+            <Select
+              value={relationshipSatisfaction}
+              onChange={(e) => setRelationshipSatisfaction(e.target.value)}
+              placeholder="All rel. satisfaction"
+              aria-label="Filter by relationship satisfaction"
+              options={Object.entries(SATISFACTION_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
+            <Select
+              value={workLifeBalance}
+              onChange={(e) => setWorkLifeBalance(e.target.value)}
+              placeholder="All work-life balance"
+              aria-label="Filter by work-life balance"
+              options={Object.entries(SATISFACTION_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
+            <Select
+              value={ageGroup}
+              onChange={(e) => setAgeGroup(e.target.value)}
+              placeholder="All age groups"
+              aria-label="Filter by age group"
+              options={Object.entries(AGE_GROUP_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
+            <Select
+              value={tenureGroup}
+              onChange={(e) => setTenureGroup(e.target.value)}
+              placeholder="All tenure"
+              aria-label="Filter by tenure"
+              options={Object.entries(TENURE_GROUP_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))}
+            />
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
             <button
@@ -393,11 +588,12 @@ export default function EmployeesPage() {
                       <SortHeader field="jobTitle">Job Title</SortHeader>
                     </TableHead>
                     <TableHead>Department</TableHead>
-                    <TableHead>Manager</TableHead>
+                    <TableHead className="hidden md:table-cell">Manager</TableHead>
                     <TableHead>
                       <SortHeader field="status">Status</SortHeader>
                     </TableHead>
-                    <TableHead>
+                    <TableHead>Profile</TableHead>
+                    <TableHead className="hidden lg:table-cell">
                       <SortHeader field="hiredAt">Hired</SortHeader>
                     </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -444,7 +640,7 @@ export default function EmployeesPage() {
                             </span>
                           ) : null}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
                           {employee.manager
                             ? fullName(employee.manager.firstName, employee.manager.lastName)
                             : '—'}
@@ -460,7 +656,20 @@ export default function EmployeesPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {employee.attrition ? (
+                              <Badge variant="danger">Left</Badge>
+                            ) : employee.attrition === false ? (
+                              <Badge variant="success">Retained</Badge>
+                            ) : null}
+                            {employee.overTime ? <Badge variant="warning">Overtime</Badge> : null}
+                            {!isDeleted && typeof employee.jobSatisfaction === 'number' ? (
+                              <Badge variant="info">Sat {employee.jobSatisfaction}/4</Badge>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                           {formatDate(employee.hiredAt)}
                         </TableCell>
                         <TableCell className="text-right">

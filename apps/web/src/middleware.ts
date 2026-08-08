@@ -42,7 +42,13 @@ const APP_ROUTES = [
   '/imports',
   '/users',
   '/audit-logs',
+  '/organization',
 ];
+
+// Dynamic app routes protected the same way as the static ones (e.g. a
+// deep link to an employee profile must not render an error state for a
+// signed-out visitor — it should redirect to /signin like every other page).
+const APP_ROUTE_PATTERNS = ['/employees/:path*'];
 const ADMIN_ONLY_ROUTES = ['/users', '/audit-logs'];
 const AUTH_PAGES = ['/signin', '/signup'];
 
@@ -74,7 +80,7 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.next();
   }
 
-  if (APP_ROUTES.includes(pathname)) {
+  if (APP_ROUTES.includes(pathname) || APP_ROUTE_PATTERNS.some((p) => pathMatch(p, pathname))) {
     const hasSessionVerifier = request.nextUrl.searchParams.has(SESSION_VERIFIER_PARAM);
     if (!sessionCookie || isExpired(sessionCookie)) {
       // A fresh OAuth callback carries the session verifier — let the client
@@ -98,6 +104,12 @@ export function middleware(request: NextRequest): NextResponse {
   }
 
   return NextResponse.next();
+}
+
+/** Minimal `:path*` matcher for the dynamic app-route patterns above. */
+function pathMatch(pattern: string, pathname: string): boolean {
+  const prefix = pattern.replace('/:path*', '');
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
 function hasRole(cookieValue: string, role: string): boolean {
@@ -130,10 +142,12 @@ export const config = {
     '/signup',
     '/dashboard',
     '/employees',
+    '/employees/:path*',
     '/departments',
     '/teams',
     '/imports',
     '/users',
     '/audit-logs',
+    '/organization',
   ],
 };

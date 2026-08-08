@@ -23,7 +23,18 @@ import { useToast } from '@/components/ui/toast';
 import { useAsync } from '@/hooks/use-async';
 import { api, ApiClientError } from '@/lib/api';
 import { useCanWrite } from '@/lib/auth-context';
-import { formatDate, GENDER_LABELS, STATUS_LABELS, STATUS_VARIANTS, fullName } from '@/lib/format';
+import {
+  EDUCATION_LABELS,
+  formatDate,
+  formatIncome,
+  formatYears,
+  GENDER_LABELS,
+  PERFORMANCE_LABELS,
+  SATISFACTION_LABELS,
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  fullName,
+} from '@/lib/format';
 
 export default function EmployeeDetailPage() {
   const params = useParams<{ id: string }>();
@@ -180,6 +191,83 @@ export default function EmployeeDetailPage() {
         </ProfileSection>
       </div>
 
+      {/* Workforce analytics profile — engagement dimensions + performance */}
+      <div className="mt-6">
+        <ProfileSection title="Workforce profile">
+          <Row
+            label="Attrition status"
+            value={
+              employee.attrition === true
+                ? `Left ${employee.attritionDate ? formatDate(employee.attritionDate) : ''}`
+                : employee.attrition === false
+                  ? 'Retained'
+                  : '—'
+            }
+          />
+          <Row
+            label="Overtime"
+            value={
+              employee.overTime === true
+                ? 'Works overtime'
+                : employee.overTime === false
+                  ? 'No overtime'
+                  : '—'
+            }
+          />
+          <Row
+            label="Job satisfaction"
+            value={
+              typeof employee.jobSatisfaction === 'number'
+                ? `${SATISFACTION_LABELS[employee.jobSatisfaction] ?? employee.jobSatisfaction} (${employee.jobSatisfaction}/4)`
+                : '—'
+            }
+          />
+          <Row
+            label="Work-life balance"
+            value={
+              typeof employee.workLifeBalance === 'number' ? `${employee.workLifeBalance}/4` : '—'
+            }
+          />
+          <Row
+            label="Performance rating"
+            value={
+              typeof employee.performanceRating === 'number'
+                ? `${PERFORMANCE_LABELS[employee.performanceRating] ?? employee.performanceRating} (${employee.performanceRating}/4)`
+                : '—'
+            }
+          />
+          <Row
+            label="Education"
+            value={
+              typeof employee.education === 'number'
+                ? `${EDUCATION_LABELS[employee.education] ?? `Level ${employee.education}`}${
+                    employee.educationField ? ` · ${employee.educationField}` : ''
+                  }`
+                : '—'
+            }
+          />
+          <Row
+            label="Monthly income"
+            value={
+              employee.monthlyIncome === null || employee.monthlyIncome === undefined
+                ? canWrite
+                  ? '—'
+                  : 'Not available for your role'
+                : formatIncome(employee.monthlyIncome)
+            }
+          />
+          <Row label="Tenure" value={formatYears(employee.yearsAtCompany ?? undefined)} />
+          <Row
+            label="Age"
+            value={employee.dateOfBirth ? formatYears(ageInYears(employee.dateOfBirth), 0) : '—'}
+          />
+          <Row
+            label="Job level"
+            value={typeof employee.jobLevel === 'number' ? `Level ${employee.jobLevel}` : '—'}
+          />
+        </ProfileSection>
+      </div>
+
       <p className="mt-6 text-center text-xs text-muted-foreground">
         <Link
           href="/employees"
@@ -214,4 +302,9 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function initials(first: string, last: string): string {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+}
+
+function ageInYears(iso: string): number {
+  const ms = Date.now() - new Date(iso).getTime();
+  return Math.max(0, ms / (365.25 * 24 * 3600 * 1000));
 }

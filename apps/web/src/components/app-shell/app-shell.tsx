@@ -8,6 +8,9 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Network,
+  PanelLeft,
+  PanelLeftClose,
   ScrollText,
   Search,
   ShieldCheck,
@@ -20,6 +23,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Logo } from '@/components/landing/logo';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { CommandPalette, CommandPaletteTrigger } from './command-palette';
@@ -62,6 +66,12 @@ const TEAMS_ITEM: NavItem = {
   icon: BarChart3,
   roles: ['admin', 'manager', 'viewer'],
 };
+const ORG_ITEM: NavItem = {
+  href: '/organization',
+  label: 'Org Chart',
+  icon: Network,
+  roles: ['admin', 'manager', 'viewer'],
+};
 const IMPORTS_ITEM: NavItem = {
   href: '/imports',
   label: 'CSV Import',
@@ -83,7 +93,7 @@ const USERS_ITEM: NavItem = {
 
 const NAV_SECTIONS: NavSection[] = [
   { label: 'Overview', items: [DASHBOARD_ITEM] },
-  { label: 'Workforce', items: [EMPLOYEES_ITEM, DEPARTMENTS_ITEM, TEAMS_ITEM] },
+  { label: 'Workforce', items: [EMPLOYEES_ITEM, DEPARTMENTS_ITEM, TEAMS_ITEM, ORG_ITEM] },
   { label: 'Operations', items: [IMPORTS_ITEM, AUDIT_ITEM] },
   { label: 'System', items: [USERS_ITEM] },
 ];
@@ -94,6 +104,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   employees: 'Employees',
   departments: 'Departments',
   teams: 'Teams',
+  organization: 'Org Chart',
   imports: 'CSV Import',
   users: 'Users & Roles',
   'audit-logs': 'Audit Log',
@@ -117,6 +128,58 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { role, profile, initializing, profileError, refreshProfile, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Load saved sidebar state from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('peoplelens_sidebar_collapsed');
+    if (stored !== null) {
+      setIsCollapsed(stored === 'true');
+    }
+  }, []);
+
+  // Track small screens so the mobile drawer is ALWAYS expanded: the desktop
+  // collapsed state is a pointer-driven convenience and must never produce an
+  // icon-only strip in the touch drawer.
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsMobile(!mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  const effectiveCollapsed = isMobile ? false : isCollapsed;
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('peoplelens_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
+  // Keyboard shortcut Ctrl+B / Cmd+B to toggle sidebar collapse state on desktop
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isMobile) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        const target = e.target as HTMLElement;
+        if (
+          target &&
+          (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        toggleCollapsed();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobile]);
 
   // Close the mobile drawer on navigation.
   useEffect(() => {
@@ -162,23 +225,60 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[16rem_1fr]">
+      <div
+        className={cn(
+          'grid transition-[grid-template-columns] duration-300 ease-in-out',
+          effectiveCollapsed ? 'lg:grid-cols-[4.5rem_1fr]' : 'lg:grid-cols-[16rem_1fr]',
+        )}
+      >
         {/* Sidebar */}
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-50 w-64 border-r border-border/60 bg-card/60 backdrop-blur-xl transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:bg-transparent',
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+            'fixed inset-y-0 left-0 z-50 border-r border-border/60 bg-card/60 backdrop-blur-xl transition-all duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:bg-transparent',
+            effectiveCollapsed ? 'w-[4.5rem]' : 'w-64',
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
           <div className="flex h-full flex-col">
-            <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
-              <Link
-                href="/dashboard"
-                aria-label="PeopleLens dashboard"
-                className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {/* Sidebar header */}
+            <div
+              className={cn(
+                'flex h-14 items-center border-b border-border/60 transition-all duration-300',
+                effectiveCollapsed ? 'justify-center px-2' : 'justify-between px-5',
+              )}
+            >
+              <Tooltip
+                content={effectiveCollapsed ? 'Expand sidebar' : undefined}
+                shortcut="Ctrl B"
+                side="right"
+                disabled={!effectiveCollapsed}
               >
-                <Logo />
-              </Link>
+                <Link
+                  href="/dashboard"
+                  aria-label="PeopleLens dashboard"
+                  className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Logo showText={!effectiveCollapsed} />
+                </Link>
+              </Tooltip>
+
+              {/* Desktop toggle button in sidebar header (visible when expanded) */}
+              {!effectiveCollapsed ? (
+                <div className="hidden lg:flex items-center">
+                  <Tooltip content="Collapse sidebar" shortcut="Ctrl B" side="right">
+                    <button
+                      type="button"
+                      onClick={toggleCollapsed}
+                      aria-label="Collapse sidebar"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                    >
+                      <PanelLeftClose className="size-4.5" aria-hidden />
+                    </button>
+                  </Tooltip>
+                </div>
+              ) : null}
+
+              {/* Mobile close button */}
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
@@ -189,46 +289,78 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
+            {/* Navigation links */}
             <nav
-              className="flex-1 space-y-4 overflow-y-auto px-3 py-4"
+              className={cn(
+                'flex-1 space-y-4 overflow-y-auto py-4 transition-all duration-300',
+                effectiveCollapsed ? 'px-2' : 'px-3',
+              )}
               aria-label="Main navigation"
             >
-              {NAV_SECTIONS.map((section) => {
+              {NAV_SECTIONS.map((section, sectionIdx) => {
                 const visibleItems = section.items.filter(
                   (item) => role && item.roles.includes(role),
                 );
                 if (visibleItems.length === 0) return null;
                 return (
                   <div key={section.label}>
-                    <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                      {section.label}
-                    </p>
-                    <div className="space-y-0.5">
+                    {!effectiveCollapsed ? (
+                      <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                        {section.label}
+                      </p>
+                    ) : sectionIdx > 0 ? (
+                      <div className="my-2.5 mx-2 border-t border-border/40" />
+                    ) : null}
+
+                    <div className="space-y-1">
                       {visibleItems.map((item) => {
                         const isActive =
                           pathname === item.href || pathname.startsWith(`${item.href}/`);
-                        return (
+
+                        const linkNode = (
                           <Link
                             key={item.href}
                             href={item.href}
                             aria-current={isActive ? 'page' : undefined}
                             className={cn(
-                              'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                              'relative flex items-center rounded-xl font-medium transition-all duration-200',
+                              effectiveCollapsed
+                                ? 'size-10 justify-center mx-auto'
+                                : 'gap-2.5 px-3 py-2 text-sm',
                               isActive
-                                ? 'bg-primary/10 text-primary'
+                                ? 'bg-primary/10 text-primary font-semibold shadow-xs'
                                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                             )}
                           >
                             {isActive ? (
                               <span
-                                className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                                className={cn(
+                                  'absolute rounded-full bg-primary',
+                                  effectiveCollapsed
+                                    ? '-left-1 top-1/2 h-5 w-1 -translate-y-1/2'
+                                    : 'left-0 top-1/2 h-5 w-0.5 -translate-y-1/2',
+                                )}
                                 aria-hidden
                               />
                             ) : null}
-                            <item.icon className="size-4 shrink-0" aria-hidden />
-                            {item.label}
+                            <item.icon className="size-4.5 shrink-0" aria-hidden />
+                            {!effectiveCollapsed ? (
+                              <span className="truncate">{item.label}</span>
+                            ) : null}
                           </Link>
                         );
+
+                        if (effectiveCollapsed) {
+                          return (
+                            <div key={item.href} className="flex justify-center">
+                              <Tooltip content={item.label} side="right">
+                                {linkNode}
+                              </Tooltip>
+                            </div>
+                          );
+                        }
+
+                        return linkNode;
                       })}
                     </div>
                   </div>
@@ -236,49 +368,102 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="border-t border-border/60 p-3">
+            {/* Sidebar User Profile Footer */}
+            <div
+              className={cn(
+                'border-t border-border/60 transition-all duration-300',
+                effectiveCollapsed ? 'p-2' : 'p-3',
+              )}
+            >
               {initializing ? (
-                <div className="animate-pulse space-y-2 rounded-lg bg-muted p-3">
-                  <div className="h-3 w-24 rounded bg-muted-foreground/20" />
-                  <div className="h-2.5 w-16 rounded bg-muted-foreground/15" />
+                <div
+                  className={cn(
+                    'animate-pulse rounded-lg bg-muted',
+                    effectiveCollapsed ? 'size-10 mx-auto' : 'space-y-2 p-3',
+                  )}
+                >
+                  {!effectiveCollapsed ? (
+                    <>
+                      <div className="h-3 w-24 rounded bg-muted-foreground/20" />
+                      <div className="h-2.5 w-16 rounded bg-muted-foreground/15" />
+                    </>
+                  ) : null}
                 </div>
               ) : profile ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 rounded-lg p-2">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-xs font-bold text-white">
-                      {initials(profile.name || profile.email)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{profile.name}</p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {ROLE_LABEL[profile.role] ?? profile.role}
-                      </p>
-                    </div>
+                effectiveCollapsed ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Tooltip
+                      content={`${profile.name || profile.email} (${ROLE_LABEL[profile.role] ?? profile.role})`}
+                      side="right"
+                    >
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-xs font-bold text-white shadow-sm ring-1 ring-white/20 cursor-pointer">
+                        {initials(profile.name || profile.email)}
+                      </div>
+                    </Tooltip>
+                    <Tooltip content="Sign out" side="right">
+                      <button
+                        type="button"
+                        onClick={() => void handleSignOut()}
+                        aria-label="Sign out of PeopleLens"
+                        className="flex size-9 items-center justify-center rounded-lg border border-border text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <LogOut className="size-4" aria-hidden />
+                      </button>
+                    </Tooltip>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleSignOut()}
-                    aria-label="Sign out of PeopleLens"
-                    title="Sign out"
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <LogOut className="size-4" aria-hidden />
-                    Sign out
-                  </button>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 rounded-lg p-2">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-xs font-bold text-white">
+                        {initials(profile.name || profile.email)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {profile.name}
+                        </p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {ROLE_LABEL[profile.role] ?? profile.role}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleSignOut()}
+                      aria-label="Sign out of PeopleLens"
+                      title="Sign out"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <LogOut className="size-4" aria-hidden />
+                      Sign out
+                    </button>
+                  </div>
+                )
               ) : profileError ? (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
-                  <p className="text-[11px] leading-relaxed text-destructive">
-                    {'Could not load your profile — '}
-                    {profileError}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refreshProfile()}
-                    className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    Retry
-                  </button>
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-center">
+                  {!effectiveCollapsed ? (
+                    <>
+                      <p className="text-[11px] leading-relaxed text-destructive">
+                        {'Could not load profile'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void refreshProfile()}
+                        className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted"
+                      >
+                        Retry
+                      </button>
+                    </>
+                  ) : (
+                    <Tooltip content="Retry loading profile" side="right">
+                      <button
+                        type="button"
+                        onClick={() => void refreshProfile()}
+                        className="p-1 text-xs text-destructive hover:underline"
+                      >
+                        !
+                      </button>
+                    </Tooltip>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -288,7 +473,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Main column */}
         <div className="min-w-0">
           <header className="sticky top-0 z-30 hidden h-14 items-center justify-between border-b border-border/60 bg-background/85 px-6 backdrop-blur-md lg:flex">
-            <Breadcrumbs pathname={pathname} />
+            <div className="flex items-center gap-3 min-w-0">
+              <Tooltip
+                content={effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                shortcut="Ctrl B"
+                side="bottom"
+              >
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  aria-label={effectiveCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                >
+                  <PanelLeft className="size-4.5" aria-hidden />
+                </button>
+              </Tooltip>
+              <Breadcrumbs pathname={pathname} />
+            </div>
             <div className="flex items-center gap-2">
               <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
               <ThemeToggle />

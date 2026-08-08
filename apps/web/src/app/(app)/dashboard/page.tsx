@@ -1,8 +1,12 @@
 'use client';
 
-import type { DashboardFilters, DashboardOverview, Gender, Role } from '@peoplelens/types';
+import type {
+  AnalyticsOverview,
+  DepartmentComparison,
+  FilterOptions,
+  Role,
+} from '@peoplelens/types';
 import {
-  ArrowUpRight,
   Building2,
   FileSpreadsheet,
   Plus,
@@ -14,56 +18,41 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  DashboardKpis,
-  DepartmentDistributionChart,
-  DistributionDonut,
-} from '@/components/dashboard/charts';
 import { PageHeader } from '@/components/app-shell/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { AnalyticsFilters } from '@/components/dashboard/analytics-filters';
+import { AnalyticsKpis } from '@/components/dashboard/analytics-kpis';
+import { AttritionSection } from '@/components/dashboard/attrition-section';
+import { CompareSection } from '@/components/dashboard/compare-section';
+import { CompositionSection } from '@/components/dashboard/composition-section';
+import { DataQualityCard } from '@/components/dashboard/data-quality-card';
+import { EngagementSection } from '@/components/dashboard/engagement-section';
+import { ExecutiveSummaryCard } from '@/components/dashboard/executive-summary';
+import { InsightsSection } from '@/components/dashboard/insights-section';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState } from '@/components/ui/empty-state';
-import { Select, type SelectOption } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalyticsFilters } from '@/hooks/use-analytics-filters';
 import { useAsync } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import {
-  formatDate,
-  formatRelative,
-  GENDER_LABELS,
-  STATUS_LABELS,
-  STATUS_VARIANTS,
-  fullName,
-} from '@/lib/format';
-
-const GENDER_OPTIONS: SelectOption[] = Object.entries(GENDER_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}));
-
-const STATUS_OPTIONS: SelectOption[] = Object.entries(STATUS_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}));
-
-/** Serializes the active filters into a stable dependency key. */
-function filterKey(filters: DashboardFilters): string {
-  return JSON.stringify(filters);
-}
-
-interface QuickAction {
-  href: string;
-  label: string;
-  icon: typeof Plus;
-}
+import { formatDate, formatRelative } from '@/lib/format';
+import { filtersToQuery } from '@/lib/analytics-filters';
 
 const WELCOME_DISMISS_KEY = 'peoplelens_welcome_dismissed';
 
+const SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'retention', label: 'Retention & Attrition' },
+  { id: 'engagement', label: 'Engagement & Culture' },
+  { id: 'composition', label: 'Composition' },
+  { id: 'compare', label: 'Compare' },
+  { id: 'insights', label: 'Insights' },
+  { id: 'health', label: 'Data health' },
+] as const;
+
 export default function DashboardPage() {
   const { role, profile } = useAuth();
-  const [filters, setFilters] = useState<DashboardFilters>({});
+  const { filters, setFilter, resetFilters, activeCount, hydrated } = useAnalyticsFilters();
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
 
@@ -86,78 +75,70 @@ export default function DashboardPage() {
     }
   };
 
-  const key = useMemo(() => filterKey(filters), [filters]);
-  const { data, loading, error, refetch } = useAsync<DashboardOverview>(() => {
-    const params = new URLSearchParams();
-    if (filters.departmentId) params.set('departmentId', filters.departmentId);
-    if (filters.status) params.set('status', filters.status);
-    if (filters.gender) params.set('gender', filters.gender);
-    const qs = params.toString();
-    return api.get(`/dashboard/overview${qs ? `?${qs}` : ''}`);
-  }, [key]);
+  const query = useMemo(() => filtersToQuery(filters).toString(), [filters]);
+
+  const {
+    data: overview,
+    loading,
+    error,
+    refetch,
+  } = useAsync<AnalyticsOverview | null>(
+    () =>
+      hydrated ? api.get(`/analytics/overview${query ? `?${query}` : ''}`) : Promise.resolve(null),
+    [query, hydrated],
+  );
+
+  const { data: filterOptions } = useAsync<FilterOptions | null>(
+    () => api.get('/analytics/filters'),
+    [],
+  );
 
   // Track when the latest payload was fetched for the "Updated X ago" label.
   useEffect(() => {
-    if (data) setRefreshedAt(new Date());
-  }, [data]);
+    if (overview) setRefreshedAt(new Date());
+  }, [overview]);
 
-  // Department options come back with every overview (scope-aware for
-  // managers), so the filter dropdown can never offer an out-of-scope choice.
-  const departmentOptions: SelectOption[] = useMemo(
-    () => (data?.departments ?? []).map((d) => ({ value: d.id, label: d.name })),
-    [data?.departments],
+  // Default comparison: the three largest departments by headcount.
+  const [compareSelection, setCompareSelection] = useState<string[]>([]);
+  useEffect(() => {
+    if (compareSelection.length === 0 && overview && overview.departments.length > 0) {
+      const topNames = overview.composition.department.slice(0, 3).map((s) => s.name);
+      const ids = overview.departments.filter((d) => topNames.includes(d.name)).map((d) => d.id);
+      if (ids.length >= 2) setCompareSelection(ids);
+    }
+  }, [overview, compareSelection.length]);
+
+  const compareKey = useMemo(() => [...compareSelection].sort().join(','), [compareSelection]);
+  const { data: compare, loading: compareLoading } = useAsync<DepartmentComparison[]>(
+    () =>
+      compareSelection.length >= 2
+        ? api.get(`/analytics/compare?departmentIds=${compareSelection.join(',')}`)
+        : Promise.resolve([]),
+    [compareKey],
   );
 
-  const activeFilterCount =
-    (filters.departmentId ? 1 : 0) + (filters.status ? 1 : 0) + (filters.gender ? 1 : 0);
-
-  const setFilter = <K extends keyof DashboardFilters>(key: K, value: DashboardFilters[K]) => {
-    setFilters((current) => {
-      const next = { ...current };
-      if (value === undefined || value === '') {
-        delete next[key];
-      } else {
-        next[key] = value;
-      }
-      return next;
-    });
+  const toggleCompare = (id: string) => {
+    setCompareSelection((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+    );
   };
 
-  // Write actions (add/import) only for roles that can actually perform them;
-  // admin-only destinations stay gated to admins — mirrors the sidebar.
   const canWrite = role === 'admin' || role === 'manager';
-
-  // First-run: an account with no linked employee profile is brand new — give
-  // it a clear, role-aware welcome instead of a silent empty dashboard.
   const showWelcome = Boolean(profile && !profile.employeeId && !welcomeDismissed);
-
-  // Empty-org: an organization with zero employees needs a next step, not a
-  // wall of zero-filled charts.
-  const isOrgEmpty = Boolean(data && data.kpis.totalEmployees === 0);
-  const quickActions: QuickAction[] = [
-    ...(canWrite ? [{ href: '/employees', label: 'Add employee', icon: Plus }] : []),
-    ...(canWrite ? [{ href: '/imports', label: 'Import CSV', icon: FileSpreadsheet }] : []),
-    ...(role === 'admin'
-      ? [{ href: '/departments', label: 'New department', icon: Building2 }]
-      : []),
-    ...(role === 'admin' ? [{ href: '/audit-logs', label: 'Audit log', icon: ScrollText }] : []),
-  ];
+  const isOrgEmpty = Boolean(overview && overview.kpis.totalEmployees === 0);
+  const showSkeleton = (loading && !overview) || !hydrated;
 
   const handleRefresh = () => {
     setRefreshedAt(null);
     void refetch();
   };
 
-  // Keep the last-good dashboard visible during filter changes — the skeleton
-  // only appears on the very first load.
-  const showSkeleton = loading && !data;
-
   return (
     <div>
       <PageHeader
-        eyebrow="Analytics"
-        title="Workforce Dashboard"
-        description="Live headcount, organizational structure, and employee composition at a glance."
+        eyebrow="Workforce Intelligence"
+        title="Analytics Dashboard"
+        description="What is happening in your workforce, where the important changes are, and what deserves attention next."
         actions={
           <div className="flex items-center gap-2">
             {refreshedAt ? (
@@ -184,164 +165,176 @@ export default function DashboardPage() {
 
       {showSkeleton ? (
         <DashboardSkeleton />
-      ) : error && !data ? (
+      ) : error && !overview ? (
         <ErrorState description={error} onRetry={() => void refetch()} />
-      ) : data && isOrgEmpty ? (
+      ) : overview && isOrgEmpty ? (
         <EmptyOrgState canWrite={canWrite} />
-      ) : data ? (
-        <div className="space-y-6">
-          {/* Global slice filters — one coherent state feeding the whole
-              overview (KPIs + all charts update together). */}
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/60 p-3">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Filters
-            </span>
-            <Select
-              aria-label="Filter by department"
-              placeholder="All departments"
-              value={filters.departmentId ?? ''}
-              onChange={(event) => setFilter('departmentId', event.target.value)}
-              options={departmentOptions}
-              className="w-48"
-            />
-            <Select
-              aria-label="Filter by employment status"
-              placeholder="All statuses"
-              value={filters.status ?? ''}
-              onChange={(event) =>
-                setFilter('status', event.target.value as DashboardFilters['status'])
-              }
-              options={STATUS_OPTIONS}
-              className="w-44"
-            />
-            <Select
-              aria-label="Filter by gender"
-              placeholder="All genders"
-              value={filters.gender ?? ''}
-              onChange={(event) => setFilter('gender', event.target.value as Gender)}
-              options={GENDER_OPTIONS}
-              className="w-44"
-            />
-            {activeFilterCount > 0 ? (
-              <>
-                <Badge variant="secondary" className="h-6">
-                  {activeFilterCount} active
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFilters({})}
-                  aria-label="Clear all filters"
-                >
-                  Reset
-                </Button>
-              </>
-            ) : null}
-          </div>
+      ) : overview ? (
+        <div className="space-y-8">
+          <ExecutiveSummaryCard summary={overview.executiveSummary} />
+
+          {/* Global filters — one coherent state feeding every section below */}
+          <AnalyticsFilters
+            filters={filters}
+            setFilter={setFilter}
+            resetFilters={resetFilters}
+            activeCount={activeCount}
+            options={filterOptions}
+          />
 
           {/* Quick actions */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Quick actions
             </span>
-            {quickActions.map((action) => (
-              <Button key={action.label} variant="secondary" size="sm" asChild>
-                <Link href={action.href}>
-                  <action.icon className="size-3.5" aria-hidden /> {action.label}
+            {canWrite ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/employees?new=1">
+                  <Plus className="size-3.5" aria-hidden /> Add employee
                 </Link>
               </Button>
-            ))}
-          </div>
-
-          <DashboardKpis overview={data} />
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Department Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DepartmentDistributionChart data={data.departmentDistribution} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Employment Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DistributionDonut data={data.employeeStatus} title="Status" />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gender Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DistributionDonut data={data.genderDistribution} title="Gender" />
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-2">
-              <CardHeader className="flex-row items-center justify-between">
-                <CardTitle>Recent Hires</CardTitle>
-                <Link
-                  href="/employees"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-indigo-500 transition-colors hover:text-indigo-400 dark:text-indigo-300"
-                >
-                  View all <ArrowUpRight className="size-3.5" aria-hidden />
+            ) : null}
+            {canWrite ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/imports">
+                  <FileSpreadsheet className="size-3.5" aria-hidden /> Import CSV
                 </Link>
-              </CardHeader>
-              <CardContent>
-                {data.recentHires.length === 0 ? (
-                  <EmptyState
-                    title="No recent hires"
-                    description="Hires will appear here as employees join the organization."
-                  />
-                ) : (
-                  <ul className="divide-y divide-border/60">
-                    {data.recentHires.map((employee) => (
-                      <li key={employee.id} className="flex items-center gap-3 py-3">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 text-xs font-semibold text-indigo-500 dark:text-indigo-300">
-                          {initials(employee.firstName, employee.lastName)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {fullName(employee.firstName, employee.lastName)}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {employee.jobTitle}
-                            {employee.department ? ` · ${employee.department.name}` : ''}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant={STATUS_VARIANTS[employee.status]}>
-                            {STATUS_LABELS[employee.status]}
-                          </Badge>
-                          <span className="text-[11px] text-muted-foreground">
-                            Hired {formatDate(employee.hiredAt)}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+              </Button>
+            ) : null}
+            {role === 'admin' ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/departments">
+                  <Building2 className="size-3.5" aria-hidden /> Departments
+                </Link>
+              </Button>
+            ) : null}
+            {role === 'admin' ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/audit-logs">
+                  <ScrollText className="size-3.5" aria-hidden /> Audit log
+                </Link>
+              </Button>
+            ) : null}
           </div>
+
+          {/* In-page section navigation */}
+          <nav
+            aria-label="Dashboard sections"
+            className="sticky top-14 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-xl border border-border/60 bg-background/85 px-2 py-1.5 backdrop-blur-md lg:top-[3.5rem]"
+          >
+            {SECTIONS.map((section) => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {section.label}
+              </a>
+            ))}
+          </nav>
+
+          <section id="overview" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Workforce Overview"
+              title="The workforce at a glance"
+              description="Current headcount, stability and composition for the active filters."
+            />
+            <AnalyticsKpis kpis={overview.kpis} />
+          </section>
+
+          <section id="retention" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Retention & Attrition"
+              title="Where is retention risk concentrated?"
+              description="Observed attrition across departments, roles, tenure, overtime and satisfaction — click any slice to investigate."
+            />
+            <AttritionSection overview={overview} />
+          </section>
+
+          <section id="engagement" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Engagement & Culture"
+              title="How engaged is the workforce?"
+              description="Satisfaction dimensions measured on a 1–4 scale, plus overtime prevalence."
+            />
+            <EngagementSection overview={overview} />
+          </section>
+
+          <section id="composition" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Workforce Composition"
+              title="Who makes up the workforce?"
+              description="Distribution by department, role, gender, age, education and tenure — click a slice to explore that population."
+            />
+            <CompositionSection overview={overview} />
+          </section>
+
+          <section id="compare" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Department Comparison"
+              title="How do departments differ?"
+              description="Select departments to compare headcount, attrition, tenure, income, overtime, satisfaction and performance side-by-side."
+            />
+            <CompareSection
+              departments={overview.departments}
+              selection={compareSelection}
+              onToggle={toggleCompare}
+              onClear={() => setCompareSelection([])}
+              data={compare}
+              loading={compareLoading}
+            />
+          </section>
+
+          <section id="insights" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Workforce Insights"
+              title="Observed patterns worth investigating"
+              description="Deterministic observations from the current dataset — correlations, not predictions. Each card links to the underlying records."
+            />
+            <InsightsSection insights={overview.insights} />
+          </section>
+
+          <section id="health" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Data Quality"
+              title="Is the dataset ready for analytics?"
+              description="Analytics quality depends on data quality — missing values lower the readiness score and are listed below."
+            />
+            <div className="max-w-2xl">
+              <DataQualityCard quality={overview.dataQuality} />
+            </div>
+          </section>
         </div>
       ) : null}
     </div>
   );
 }
 
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div>
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-indigo-400 dark:text-indigo-300">
+        {eyebrow}
+      </p>
+      <h2 className="mt-1 font-display text-xl font-semibold tracking-tight text-foreground">
+        {title}
+      </h2>
+      <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
 /**
  * First-run welcome card for accounts with no linked employee profile.
- * Explains the caller's role and points at the right next step — a new user
- * should never land on a silent dashboard with no idea where they are.
+ * Explains the caller's role and points at the right next step.
  */
 function WelcomeCard({
   role,
@@ -435,17 +428,18 @@ function EmptyOrgState({ canWrite }: { canWrite: boolean }) {
   );
 }
 
-/** Skeleton mirror of the dashboard layout while metrics load. */
+/** Skeleton mirror of the analytics dashboard while metrics load. */
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6" aria-hidden>
-      <div className="flex flex-wrap items-center gap-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-8 w-28 rounded-md" />
-        <Skeleton className="h-8 w-28 rounded-md" />
+    <div className="space-y-8" aria-hidden>
+      <Skeleton className="h-28 w-full rounded-2xl" />
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((index) => (
+          <Skeleton key={index} className="h-10 rounded-lg" />
+        ))}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[0, 1, 2, 3].map((index) => (
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((index) => (
           <div key={index} className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center justify-between">
               <Skeleton className="h-3 w-24" />
@@ -459,19 +453,15 @@ function DashboardSkeleton() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <div className="rounded-2xl border border-border bg-card p-5">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="mt-5 h-52 w-full" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="mt-5 h-56 w-full" />
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-5">
           <Skeleton className="h-4 w-36" />
-          <Skeleton className="mt-5 h-52 w-full rounded-full" />
+          <Skeleton className="mt-5 h-56 w-full" />
         </div>
       </div>
     </div>
   );
-}
-
-function initials(first: string, last: string): string {
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }

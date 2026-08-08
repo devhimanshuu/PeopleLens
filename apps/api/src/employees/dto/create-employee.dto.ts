@@ -1,14 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDate,
   IsEmail,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 import type { EmployeeStatus, Gender } from '@peoplelens/types';
@@ -96,4 +100,105 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   managerId?: string;
+
+  // ── Analytics & engagement profile (Phase 4) ─────────────────────────────
+
+  @ApiPropertyOptional({ description: 'Observed attrition event (left workforce)' })
+  @IsOptional()
+  @IsBoolean()
+  attrition?: boolean;
+
+  @ApiPropertyOptional({ description: 'When attrition occurred' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  attritionDate?: Date;
+
+  @ApiPropertyOptional({ example: 9800, description: 'Monthly income in USD' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  monthlyIncome?: number;
+
+  @ApiPropertyOptional({ description: '1 (low) – 4 (high)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  jobSatisfaction?: number;
+
+  @ApiPropertyOptional({ description: '1 (low) – 4 (high)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  environmentSatisfaction?: number;
+
+  @ApiPropertyOptional({ description: '1 (low) – 4 (high)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  relationshipSatisfaction?: number;
+
+  @ApiPropertyOptional({ description: '1 (low) – 4 (high)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  workLifeBalance?: number;
+
+  @ApiPropertyOptional({ description: 'Works beyond standard hours' })
+  @IsOptional()
+  @IsBoolean()
+  overTime?: boolean;
+
+  @ApiPropertyOptional({ description: '1 (low) – 4 (high)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4)
+  performanceRating?: number;
+
+  @ApiPropertyOptional({ description: '1 (below) – 5 (doctorate)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  education?: number;
+
+  @ApiPropertyOptional({ example: 'Technical Degree' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  educationField?: string;
+
+  @ApiPropertyOptional({ description: '1 (entry) – 5 (executive)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  jobLevel?: number;
+
+  @ApiPropertyOptional({ description: 'Years at the company' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  yearsAtCompany?: number;
+
+  @ApiPropertyOptional({ description: 'Total years of working experience' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  totalWorkingYears?: number;
 }

@@ -6,11 +6,14 @@ export function Logo({
   className = '',
   size = 'md',
   shimmer = false,
+  showText = true,
 }: {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   /** Brand-gradient hover shimmer over the wordmark (requires a `.group` ancestor). */
   shimmer?: boolean;
+  /** Whether to display the text wordmark alongside the mark icon. */
+  showText?: boolean;
 }) {
   const isSm = size === 'sm';
   const isLg = size === 'lg';
@@ -93,24 +96,26 @@ export function Logo({
       </div>
 
       {/* Enterprise SaaS Wordmark */}
-      <span
-        className={`relative font-display font-bold tracking-tight text-foreground ${
-          isSm ? 'text-base' : isLg ? 'text-xl' : 'text-lg'
-        }`}
-      >
-        People
-        <span className="font-semibold bg-gradient-to-r from-indigo-600 via-sky-500 to-cyan-500 bg-clip-text text-transparent dark:from-indigo-300 dark:via-sky-300 dark:to-cyan-400">
-          Lens
-        </span>
-        {shimmer ? (
-          <span
-            aria-hidden
-            className="watermark-shimmer pointer-events-none absolute inset-0 font-bold"
-          >
-            PeopleLens
+      {showText ? (
+        <span
+          className={`relative font-display font-bold tracking-tight text-foreground ${
+            isSm ? 'text-base' : isLg ? 'text-xl' : 'text-lg'
+          }`}
+        >
+          People
+          <span className="font-semibold bg-gradient-to-r from-indigo-600 via-sky-500 to-cyan-500 bg-clip-text text-transparent dark:from-indigo-300 dark:via-sky-300 dark:to-cyan-400">
+            Lens
           </span>
-        ) : null}
-      </span>
+          {shimmer ? (
+            <span
+              aria-hidden
+              className="watermark-shimmer pointer-events-none absolute inset-0 font-bold"
+            >
+              PeopleLens
+            </span>
+          ) : null}
+        </span>
+      ) : null}
     </div>
   );
 }

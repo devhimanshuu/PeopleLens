@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { api, ApiClientError, downloadAuthenticated } from '@/lib/api';
-import { formatDate, formatNumber, formatRelative } from '@/lib/format';
+import { formatDate, formatDuration, formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export default function ImportsPage() {
@@ -126,7 +126,7 @@ export default function ImportsPage() {
         }}
         aria-label="Upload a CSV file"
         className={cn(
-          'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center transition-colors',
+          'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition-colors sm:p-10',
           dragging
             ? 'border-indigo-500 bg-indigo-500/5'
             : 'border-border bg-card/50 hover:border-indigo-500/50 hover:bg-card',
@@ -231,10 +231,12 @@ export default function ImportsPage() {
                   <TableRow>
                     <TableHead>File</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Rows</TableHead>
                     <TableHead>Imported</TableHead>
                     <TableHead>Failed</TableHead>
                     <TableHead>Duplicates</TableHead>
-                    <TableHead>By</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead className="hidden lg:table-cell">By</TableHead>
                     <TableHead>When</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -260,6 +262,9 @@ export default function ImportsPage() {
                           {item.status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatNumber(item.totalRows)}
+                      </TableCell>
                       <TableCell className="text-sm text-emerald-500">
                         {item.successCount}
                       </TableCell>
@@ -268,6 +273,9 @@ export default function ImportsPage() {
                         {item.duplicateCount}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
+                        {formatDuration(item.durationMs)}
+                      </TableCell>
+                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                         {item.importedBy?.name ?? '—'}
                       </TableCell>
                       <TableCell

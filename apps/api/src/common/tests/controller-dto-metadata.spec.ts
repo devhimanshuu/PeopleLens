@@ -23,7 +23,7 @@ import { PaginationDto } from '@app/common/dto/pagination.dto';
  *
  * The global ValidationPipe resolves the class to validate for `@Query()` /
  * `@Body()` from `design:paramtypes` emitted by TypeScript. If a DTO is
- * imported as `import { type X }` it is erased at compile time and the emitted
+ * imported as `import { X }` it is erased at compile time and the emitted
  * type degrades to `Function` — silently disabling validation (whitelist,
  * defaults, transformation) for that endpoint.
  *

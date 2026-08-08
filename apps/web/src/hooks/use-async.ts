@@ -19,23 +19,38 @@ export function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[] = []): As
   const [error, setError] = useState<string | null>(null);
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
+  // Monotonic request id — a response is only committed if it is still the
+  // latest request, so a slow stale response can never overwrite the results
+  // of a newer one (rapid filter changes), and unmounted components never
+  // setState (the cleanup bumps the id to invalidate any in-flight request).
+  const requestIdRef = useRef(0);
 
   const run = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const result = await fetcherRef.current();
-      setData(result);
+      if (requestId === requestIdRef.current) setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      if (requestId === requestIdRef.current) {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, deps);
 
   useEffect(() => {
     void run();
   }, [run]);
+
+  // Invalidate in-flight requests when the component unmounts.
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, []);
 
   return { data, loading, error, refetch: run };
 }
