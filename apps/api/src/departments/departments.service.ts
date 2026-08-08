@@ -25,9 +25,13 @@ export class DepartmentsService {
     private readonly audit: AuditService,
   ) {}
 
-  async findAll(): Promise<DepartmentSummary[]> {
+  async findAll(actor: RequestUser): Promise<DepartmentSummary[]> {
+    // Scope: managers only see the departments they manage. Viewers keep
+    // read-only access to the full org (documented product rule), so the
+    // scope filter applies to managers only — the same model as employees.
+    const scope = await this.rbac.departmentScope(actor);
     const departments = await this.prisma.department.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...(scope ? { id: { in: scope } } : {}) },
       orderBy: { name: 'asc' },
       include: {
         managerUser: { select: { id: true, name: true, email: true, role: true } },
@@ -69,6 +73,13 @@ export class DepartmentsService {
       },
     });
     if (!department) throw new NotFoundException('Department not found');
+    // Resource-level check: a manager may only read departments they manage.
+    if (!this.rbac.isAdmin(actor)) {
+      const scope = await this.rbac.departmentScope(actor);
+      if (scope && !scope.includes(department.id)) {
+        throw new NotFoundException('Department not found');
+      }
+    }
     return this.toSummary(department);
   }
 

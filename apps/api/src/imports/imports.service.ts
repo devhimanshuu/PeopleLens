@@ -140,14 +140,23 @@ export class ImportsService {
     page: number,
     pageSize: number,
   ): Promise<Paginated<ImportHistoryView>> {
+    // Scope: admins see the whole feed; managers and viewers only see imports
+    // they performed. Import history carries org data (filenames, counts,
+    // per-row error reports with employee emails/codes), so letting a manager
+    // enumerate everyone's imports would leak workforce information from
+    // departments outside their scope.
+    const where: Prisma.ImportHistoryWhereInput = this.rbac.isAdmin(actor)
+      ? {}
+      : { importedByUserId: actor.sub };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.importHistory.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: { importedByUser: { select: { id: true, name: true, email: true } } },
       }),
-      this.prisma.importHistory.count(),
+      this.prisma.importHistory.count({ where }),
     ]);
     return {
       items: items.map((h) => this.toView(h)),
@@ -164,6 +173,12 @@ export class ImportsService {
       include: { importedByUser: { select: { id: true, name: true, email: true } } },
     });
     if (!history) throw new NotFoundException('Import record not found');
+    // Same scope rule as findAll — a non-admin may only read imports they
+    // performed. A NotFound (not Forbidden) keeps the resource opaque: an
+    // out-of-scope import id is indistinguishable from a nonexistent one.
+    if (!this.rbac.isAdmin(actor) && history.importedByUserId !== actor.sub) {
+      throw new NotFoundException('Import record not found');
+    }
     return this.toView(history);
   }
 

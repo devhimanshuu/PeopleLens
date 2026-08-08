@@ -28,9 +28,13 @@ export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List departments', description: 'All roles can list departments.' })
-  findAll() {
-    return this.departmentsService.findAll();
+  @ApiOperation({
+    summary: 'List departments',
+    description:
+      'All roles can list departments; managers are scoped to their assigned departments.',
+  })
+  findAll(@CurrentUser() user: RequestUser) {
+    return this.departmentsService.findAll(user);
   }
 
   @Get(':id')

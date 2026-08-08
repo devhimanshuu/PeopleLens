@@ -56,6 +56,16 @@ describe('RbacService', () => {
         expect.objectContaining({ where: { managerUserId: 'user-1', deletedAt: null } }),
       );
     });
+
+    it('returns an EMPTY array for a manager with no assigned departments (zero access, never full access)', async () => {
+      // An empty scope must mean "nothing in scope". Services gate reads on the
+      // scope value (`scope ? { id: { in: scope } } : {}`); since `[]` is
+      // truthy this becomes `{ id: { in: [] } }` — matches zero rows — instead
+      // of the `{}` full-access branch that `null`/`undefined` would hit.
+      prisma.department.findMany.mockResolvedValue([]);
+
+      await expect(service.departmentScope(actor(Role.MANAGER))).resolves.toEqual([]);
+    });
   });
 
   describe('isDepartmentInScope', () => {

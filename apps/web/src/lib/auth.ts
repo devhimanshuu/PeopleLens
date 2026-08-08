@@ -33,13 +33,26 @@ const SESSION_STORAGE_KEY = 'peoplelens_session';
 /** Mirrors the session to a cookie so server-side middleware can read it (Edge runtime has no localStorage). */
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
+/**
+ * The raw session token is kept ONLY in module memory. Persisting it to
+ * localStorage would hand an XSS attacker a credential that outlives the
+ * page; the API accepts the HttpOnly `__Secure-neon-auth.*` cookie anyway
+ * (sent automatically with `credentials: 'include'`), so after a reload the
+ * Bearer header simply isn't needed — the cookie authenticates the request.
+ */
+let memoryToken: string | undefined;
+
 /** Get current stored session from localStorage / cookies if in browser */
 export function getStoredSession(): NeonSession | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as NeonSession;
+    const session = JSON.parse(raw) as NeonSession;
+    // Rehydrate the in-memory token for the current page load so the Bearer
+    // header keeps working until refresh (when the cookie takes over).
+    session.token = memoryToken;
+    return session;
   } catch {
     return null;
   }
@@ -47,14 +60,18 @@ export function getStoredSession(): NeonSession | null {
 
 /**
  * Store session locally in browser (and mirror it to a cookie for the
- * server-side middleware guard on /signin and /signup).
+ * server-side middleware guard on /signin and /signup). The raw token never
+ * touches localStorage — see `memoryToken` above.
  */
 export function setStoredSession(session: NeonSession | null) {
+  memoryToken = session?.token;
   if (typeof window === 'undefined') return;
   if (!session) {
     localStorage.removeItem(SESSION_STORAGE_KEY);
   } else {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    const marker = { ...session };
+    delete marker.token;
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(marker));
   }
   syncSessionCookie(session);
 }

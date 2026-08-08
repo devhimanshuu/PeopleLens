@@ -44,12 +44,32 @@ export class EmployeesService {
     } = query;
     const scope = await this.rbac.departmentScope(actor);
 
+    // Only writers (admin/manager) may reveal soft-deleted records — they own
+    // the audit/restore workflow. Viewers passing `includeDeleted=true` must
+    // be silently ignored: terminated/deleted profiles are not read-only
+    // data, they are internal HR records.
+    const canIncludeDeleted = this.rbac.canWrite(actor) && includeDeleted;
+
+    // The manager scope is AUTHORITATIVE — an explicit department filter may
+    // only narrow it, never widen it. A naive `...(departmentId ? { departmentId } : {})`
+    // spread AFTER the scope key would OVERWRITE the scope constraint (duplicate
+    // object keys, last-wins), letting a manager read another department's
+    // employees by guessing ids. Intersect instead (same pattern as the
+    // dashboard and teams services): an in-scope id narrows, an out-of-scope
+    // id matches nothing (`{ in: [] }`), and scope-less actors pass through.
+    const departmentFilter: string | { in: string[] } | undefined = scope
+      ? departmentId
+        ? scope.includes(departmentId)
+          ? departmentId
+          : { in: [] }
+        : { in: scope }
+      : departmentId;
+
     const where: Prisma.EmployeeWhereInput = {
       // Soft-deleted records are hidden by default; `includeDeleted` reveals
       // them so admins/managers can audit and restore removed employees.
-      ...(includeDeleted ? {} : { deletedAt: null }),
-      ...(scope ? { departmentId: { in: scope } } : {}),
-      ...(departmentId ? { departmentId } : {}),
+      ...(canIncludeDeleted ? {} : { deletedAt: null }),
+      ...(departmentFilter ? { departmentId: departmentFilter } : {}),
       ...(teamId ? { teamId } : {}),
       ...(status ? { status } : {}),
       ...(gender ? { gender } : {}),
@@ -95,13 +115,19 @@ export class EmployeesService {
       if (scope && !scope.includes(employee.departmentId)) {
         throw new NotFoundException('Employee not found');
       }
+      // Viewers must not read soft-deleted records — only admins (restore
+      // anywhere) and managers (restore within their scope) may. A deleted
+      // record is indistinguishable from a nonexistent one for viewers.
+      if (!this.rbac.canWrite(actor) && employee.deletedAt) {
+        throw new NotFoundException('Employee not found');
+      }
     }
     return this.toView(employee);
   }
 
   async create(actor: RequestUser, dto: CreateEmployeeDto, ip?: string): Promise<EmployeeView> {
     await this.rbac.assertCanWrite(actor, dto.departmentId);
-    await this.validateReferences(dto, dto.departmentId);
+    await this.validateReferences(actor, dto, dto.departmentId);
     await this.ensureUnique(dto.employeeCode, dto.email);
 
     const employee = await this.prisma.employee.create({
@@ -150,7 +176,7 @@ export class EmployeesService {
     if (dto.email && dto.email.toLowerCase() !== existing.email) {
       await this.ensureUnique(undefined, dto.email, id);
     }
-    await this.validateReferences(dto, departmentId, existing.teamId);
+    await this.validateReferences(actor, dto, departmentId, existing.teamId);
     if (dto.managerId === id) {
       throw new BadRequestException('An employee cannot be their own manager');
     }
@@ -328,6 +354,7 @@ export class EmployeesService {
   }
 
   private async validateReferences(
+    actor: RequestUser,
     dto: CreateEmployeeDto | UpdateEmployeeDto,
     departmentId: string,
     existingTeamId?: string | null,
@@ -355,6 +382,18 @@ export class EmployeesService {
         where: { id: dto.managerId, deletedAt: null },
       });
       if (!manager) throw new BadRequestException('Manager employee not found');
+      // Horizontal-scope guard: a manager may only reference a manager
+      // employee inside their own departments. Without this, a manager could
+      // probe for employees in other departments by id through the manager
+      // field (an IDOR-style existence leak). Admins are unrestricted.
+      if (this.rbac.isManager(actor)) {
+        const scope = await this.rbac.departmentScope(actor);
+        if (scope && !scope.includes(manager.departmentId)) {
+          throw new BadRequestException(
+            'The assigned manager is outside your assigned departments',
+          );
+        }
+      }
     }
   }
 

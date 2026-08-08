@@ -85,6 +85,7 @@ function createMocks() {
     assertCanWrite: jest.fn().mockResolvedValue(undefined),
     departmentScope: jest.fn().mockResolvedValue(null),
     isAdmin: jest.fn().mockReturnValue(true),
+    isManager: jest.fn().mockReturnValue(false),
     canWrite: jest.fn().mockReturnValue(true),
   };
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
@@ -242,6 +243,161 @@ describe('EmployeesService', () => {
         unknown
       >;
       expect(where.deletedAt).toBeUndefined();
+    });
+
+    it('ignores includeDeleted for viewers — deleted rows stay hidden', async () => {
+      mocks.rbac.canWrite.mockReturnValue(false);
+      await service.findAll(actor(Role.VIEWER), {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'hiredAt',
+        sortOrder: 'desc',
+        includeDeleted: true,
+      });
+
+      const where = mocks.prisma.employee.findMany.mock.calls[0]![0]!.where as Record<
+        string,
+        unknown
+      >;
+      // A viewer must never be able to reveal soft-deleted records.
+      expect(where.deletedAt).toBeNull();
+    });
+
+    it("never lets a manager's departmentId filter widen the scope (IDOR guard)", async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.rbac.departmentScope.mockResolvedValue(['dept-A']);
+      await service.findAll(actor(Role.MANAGER), {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'hiredAt',
+        sortOrder: 'desc',
+        departmentId: 'dept-B',
+      });
+
+      const where = mocks.prisma.employee.findMany.mock.calls[0]![0]!.where as Record<
+        string,
+        unknown
+      >;
+      // An out-of-scope department id must match NOTHING — never a bare id
+      // that would overwrite the scope constraint.
+      expect(where.departmentId).toEqual({ in: [] });
+    });
+
+    it('narrows to an in-scope departmentId for managers', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.rbac.departmentScope.mockResolvedValue(['dept-A', 'dept-B']);
+      await service.findAll(actor(Role.MANAGER), {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'hiredAt',
+        sortOrder: 'desc',
+        departmentId: 'dept-B',
+      });
+
+      const where = mocks.prisma.employee.findMany.mock.calls[0]![0]!.where as Record<
+        string,
+        unknown
+      >;
+      expect(where.departmentId).toBe('dept-B');
+    });
+
+    it('a manager with an EMPTY scope gets zero results even with a departmentId filter', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.rbac.departmentScope.mockResolvedValue([]);
+      await service.findAll(actor(Role.MANAGER), {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'hiredAt',
+        sortOrder: 'desc',
+        departmentId: 'dept-B',
+      });
+
+      const where = mocks.prisma.employee.findMany.mock.calls[0]![0]!.where as Record<
+        string,
+        unknown
+      >;
+      expect(where.departmentId).toEqual({ in: [] });
+    });
+  });
+
+  describe('findOne — viewer guard on soft-deleted records', () => {
+    it('returns a 404 when a viewer requests a soft-deleted employee', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.rbac.canWrite.mockReturnValue(false);
+      mocks.prisma.employee.findFirst.mockResolvedValue(employeeRow());
+
+      await expect(service.findOne(actor(Role.VIEWER), 'emp-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('admins and managers may still view deleted profiles (restore workflow)', async () => {
+      mocks.rbac.canWrite.mockReturnValue(true);
+      mocks.prisma.employee.findFirst.mockResolvedValue(employeeRow());
+
+      await expect(service.findOne(actor(), 'emp-1')).resolves.toMatchObject({ id: 'emp-1' });
+      await expect(service.findOne(actor(Role.MANAGER), 'emp-1')).resolves.toMatchObject({
+        id: 'emp-1',
+      });
+    });
+  });
+
+  describe('create — manager reference stays in scope', () => {
+    it('rejects a manager assigning an out-of-scope manager employee', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.rbac.isManager.mockReturnValue(true);
+      mocks.rbac.departmentScope.mockResolvedValue(['dept-1']);
+      mocks.prisma.department.findFirst.mockResolvedValue({ id: 'dept-1', name: 'Engineering' });
+      // The referenced manager belongs to dept-9 — outside the actor's scope.
+      mocks.prisma.employee.findFirst.mockResolvedValue({
+        id: 'manager-9',
+        departmentId: 'dept-9',
+      });
+
+      const dto = {
+        employeeCode: 'EMP-0099',
+        firstName: 'New',
+        lastName: 'Hire',
+        email: 'hire@peoplelens.com',
+        jobTitle: 'Engineer',
+        gender: 'female',
+        hiredAt: new Date('2024-01-01'),
+        departmentId: 'dept-1',
+        managerId: 'manager-9',
+      } as CreateEmployeeDto;
+
+      await expect(service.create(actor(Role.MANAGER), dto)).rejects.toThrow(
+        /outside your assigned departments/,
+      );
+      expect(mocks.prisma.employee.create).not.toHaveBeenCalled();
+    });
+
+    it('allows a manager referencing an in-scope manager employee', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.rbac.isManager.mockReturnValue(true);
+      mocks.rbac.departmentScope.mockResolvedValue(['dept-1']);
+      mocks.prisma.department.findFirst.mockResolvedValue({ id: 'dept-1', name: 'Engineering' });
+      mocks.prisma.employee.findFirst.mockResolvedValue({
+        id: 'manager-1',
+        departmentId: 'dept-1',
+      });
+      mocks.prisma.employee.findMany.mockResolvedValue([]); // uniqueness: clean
+      mocks.prisma.employee.create.mockResolvedValue(employeeRow());
+
+      const dto = {
+        employeeCode: 'EMP-0100',
+        firstName: 'New',
+        lastName: 'Hire',
+        email: 'hire2@peoplelens.com',
+        jobTitle: 'Engineer',
+        gender: 'female',
+        hiredAt: new Date('2024-01-01'),
+        departmentId: 'dept-1',
+        managerId: 'manager-1',
+      } as CreateEmployeeDto;
+
+      await expect(service.create(actor(Role.MANAGER), dto)).resolves.toBeDefined();
+      expect(mocks.prisma.employee.create).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { ImportHistory } from '@prisma/client';
 import { type AuditService } from '@app/audit/audit.service';
 import { type RbacService } from '@app/common/services/rbac.service';
@@ -31,11 +31,16 @@ interface Mocks {
     };
     department: { findMany: jest.Mock };
     team: { findMany: jest.Mock };
-    importHistory: { create: jest.Mock };
+    importHistory: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      count: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
   csv: { parse: jest.Mock };
-  rbac: { canWrite: jest.Mock; departmentScope: jest.Mock };
+  rbac: { canWrite: jest.Mock; departmentScope: jest.Mock; isAdmin: jest.Mock };
   audit: { record: jest.Mock };
 }
 
@@ -44,7 +49,12 @@ function createMocks(): Mocks {
     employee: { findMany: jest.fn(), create: jest.fn() },
     department: { findMany: jest.fn() },
     team: { findMany: jest.fn() },
-    importHistory: { create: jest.fn() },
+    importHistory: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      count: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
   return {
@@ -53,6 +63,7 @@ function createMocks(): Mocks {
     rbac: {
       canWrite: jest.fn().mockReturnValue(true),
       departmentScope: jest.fn().mockResolvedValue(null),
+      isAdmin: jest.fn().mockReturnValue(true),
     },
     audit: { record: jest.fn().mockResolvedValue(undefined) },
   };
@@ -190,6 +201,73 @@ describe('ImportsService', () => {
     it('rejects viewers with 403 (not 400)', async () => {
       mocks.rbac.canWrite.mockReturnValue(false);
       await expect(service.importCsv(ACTOR, FILE)).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('history reads — scope enforcement', () => {
+    it('admins list and read every import', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(true);
+      mocks.prisma.importHistory.findMany.mockResolvedValue([historyRow()]);
+      mocks.prisma.$transaction.mockResolvedValue([[historyRow()], 1]);
+
+      const list = await service.findAll(ACTOR as never, 1, 20);
+      expect(list.total).toBe(1);
+      // No owner filter for admins — they see the whole feed.
+      expect(mocks.prisma.importHistory.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
+      );
+
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(historyRow());
+      await expect(service.findOne(ACTOR as never, 'hist-1')).resolves.toMatchObject({
+        id: 'hist-1',
+      });
+    });
+
+    it('managers only list imports they performed', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.prisma.importHistory.findMany.mockResolvedValue([historyRow()]);
+      mocks.prisma.$transaction.mockResolvedValue([[historyRow()], 1]);
+
+      const managerActor = {
+        sub: 'user-2',
+        email: 'manager@peoplelens.dev',
+        roles: ['manager'],
+      } as never;
+      await service.findAll(managerActor, 1, 20);
+
+      expect(mocks.prisma.importHistory.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { importedByUserId: 'user-2' } }),
+      );
+    });
+
+    it("managers cannot read another user's import (404, opaque)", async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(
+        historyRow({ id: 'hist-theirs', importedByUserId: 'user-9' }),
+      );
+
+      await expect(service.findOne(ACTOR as never, 'hist-theirs')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('managers can read their own import records', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(
+        historyRow({ importedByUserId: 'user-1' }),
+      );
+
+      await expect(service.findOne(ACTOR as never, 'hist-1')).resolves.toMatchObject({
+        id: 'hist-1',
+      });
+    });
+
+    it('unknown import ids still 404', async () => {
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne(ACTOR as never, 'nope')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 

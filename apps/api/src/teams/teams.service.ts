@@ -26,8 +26,25 @@ export class TeamsService {
   ) {}
 
   async findAll(actor: RequestUser, departmentId?: string): Promise<TeamSummary[]> {
+    const scope = await this.rbac.departmentScope(actor);
+
+    // The manager scope is AUTHORITATIVE — an explicit department filter may
+    // only narrow it, never widen it (mirrors the dashboard/employee rules).
+    // An out-of-scope department id matches nothing rather than leaking teams
+    // from another department.
+    const departmentFilter: string | { in: string[] } | undefined = scope
+      ? departmentId
+        ? scope.includes(departmentId)
+          ? departmentId
+          : { in: [] }
+        : { in: scope }
+      : departmentId;
+
     const teams = await this.prisma.team.findMany({
-      where: { deletedAt: null, ...(departmentId ? { departmentId } : {}) },
+      where: {
+        deletedAt: null,
+        ...(departmentFilter ? { departmentId: departmentFilter } : {}),
+      },
       orderBy: { name: 'asc' },
       include: {
         department: { select: { id: true, name: true } },
@@ -48,6 +65,15 @@ export class TeamsService {
       },
     });
     if (!team) throw new NotFoundException('Team not found');
+    // Resource-level check: a manager may only read teams inside their
+    // assigned departments. NotFound (not Forbidden) keeps out-of-scope ids
+    // indistinguishable from nonexistent ones.
+    if (!this.rbac.isAdmin(actor)) {
+      const scope = await this.rbac.departmentScope(actor);
+      if (scope && !scope.includes(team.departmentId)) {
+        throw new NotFoundException('Team not found');
+      }
+    }
     return this.toSummary(team);
   }
 

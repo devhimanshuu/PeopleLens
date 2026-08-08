@@ -1,5 +1,7 @@
 'use client';
 
+import { useId } from 'react';
+
 export function Logo({
   className = '',
   size = 'md',
@@ -12,6 +14,15 @@ export function Logo({
 }) {
   const isSm = size === 'sm';
   const isLg = size === 'lg';
+
+  // The sidebar + mobile topbar render two Logo instances on the same page.
+  // Fixed gradient ids would collide, and `url(#id)` resolves to the FIRST
+  // matching id in the document — making one logo's mark render with the
+  // wrong (or no) gradient. useId gives every instance unique ids.
+  const gradientId = useId();
+  const outerId = `pl-logo-outer-${gradientId}`;
+  const innerId = `pl-logo-inner-${gradientId}`;
+  const coreId = `pl-logo-core-${gradientId}`;
 
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
@@ -33,17 +44,17 @@ export function Logo({
               cx="12"
               cy="12"
               r="8.5"
-              stroke="url(#pl-logo-outer)"
+              stroke={`url(#${outerId})`}
               strokeWidth="1.5"
               strokeDasharray="18 4 6 4"
             />
             {/* Inner optical lens curve */}
-            <circle cx="12" cy="12" r="4.5" stroke="url(#pl-logo-inner)" strokeWidth="1.75" />
+            <circle cx="12" cy="12" r="4.5" stroke={`url(#${innerId})`} strokeWidth="1.75" />
             {/* Core focus point */}
-            <circle cx="12" cy="12" r="2" fill="url(#pl-logo-core)" />
+            <circle cx="12" cy="12" r="2" fill={`url(#${coreId})`} />
             <defs>
               <linearGradient
-                id="pl-logo-outer"
+                id={outerId}
                 x1="3"
                 y1="3"
                 x2="21"
@@ -55,7 +66,7 @@ export function Logo({
                 <stop offset="1" stopColor="#06B6D4" />
               </linearGradient>
               <linearGradient
-                id="pl-logo-inner"
+                id={innerId}
                 x1="7.5"
                 y1="7.5"
                 x2="16.5"
@@ -66,7 +77,7 @@ export function Logo({
                 <stop offset="1" stopColor="#818CF8" />
               </linearGradient>
               <linearGradient
-                id="pl-logo-core"
+                id={coreId}
                 x1="10"
                 y1="10"
                 x2="14"

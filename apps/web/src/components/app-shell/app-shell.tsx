@@ -123,8 +123,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
-  const roleType = role ?? 'viewer';
-
   const handleSignOut = async () => {
     await signOut();
     router.replace('/');
@@ -304,12 +302,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             {children}
           </main>
-
-          <footer className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-8">
-            <p className="border-t border-border/40 pt-4 text-center text-[11px] text-muted-foreground/70">
-              PeopleLens · Enterprise Workforce Intelligence · Signed in as {ROLE_LABEL[roleType]}
-            </p>
-          </footer>
         </div>
       </div>
 
