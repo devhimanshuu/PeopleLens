@@ -12,6 +12,11 @@ export interface AppConfig {
     neonBaseUrl: string;
     /** How long a validated session stays cached in-memory (ms). */
     sessionCacheTtlMs: number;
+    /**
+     * Emails granted the Admin role at first contact and re-promoted on every
+     * session (comma-separated `ADMIN_EMAILS`, case-insensitive).
+     */
+    bootstrapAdminEmails: string[];
   };
   /** Global rate limiting — keyed by user id when authenticated, IP otherwise. */
   rateLimit: {
@@ -47,6 +52,10 @@ export default (): AppConfig => ({
   auth: {
     neonBaseUrl: process.env.NEON_AUTH_BASE_URL ?? '',
     sessionCacheTtlMs: Number.parseInt(process.env.SESSION_CACHE_TTL_MS ?? '60000', 10),
+    bootstrapAdminEmails: (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
   },
   rateLimit: {
     ttlMs: Number.parseInt(process.env.RATE_LIMIT_TTL_MS ?? '60000', 10),

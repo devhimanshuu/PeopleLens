@@ -22,8 +22,10 @@ export function requestLoggerMiddleware(config: ConfigService) {
 
     const startedAt = Date.now();
     res.on('finish', () => {
+      // `req.id` is assigned by the request-id middleware (registered first)
+      // so every log line can be correlated with the client's X-Request-Id.
       logger.log(
-        `${req.method} ${req.originalUrl} → ${res.statusCode} (${Date.now() - startedAt}ms)`,
+        `[${req.id ?? '-'}] ${req.method} ${req.originalUrl} → ${res.statusCode} (${Date.now() - startedAt}ms)`,
       );
     });
     next();

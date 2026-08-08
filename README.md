@@ -6,10 +6,31 @@ PeopleLens is a modern enterprise People Analytics platform that helps HR leader
 and executives manage their **workforce**, **organizational structure**, and
 **headcount intelligence** from a single source of truth.
 
-> **Status — Phase 2 complete (MVP).** Authentication with role-based access
-> control, organization management, employee management, analytics dashboard,
-> CSV bulk import, and a production-grade landing page are all implemented and
-> working end-to-end. See the [Roadmap](#roadmap) for what is planned next.
+> **Status — Phase 3 complete.** The Phase 2 MVP has undergone a full
+> production-readiness pass: security review, hardened CSV pipeline, database
+> health checks, request correlation, dashboard slice filters, expanded tests,
+> and professional documentation. See the [Roadmap](#roadmap) for what is
+> planned next.
+
+---
+
+## Problem
+
+HR leaders run on spreadsheets and disconnected tools. Headcount, attrition,
+and organizational structure live in half-maintained files; questions like
+_"how many engineers are in the Berlin office?"_ or _"which department has the
+most probationary staff?"_ require manual digging, and answers are stale by
+the time they are shared. Sensitive employee data is passed around by email,
+making access control an afterthought.
+
+## Product Vision
+
+PeopleLens is the single source of truth for workforce intelligence. It turns
+employee and organizational data into answers an HR leader can act on — who is
+here, how the organization is shaped, and what is changing — while enforcing
+role-based access so sensitive records are only ever visible to the people who
+should see them. The platform is deliberately narrow in Phase 3: reliable
+foundations first, intelligent layers later.
 
 ---
 
@@ -72,6 +93,9 @@ validates each request's session token against Neon and maps the confirmed
 identity to a local `User` row — the source of truth for the platform role.
 First-contact provisioning means the very first account to sign in becomes an
 **admin**; every later sign-up is a **viewer** until an admin promotes them.
+Emails listed in the optional `ADMIN_EMAILS` env var are always provisioned (or
+re-promoted) as admins — the durable way to grant specific identities full
+access across environments and reseeds.
 
 ## Repository Structure
 
@@ -128,6 +152,12 @@ fill in the values in `apps/api/.env` and `apps/web/.env.local`:
 - `NEON_AUTH_BASE_URL` — from Neon Console → Branch → Auth → Configuration
 - `NEON_AUTH_COOKIE_SECRET` — `openssl rand -base64 32`
 - `NEXT_PUBLIC_API_URL` — default `http://localhost:3001/api/v1`
+- `ADMIN_EMAILS` (optional) — comma-separated emails granted the **Admin** role
+  at first contact and re-promoted on every sign-in (bootstrap admins)
+
+  ```bash
+  ADMIN_EMAILS=you@example.com,ops@example.com
+  ```
 
 > **Optional:** a local Postgres is available via `docker compose up -d` — the
 > `.env.example` defaults point at it.
@@ -194,6 +224,70 @@ dateOfBirth, hiredAt, status, department, team, managerEmail
 | `pnpm --filter @peoplelens/api prisma:studio` | Browse the database                 |
 | `pnpm --filter @peoplelens/api prisma:deploy` | Apply migrations (production)       |
 
+## Analytics
+
+The dashboard aggregates **real data from the seeded workspace** (42 employees
+across 10 departments and 8 teams) into:
+
+| Question it answers                      | KPI / chart                                       |
+| ---------------------------------------- | ------------------------------------------------- |
+| How large is the workforce?              | **Total Employees** / **Active** KPI cards        |
+| Where is the workforce organizationally? | **Department Distribution** bar chart             |
+| What is changing?                        | **Recent Hires** list (latest 6 by hire date)     |
+| What is the composition?                 | **Employment Status** and **Gender** donut charts |
+
+**Global slice filters** (department / status / gender) narrow the entire
+overview at once — KPIs, distributions and recent hires update together. Filters
+are applied server-side and intersected with the caller's RBAC scope, so a
+manager can only ever slice the departments they are assigned to.
+
+Every metric is computed directly from the `Employee` table. Metrics that the
+dataset cannot support (attrition rate, average compensation, performance
+distribution) are deliberately **not** shown — the platform never invents
+numbers it cannot back with data.
+
+## Testing
+
+Backend unit tests cover the highest-risk business logic:
+
+- **RBAC** — role write-gates, department scoping, resource-level checks
+- **Employees** — CRUD, soft delete/restore, unique constraint handling
+- **Dashboard** — manager scoping and slice filters cannot leak outside scope
+- **CSV** — parsing, row-level validation, duplicate detection
+- **Audit** — best-effort recording
+- **Health** — DB-up and degraded states
+
+Run them with `pnpm test`. The GitHub Actions workflow runs
+**typecheck → lint → test → build** on every push and pull request.
+
+## Deployment
+
+The stack deploys as two stateless services plus a managed database:
+
+1. **PostgreSQL** — a Neon project (managed) or any Postgres 16 instance.
+2. **API** (`apps/api`) — Node 20+, `pnpm install`, `prisma deploy`, `pnpm build`,
+   `node dist/index` on port 3001. Set the env vars from the table below.
+3. **Web** (`apps/web`) — `pnpm build && pnpm start` on port 3000, pointed at the
+   API via `NEXT_PUBLIC_API_URL`. `NEXT_PUBLIC_API_URL` must be public in the
+   browser, so use the deployed API origin (e.g. `https://api.example.com/api/v1`).
+
+Both services are horizontally scalable behind a reverse proxy. For production:
+set `NODE_ENV=production`, enable `TRUST_PROXY=true`, configure `CORS_ORIGINS`
+to your exact web origin, and keep `SWAGGER_ENABLED=false` unless you
+intentionally expose the docs.
+
+## Engineering Decisions & Trade-offs
+
+| Decision                                    | Rationale                                                                                                                       | Trade-off                                                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Neon Auth as the identity provider**      | No custom password storage/hashing; the platform focuses on authorization, not authentication                                   | App identity is tied to Neon; self-hosting auth later requires a migration                                                                      |
+| **Soft deletes via `deletedAt`**            | History, audit trails and dashboard counts survive "removal"                                                                    | Global unique indexes mean deleted records keep their email/code occupied                                                                       |
+| **Marker cookie for frontend route guards** | Edge middleware cannot read `localStorage`; the cookie mirrors the session for UX redirects                                     | It is a UX guard only — the API remains the security boundary                                                                                   |
+| **In-memory session cache (60s TTL)**       | Avoids a Neon `get-session` round-trip on every request                                                                         | A revoked token stays valid for ≤60s; acceptable for an MVP                                                                                     |
+| **Bootstrap admins via `ADMIN_EMAILS`**     | Root-like identities are granted admin at first contact and re-promoted on every session — no manual DB pokes, survives reseeds | Env-listed accounts **cannot** be demoted or deactivated via the UI (the promotion re-asserts admin + active on their next sign-in) — by design |
+| **`createMany` avoided in imports**         | Per-row inserts report exact success counts and stay transactional                                                              | Slower than bulk insert for very large files (fine up to ~10 MB)                                                                                |
+| **No React Query**                          | The app's `useAsync` hook covers data-fetching needs; adding a cache layer would be overengineering at this stage               | Manual memoization where needed                                                                                                                 |
+
 ## CI & Quality Gates
 
 Every push and pull request runs a GitHub Actions workflow
@@ -219,13 +313,14 @@ docs: explain monorepo rationale
 
 ## Roadmap
 
-| Phase | Scope                                                                                   |
-| ----- | --------------------------------------------------------------------------------------- |
-| 1 ✅  | Monorepo foundation, shared packages, tooling, app shells                               |
-| 2 ✅  | **MVP:** auth + RBAC, departments/teams, employees, dashboard, CSV import, landing page |
-| 3     | AI assistant, predictive analytics, workforce insights                                  |
-| 4     | Reports, notifications, email service, workflow automation                              |
-| 5     | Integrations, billing, multi-tenancy, background jobs                                   |
+| Phase | Scope                                                                                                                               |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1 ✅  | Monorepo foundation, shared packages, tooling, app shells                                                                           |
+| 2 ✅  | **MVP:** auth + RBAC, departments/teams, employees, dashboard, CSV import, landing page                                             |
+| 3 ✅  | **Production readiness:** security review, DB health checks, dashboard filters, request correlation, hardened CSV, docs, more tests |
+| 4     | AI assistant, predictive analytics, workforce insights                                                                              |
+| 5     | Reports, notifications, email service, workflow automation                                                                          |
+| 6     | Integrations, billing, multi-tenancy, background jobs                                                                               |
 
 See [docs/architecture.md](./docs/architecture.md) for the full architectural
 rationale and evolution plan.

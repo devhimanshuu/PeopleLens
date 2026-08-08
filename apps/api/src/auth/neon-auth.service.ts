@@ -23,16 +23,20 @@ interface NeonSessionUser {
 /**
  * Bridges Neon Auth (Managed Better Auth) sessions into PeopleLens RBAC.
  *
- * The web app owns sign-in/sign-up via Neon Auth and sends the resulting
- * session token as `Authorization: Bearer <token>`. This service validates the
- * token against the managed auth server's `get-session` endpoint, then maps
- * the confirmed identity (by email) to a local `User` row — the source of
- * truth for the platform role (admin / manager / viewer).
+ * The web app owns sign-in/sign-up via Neon Auth; the browser then holds the
+ * `__Secure-neon-auth.session_token` cookie. Neon's managed server only
+ * accepts sessions as that signed cookie value (it does NOT honor Bearer
+ * tokens), so this service calls the managed `get-session` endpoint with the
+ * cookie forwarded verbatim — the same mechanism the official Next.js proxy
+ * uses. It then maps the confirmed identity (by email) to a local `User` row
+ * — the source of truth for the platform role (admin / manager / viewer).
  *
  * First-contact bootstrap: the very first account to be validated becomes an
  * `admin` so a fresh deployment is immediately usable; every later sign-up is
- * `viewer` until an admin promotes them (see UsersModule). No users are
- * seeded — identities come exclusively from Neon Auth sign-ins.
+ * `viewer` until an admin promotes them (see UsersModule). Emails listed in
+ * the `ADMIN_EMAILS` env var are always provisioned (or re-promoted) as
+ * admins — the durable way to grant specific identities full access. No users
+ * are seeded — identities come exclusively from Neon Auth sign-ins.
  */
 @Injectable()
 export class NeonAuthService {
@@ -48,15 +52,18 @@ export class NeonAuthService {
   }
 
   /**
-   * Validates a Neon session token and returns the principal to attach to
-   * `request.user`, or `null` when the token is missing/invalid/expired.
+   * Validates a Neon session and returns the principal to attach to
+   * `request.user`, or `null` when the session is missing/invalid/expired.
+   *
+   * @param sessionToken the `__Secure-neon-auth.session_token` cookie value,
+   * forwarded verbatim to the managed `get-session` endpoint.
    */
-  async validateToken(token: string): Promise<CachedPrincipal | null> {
-    const cached = this.cache.get(token);
+  async validateSession(sessionToken: string): Promise<CachedPrincipal | null> {
+    const cached = this.cache.get(sessionToken);
     if (cached && cached.expiresAt > Date.now()) return cached;
 
     try {
-      const user = await this.fetchSessionUser(token);
+      const user = await this.fetchSessionUser(sessionToken);
       if (!user) return null;
 
       const localUser = await this.syncLocalUser(user);
@@ -68,7 +75,7 @@ export class NeonAuthService {
         roles: [localUser.role as Role],
         expiresAt: Date.now() + this.cacheTtlMs,
       };
-      this.cache.set(token, principal);
+      this.cache.set(sessionToken, principal);
       return principal;
     } catch (error) {
       this.logger.warn(
@@ -78,13 +85,8 @@ export class NeonAuthService {
     }
   }
 
-  /** Clears the cached principal for a token (used on sign-out revocation). */
-  invalidate(token: string): void {
-    this.cache.delete(token);
-  }
-
-  /** Calls the managed auth server to confirm the session token. */
-  private async fetchSessionUser(token: string): Promise<NeonSessionUser | null> {
+  /** Calls the managed auth server to confirm the session cookie. */
+  private async fetchSessionUser(sessionToken: string): Promise<NeonSessionUser | null> {
     const baseUrl = this.config.getOrThrow<string>('auth.neonBaseUrl');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
@@ -94,7 +96,9 @@ export class NeonAuthService {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
+          // The managed server validates sessions ONLY via the signed
+          // session_token cookie — mirroring the SDK's proxy behavior.
+          Cookie: `__Secure-neon-auth.session_token=${sessionToken}`,
         },
         signal: controller.signal,
       });
@@ -118,9 +122,15 @@ export class NeonAuthService {
     }
   }
 
+  /** True when the email is listed in the `ADMIN_EMAILS` env var (case-insensitive). */
+  private isBootstrapAdmin(email: string): boolean {
+    return this.config.get<string[]>('auth.bootstrapAdminEmails', []).includes(email.toLowerCase());
+  }
+
   /** Finds (or provisions) the local User for the confirmed Neon identity. */
   private async syncLocalUser(neonUser: NeonSessionUser): Promise<User | null> {
     let user = await this.prisma.user.findUnique({ where: { email: neonUser.email } });
+    const bootstrapAdmin = this.isBootstrapAdmin(neonUser.email);
 
     if (!user) {
       const isFirstAccount = (await this.prisma.user.count()) === 0;
@@ -129,8 +139,9 @@ export class NeonAuthService {
           data: {
             email: neonUser.email,
             name: neonUser.name?.trim() || neonUser.email.split('@')[0] || 'User',
-            // First account boots as admin so a fresh deployment is usable.
-            role: isFirstAccount ? 'admin' : 'viewer',
+            // First account boots as admin so a fresh deployment is usable;
+            // env-configured bootstrap admins start with full access too.
+            role: isFirstAccount || bootstrapAdmin ? 'admin' : 'viewer',
           },
         });
         this.logger.log(
@@ -143,6 +154,24 @@ export class NeonAuthService {
         } else {
           throw error;
         }
+      }
+    } else if (bootstrapAdmin && (user.role !== 'admin' || !user.isActive)) {
+      // Env-listed admins are re-promoted on every session even if they were
+      // provisioned earlier as viewers (e.g. before ADMIN_EMAILS was set) and
+      // can never be locked out by an isActive flag. NOTE: this also means a
+      // UI demotion of an env-listed admin is reverted on their next auth.
+      try {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'admin', isActive: true },
+        });
+        this.logger.log(`Promoted bootstrap admin ${user.email} to admin`);
+      } catch (error) {
+        // Best-effort: a failed promotion must never reject a valid session —
+        // keep the previously fetched user and continue.
+        this.logger.warn(
+          `Bootstrap admin promotion failed for ${user.email}: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 

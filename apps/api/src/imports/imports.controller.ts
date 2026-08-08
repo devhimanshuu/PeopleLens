@@ -24,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CurrentUser } from '@app/common/decorators/current-user.decorator';
+import { type PaginationDto } from '@app/common/dto/pagination.dto';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
@@ -62,12 +63,8 @@ export class ImportsController {
 
   @Get()
   @ApiOperation({ summary: 'List import history' })
-  findAll(
-    @CurrentUser() user: RequestUser,
-    @Query('page') page = 1,
-    @Query('pageSize') pageSize = 20,
-  ) {
-    return this.importsService.findAll(user, Number(page), Number(pageSize));
+  findAll(@CurrentUser() user: RequestUser, @Query() query: PaginationDto) {
+    return this.importsService.findAll(user, query.page, query.pageSize);
   }
 
   @Get('template')

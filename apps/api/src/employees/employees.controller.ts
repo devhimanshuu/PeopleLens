@@ -17,6 +17,9 @@ import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
+// Value imports — NOT type-only: the global ValidationPipe resolves the DTO
+// class from emitted `design:paramtypes` metadata; a type-only import erases
+// it to `Function` and silently disables validation for these endpoints.
 import { type CreateEmployeeDto } from './dto/create-employee.dto';
 import { type QueryEmployeesDto } from './dto/query-employees.dto';
 import { type UpdateEmployeeDto } from './dto/update-employee.dto';

@@ -5,6 +5,7 @@ import compression from 'compression';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { API_GLOBAL_PREFIX } from './common/constants/app.constants';
+import { requestIdMiddleware } from './common/middleware/request-id.middleware';
 import { requestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 import { isProduction } from './common/utils/env.util';
 import { setupSwagger } from './config/swagger';
@@ -27,7 +28,9 @@ async function bootstrap(): Promise<void> {
     expressApp.set('trust proxy', 'loopback');
   }
 
-  // One-line request log (method, route, status, duration) — config-gated.
+  // Assign a correlation id to every request (and response header), then
+  // one-line request log (id, method, route, status, duration) — config-gated.
+  app.use(requestIdMiddleware());
   app.use(requestLoggerMiddleware(config));
 
   // Versioned API namespace: every route lives under /api/v1.

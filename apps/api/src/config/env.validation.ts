@@ -28,6 +28,10 @@ export const envValidationSchema = Joi.object({
   }),
   SESSION_CACHE_TTL_MS: Joi.number().integer().positive().default(60000),
 
+  // Comma-separated emails granted the Admin role at first contact and
+  // re-promoted on every session (bootstrap admins).
+  ADMIN_EMAILS: Joi.string().allow('').default(''),
+
   // Global rate limiting (per user when authenticated, per IP otherwise).
   RATE_LIMIT_TTL_MS: Joi.number().integer().positive().default(60000),
   RATE_LIMIT_MAX: Joi.number().integer().positive().default(120),

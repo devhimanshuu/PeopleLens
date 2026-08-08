@@ -36,26 +36,34 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : isMulterError(exception)
           ? this.multerStatus(exception)
           : HttpStatus.INTERNAL_SERVER_ERROR;
-    const body = this.toErrorResponse(exception, status, request.originalUrl);
+    const body = this.toErrorResponse(exception, status, request.originalUrl, request.id);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        `[${request.method}] ${request.originalUrl} → ${status} ${body.message}`,
+        `[${request.id ?? '-'}] [${request.method}] ${request.originalUrl} → ${status} ${body.message}`,
         exception instanceof Error ? exception.stack : undefined,
       );
     } else {
-      this.logger.warn(`[${request.method}] ${request.originalUrl} → ${status} ${body.message}`);
+      this.logger.warn(
+        `[${request.id ?? '-'}] [${request.method}] ${request.originalUrl} → ${status} ${body.message}`,
+      );
     }
 
     response.status(status).json(body);
   }
 
-  private toErrorResponse(exception: unknown, status: number, path: string): ApiErrorResponse {
+  private toErrorResponse(
+    exception: unknown,
+    status: number,
+    path: string,
+    requestId?: string,
+  ): ApiErrorResponse {
     const base = {
       success: false as const,
       data: null,
       timestamp: new Date().toISOString(),
       path,
+      ...(requestId ? { requestId } : {}),
     };
 
     if (exception instanceof HttpException) {

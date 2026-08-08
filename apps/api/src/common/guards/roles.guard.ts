@@ -4,6 +4,8 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+// Value import, not `type`: Reflector is a Nest-provided DI token resolved
+// from emitted decorator metadata (`design:paramtypes`).
 import { type Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../constants/app.constants';
 import type { Role } from '../enums/role.enum';
