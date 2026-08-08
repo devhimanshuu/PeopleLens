@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
+import { DashboardController } from './dashboard.controller';
+import { DashboardService } from './dashboard.service';
 
-/**
- * Executive & HR dashboards — curated workforce-health views.
- *
- * Skeleton only: registered now so the module graph and route namespace are
- * stable; business logic lands in Phase 2.
- */
-@Module({})
+/** Analytics dashboard — KPIs and distributions, role-scoped. */
+@Module({
+  controllers: [DashboardController],
+  providers: [DashboardService],
+})
 export class DashboardModule {}

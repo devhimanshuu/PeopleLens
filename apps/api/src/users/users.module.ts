@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
 
-/**
- * User management — accounts, profiles and preferences.
- *
- * Skeleton only: registered now so the module graph and route namespace are
- * stable; business logic lands in Phase 2.
- */
-@Module({})
+/** Users — profile and admin role management. */
+@Module({
+  controllers: [UsersController],
+  providers: [UsersService],
+})
 export class UsersModule {}

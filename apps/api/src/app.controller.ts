@@ -1,6 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '@app/common/decorators/public.decorator';
+// Value import, not `type`: AppController is injected with AppService, and
+// Nest resolves it via emitted decorator metadata (`design:paramtypes`). A
+// type-only import is elided at runtime, leaving an unresolvable `undefined`
+// in the metadata (breaks DI in tests and any non-tsc transpiler).
 import { type AppService } from './app.service';
 
 @Controller()

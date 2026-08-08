@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { ApiErrorResponse } from '@peoplelens/types';
 import type { Request, Response } from 'express';
+import { MulterError } from 'multer';
 
 /**
  * Last-resort error boundary for HTTP requests.
@@ -30,7 +31,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (response.headersSent) throw exception;
 
     const status =
-      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : isMulterError(exception)
+          ? this.multerStatus(exception)
+          : HttpStatus.INTERNAL_SERVER_ERROR;
     const body = this.toErrorResponse(exception, status, request.originalUrl);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
@@ -57,6 +62,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const payload = exception.getResponse();
       const { message, error, details } = this.extractHttpError(payload, exception.message, status);
       return { ...base, statusCode: status, message, error, details };
+    }
+
+    // Multer (file upload) failures are not HttpExceptions — map them to a
+    // clear 4xx instead of leaking as a 500.
+    if (isMulterError(exception)) {
+      const message =
+        exception.code === 'LIMIT_FILE_SIZE'
+          ? 'Uploaded file exceeds the maximum allowed size'
+          : exception.message;
+      return { ...base, statusCode: status, message, error: this.httpStatusName(status) };
     }
 
     return {
@@ -93,8 +108,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
+  private multerStatus(error: MulterError): HttpStatus {
+    return error.code === 'LIMIT_FILE_SIZE' ? HttpStatus.PAYLOAD_TOO_LARGE : HttpStatus.BAD_REQUEST;
+  }
+
   private httpStatusName(status: number): string {
     const reverse = HttpStatus as unknown as Record<number, string>;
     return reverse[status] ?? `HTTP_${status}`;
   }
+}
+
+/**
+ * Structural + instanceof check: matches the runtime class when it is the
+ * same multer instance, and stays resilient if platform-express ever swaps
+ * its upload library or the class identity changes across copies.
+ */
+function isMulterError(error: unknown): error is MulterError {
+  return (
+    error instanceof MulterError ||
+    (typeof error === 'object' && error !== null && (error as Error).name === 'MulterError')
+  );
 }

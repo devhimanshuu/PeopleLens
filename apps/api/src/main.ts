@@ -18,6 +18,15 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.use(compression());
 
+  // Behind a trusted reverse proxy, honor X-Forwarded-For from loopback so
+  // rate limiting sees real client IPs. Never enabled for direct exposure.
+  if (config.get<boolean>('trustProxy', false)) {
+    const expressApp = app.getHttpAdapter().getInstance() as {
+      set: (key: string, value: string | boolean) => void;
+    };
+    expressApp.set('trust proxy', 'loopback');
+  }
+
   // One-line request log (method, route, status, duration) — config-gated.
   app.use(requestLoggerMiddleware(config));
 

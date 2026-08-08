@@ -1,4 +1,4 @@
-import type { NodeEnv } from '../common/utils/env.util';
+import { isProduction, type NodeEnv } from '../common/utils/env.util';
 
 /** Typed view of the runtime configuration produced by the load factory. */
 export interface AppConfig {
@@ -7,10 +7,21 @@ export interface AppConfig {
   /** Comma-separated `CORS_ORIGINS` parsed into an explicit allowlist. */
   corsOrigins: string[];
   databaseUrl: string;
-  jwt: {
-    secret: string;
-    expiresIn: string;
+  auth: {
+    /** Base URL of the Neon Auth (Managed Better Auth) server. */
+    neonBaseUrl: string;
+    /** How long a validated session stays cached in-memory (ms). */
+    sessionCacheTtlMs: number;
   };
+  /** Global rate limiting — keyed by user id when authenticated, IP otherwise. */
+  rateLimit: {
+    /** Window length in ms. */
+    ttlMs: number;
+    /** Maximum requests per key per window. */
+    max: number;
+  };
+  /** Trust X-Forwarded-For from loopback proxies (behind a reverse proxy). */
+  trustProxy: boolean;
   swagger: {
     enabled: boolean;
     path: string;
@@ -33,14 +44,20 @@ export default (): AppConfig => ({
     .map((origin) => origin.trim())
     .filter(Boolean),
   databaseUrl: process.env.DATABASE_URL ?? '',
-  jwt: {
-    secret: process.env.JWT_SECRET ?? 'peoplelens-local-dev-secret-change-me',
-    expiresIn: process.env.JWT_EXPIRES_IN ?? '15m',
+  auth: {
+    neonBaseUrl: process.env.NEON_AUTH_BASE_URL ?? '',
+    sessionCacheTtlMs: Number.parseInt(process.env.SESSION_CACHE_TTL_MS ?? '60000', 10),
   },
+  rateLimit: {
+    ttlMs: Number.parseInt(process.env.RATE_LIMIT_TTL_MS ?? '60000', 10),
+    max: Number.parseInt(process.env.RATE_LIMIT_MAX ?? '120', 10),
+  },
+  trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
   swagger: {
     // Same truthy/falsy semantics as the Joi schema so the factory and the
     // validated contract can never disagree ('0' and 'false' are both off).
-    enabled: parseBoolean(process.env.SWAGGER_ENABLED, true),
+    // Off by default in production — docs must be an explicit opt-in.
+    enabled: parseBoolean(process.env.SWAGGER_ENABLED, !isProduction(process.env.NODE_ENV)),
     path: process.env.SWAGGER_PATH ?? 'docs',
   },
   requestLogging: {

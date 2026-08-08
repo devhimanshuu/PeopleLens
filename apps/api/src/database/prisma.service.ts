@@ -8,8 +8,9 @@ import { PrismaClient } from '@prisma/client';
  * - Resolves the connection string from validated configuration.
  * - Connects at boot and disconnects cleanly on shutdown.
  * - Degrades gracefully: if PostgreSQL is unreachable (e.g. local dev without
- *   the database running) the API still boots and logs a warning — no domain
- *   endpoint depends on the DB until Phase 2.
+ *   the database running) the API still boots and logs a warning. In
+ *   production an unreachable DB surfaces as 500s on DB-backed endpoints,
+ *   which is intentional — a loud failure beats a silent empty dataset.
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

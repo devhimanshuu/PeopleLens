@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
+import { DepartmentsController } from './departments.controller';
+import { DepartmentsService } from './departments.service';
 
-/**
- * Organizational structure — departments, teams and reporting lines.
- *
- * Skeleton only: registered now so the module graph and route namespace are
- * stable; business logic lands in Phase 2.
- */
-@Module({})
+/** Organizational structure — departments, hierarchy and manager assignment. */
+@Module({
+  controllers: [DepartmentsController],
+  providers: [DepartmentsService],
+})
 export class DepartmentsModule {}

@@ -11,9 +11,8 @@ import { ResponseInterceptor } from './interceptors/response.interceptor';
  * - `LoggingInterceptor`    → per-handler execution timing
  * - `ResponseInterceptor`   → standard success envelope
  *
- * The JWT/Roles guards live in `common/guards` and are intentionally NOT
- * registered globally — they are wired per-controller (or globally via
- * `APP_GUARD`) once Phase 2 introduces authenticated endpoints.
+ * Guards (throttle/session/roles) are registered globally in `AppModule` via
+ * `APP_GUARD` — authentication before authorization, rate limiting first.
  */
 @Module({
   providers: [

@@ -7,9 +7,9 @@ import type { Role } from '../enums/role.enum';
  * `RolesGuard`.
  *
  * @example
- *   @Roles(Role.HR_LEAD, Role.ANALYST)
- *   @Get('attrition')
- *   attrition() { ... }
+ *   @Roles(Role.ADMIN)
+ *   @Get('audit')
+ *   audit() { ... }
  */
 export const Roles = (...roles: Role[]): MethodDecorator & ClassDecorator =>
   SetMetadata(ROLES_KEY, roles);

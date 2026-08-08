@@ -1,4 +1,5 @@
 import { createParamDecorator, type ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { REQUEST_USER_KEY } from '../constants/app.constants';
 import type { AuthenticatedRequest } from '../interfaces/authenticated-request.interface';
 import type { RequestUser } from '../interfaces/request-user.interface';
 
@@ -18,7 +19,7 @@ export const CurrentUser = createParamDecorator(
     context: ExecutionContext,
   ): RequestUser | RequestUser[keyof RequestUser] => {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const user = request.user;
+    const user = request[REQUEST_USER_KEY];
 
     if (!user) {
       throw new UnauthorizedException('No authenticated user on this request');

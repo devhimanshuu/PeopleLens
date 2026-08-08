@@ -18,9 +18,23 @@ export const envValidationSchema = Joi.object({
     .required()
     .description('PostgreSQL connection string consumed by Prisma'),
 
-  // JWT signing (auth endpoints land in Phase 2; the strategy is validated now).
-  JWT_SECRET: Joi.string().min(16).default('peoplelens-local-dev-secret-change-me'),
-  JWT_EXPIRES_IN: Joi.string().default('15m'),
+  // Auth bridge — validates Neon Auth sessions from the API side.
+  // Required in production (the API would otherwise reject every protected
+  // route); optional in dev where the API boots fail-closed until configured.
+  NEON_AUTH_BASE_URL: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required().description('Neon Auth base URL — required in production'),
+    otherwise: Joi.string().allow('').default(''),
+  }),
+  SESSION_CACHE_TTL_MS: Joi.number().integer().positive().default(60000),
+
+  // Global rate limiting (per user when authenticated, per IP otherwise).
+  RATE_LIMIT_TTL_MS: Joi.number().integer().positive().default(60000),
+  RATE_LIMIT_MAX: Joi.number().integer().positive().default(120),
+
+  // Set to true when the API runs behind a trusted reverse proxy so
+  // X-Forwarded-For from loopback proxies is honored for rate limiting.
+  TRUST_PROXY: Joi.boolean().truthy('true', '1').falsy('false', '0').default(false),
 
   // Developer tooling.
   SWAGGER_ENABLED: Joi.boolean().truthy('true', '1').falsy('false', '0').default(true),

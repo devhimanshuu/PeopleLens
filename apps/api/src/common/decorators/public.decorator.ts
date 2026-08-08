@@ -3,7 +3,7 @@ import { IS_PUBLIC_KEY } from '../constants/app.constants';
 
 /**
  * Marks a route (or an entire controller) as publicly accessible, bypassing
- * the JWT authentication guard.
+ * the session authentication guard.
  *
  * @example
  *   @Public()
