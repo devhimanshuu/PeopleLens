@@ -1,0 +1,21 @@
+/**
+ * Common package barrel — platform-wide cross-cutting infrastructure.
+ *
+ * Import from `@app/common` for a single, stable entry point.
+ */
+export * from './common.module';
+export * from './constants/app.constants';
+export * from './decorators/current-user.decorator';
+export * from './decorators/public.decorator';
+export * from './decorators/roles.decorator';
+export * from './enums/role.enum';
+export * from './exceptions/global-exception.filter';
+export * from './guards/jwt-auth.guard';
+export * from './guards/roles.guard';
+export * from './interceptors/logging.interceptor';
+export * from './interceptors/response.interceptor';
+export * from './interfaces/api-response.interface';
+export * from './interfaces/authenticated-request.interface';
+export * from './interfaces/request-user.interface';
+export * from './middleware/request-logger.middleware';
+export * from './utils/env.util';

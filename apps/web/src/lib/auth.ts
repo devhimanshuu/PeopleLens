@@ -1,7 +1,13 @@
 /**
- * Neon Auth integration client for PeopleLens.
- * Interfaces directly with your Neon Auth endpoint configured in .env.local.
+ * Auth facade for PeopleLens, backed by Neon Auth (Managed Better Auth).
+ *
+ * The Better Auth session lives in its own HTTP-only cookies (set via the
+ * /api/auth proxy). We additionally mirror a minimal marker into localStorage
+ * + a plain cookie so the header indicator and the edge middleware guard on
+ * /signin & /signup keep working without touching the auth server.
  */
+
+import { authClient } from '@/lib/auth/client';
 
 export interface NeonUser {
   id: string;
@@ -17,11 +23,12 @@ export interface NeonSession {
   expiresAt?: string;
 }
 
-const NEON_AUTH_URL =
-  process.env.NEXT_PUBLIC_NEON_AUTH_URL ||
-  'https://ep-morning-darkness-ayldsgho.neonauth.c-5.us-east-2.aws.neon.tech/neondb/auth';
+export type OAuthProvider = 'google' | 'github';
 
 const SESSION_STORAGE_KEY = 'peoplelens_session';
+
+/** Mirrors the session to a cookie so server-side middleware can read it (Edge runtime has no localStorage). */
+const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 /** Get current stored session from localStorage / cookies if in browser */
 export function getStoredSession(): NeonSession | null {
@@ -35,7 +42,10 @@ export function getStoredSession(): NeonSession | null {
   }
 }
 
-/** Store session locally in browser */
+/**
+ * Store session locally in browser (and mirror it to a cookie for the
+ * server-side middleware guard on /signin and /signup).
+ */
 export function setStoredSession(session: NeonSession | null) {
   if (typeof window === 'undefined') return;
   if (!session) {
@@ -43,98 +53,134 @@ export function setStoredSession(session: NeonSession | null) {
   } else {
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   }
+  syncSessionCookie(session);
 }
 
-/** Sign in with Email and Password using Neon Auth */
+/**
+ * Mirrors a minimal session marker to a cookie so Next.js middleware (Edge
+ * runtime — no localStorage) can redirect signed-in users away from auth
+ * pages server-side. The full session stays in localStorage; the cookie only
+ * carries identity + expiry. SameSite=Lax: only needed for same-site
+ * navigation. `Secure` is added automatically over https.
+ */
+function syncSessionCookie(session: NeonSession | null): void {
+  if (typeof document === 'undefined') return;
+  const base = `${SESSION_STORAGE_KEY}=`;
+  if (!session) {
+    document.cookie = `${base}; Path=/; Max-Age=0; SameSite=Lax`;
+    return;
+  }
+  const marker = JSON.stringify({
+    id: session.user.id,
+    email: session.user.email,
+    ...(session.expiresAt ? { expiresAt: session.expiresAt } : {}),
+  });
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${base}${encodeURIComponent(marker)}; Path=/; Max-Age=${SESSION_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+}
+
+function toNeonSession(
+  user: { id: string; name?: string | null; email: string; image?: string | null },
+  token?: string | null,
+  expiresAt?: Date | string | null,
+): NeonSession {
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name ?? undefined,
+      image: user.image ?? undefined,
+    },
+    token: token ?? undefined,
+    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+  };
+}
+
+/**
+ * Pull the current session from the Better Auth server and mirror it into the
+ * local session marker. Returns the session (or null when signed out).
+ * Used after OAuth redirects so the header + middleware see the new session.
+ */
+export async function syncOAuthSession(): Promise<NeonSession | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const { data, error } = await authClient.getSession();
+    // `getSession` returns `{ session, user }` — the user is top-level, not on the session.
+    if (error || !data?.user) {
+      setStoredSession(null);
+      return null;
+    }
+    const session = toNeonSession(data.user, undefined, data.session?.expiresAt);
+    setStoredSession(session);
+    return session;
+  } catch {
+    setStoredSession(null);
+    return null;
+  }
+}
+
+/** Sign in with Email and Password via Managed Better Auth */
 export async function signInWithEmail(
   email: string,
   password: string,
 ): Promise<{ session?: NeonSession; error?: string }> {
   try {
-    const response = await fetch(`${NEON_AUTH_URL}/sign-in/email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return { error: errData.message || errData.error || 'Failed to sign in via Neon Auth' };
-    }
-
-    const data = await response.json();
-    const session: NeonSession = {
-      user: {
-        id: data.user?.id || data.id || `user_${Date.now()}`,
-        email: data.user?.email || email,
-        name: data.user?.name || email.split('@')[0],
-      },
-      token: data.token || data.session?.token,
-    };
-
+    const { data, error } = await authClient.signIn.email({ email, password });
+    if (error) return { error: error.message || 'Failed to sign in' };
+    if (!data?.user) return { error: 'Failed to sign in' };
+    const session = toNeonSession(data.user, data.token);
     setStoredSession(session);
     return { session };
   } catch {
-    // If endpoint is reachable or fallback
-    const session: NeonSession = {
-      user: {
-        id: `usr_${Math.random().toString(36).substring(2, 9)}`,
-        email,
-        name: email.split('@')[0],
-      },
-    };
-    setStoredSession(session);
-    return { session };
+    return { error: 'Could not reach the authentication service. Please try again.' };
   }
 }
 
-/** Register a new user with Email, Password, and Name via Neon Auth */
+/** Register a new user with Email, Password, and Name via Managed Better Auth */
 export async function signUpWithEmail(
   email: string,
   password: string,
   name?: string,
 ): Promise<{ session?: NeonSession; error?: string }> {
   try {
-    const response = await fetch(`${NEON_AUTH_URL}/sign-up/email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
+    const { data, error } = await authClient.signUp.email({
+      email,
+      password,
+      name: name || email.split('@')[0] || 'User',
     });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return { error: errData.message || errData.error || 'Failed to register with Neon Auth' };
-    }
-
-    const data = await response.json();
-    const session: NeonSession = {
-      user: {
-        id: data.user?.id || data.id || `user_${Date.now()}`,
-        email: data.user?.email || email,
-        name: name || data.user?.name || email.split('@')[0],
-      },
-      token: data.token || data.session?.token,
-    };
-
+    if (error) return { error: error.message || 'Failed to register' };
+    if (!data?.user) return { error: 'Failed to register' };
+    const session = toNeonSession(data.user, data.token);
     setStoredSession(session);
     return { session };
   } catch {
-    const session: NeonSession = {
-      user: {
-        id: `usr_${Math.random().toString(36).substring(2, 9)}`,
-        email,
-        name: name || email.split('@')[0],
-      },
-    };
-    setStoredSession(session);
-    return { session };
+    return { error: 'Could not reach the authentication service. Please try again.' };
   }
 }
 
-/** Sign out from Neon Auth */
+/**
+ * Start an OAuth sign-in with Google or GitHub. The SDK redirects the browser
+ * to the provider; on success Managed Better Auth lands the user back on
+ * `callbackURL` with a session established.
+ */
+export async function signInWithOAuth(
+  provider: OAuthProvider,
+  callbackURL = '/',
+): Promise<{ error?: string }> {
+  try {
+    await authClient.signIn.social({ provider, callbackURL });
+    return {};
+  } catch {
+    return { error: 'Could not start sign-in. Check that the provider is enabled in Neon Auth.' };
+  }
+}
+
+/** Sign out from Managed Better Auth and clear the local session marker */
 export async function signOutNeon(): Promise<void> {
   try {
-    await fetch(`${NEON_AUTH_URL}/sign-out`, { method: 'POST' }).catch(() => {});
+    await authClient.signOut();
+  } catch {
+    // Still clear the local marker below — the server session may already be gone.
   } finally {
     setStoredSession(null);
   }

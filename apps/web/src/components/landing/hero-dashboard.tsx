@@ -89,7 +89,7 @@ function heatClass(risk: number) {
 }
 
 /** Relative time label, e.g. "just now", "14s ago", "4m ago". */
-function formatAgo(timestamp: string, now: number): string {
+export function formatAgo(timestamp: string, now: number): string {
   const seconds = Math.max(0, Math.round((now - Date.parse(timestamp)) / 1000));
   if (seconds < 5) return 'just now';
   if (seconds < 60) return `${seconds}s ago`;
@@ -97,7 +97,7 @@ function formatAgo(timestamp: string, now: number): string {
 }
 
 /** Compact uptime label, e.g. "42s", "7m", "2h". */
-function formatUptime(uptimeSeconds: number): string {
+export function formatUptime(uptimeSeconds: number): string {
   if (uptimeSeconds < 60) return `${uptimeSeconds}s`;
   if (uptimeSeconds < 3600) return `${Math.round(uptimeSeconds / 60)}m`;
   return `${Math.round(uptimeSeconds / 3600)}h`;
@@ -198,7 +198,7 @@ export function HeroDashboard() {
           </p>
         </div>
 
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-2">
+        <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-2">
           {/* Health score gauge */}
           <div className="rounded-xl border border-border/60 bg-muted p-5">
             <div className="flex items-center justify-between">

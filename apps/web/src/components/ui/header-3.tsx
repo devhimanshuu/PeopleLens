@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import {
   BarChart,
   Code,
@@ -31,8 +32,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/landing/logo';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
-import { AuthModal, type AuthModalMode } from '@/components/auth/auth-modal';
-import { getStoredSession, signOutNeon, type NeonSession } from '@/lib/auth';
+import { getStoredSession, signOutNeon, syncOAuthSession, type NeonSession } from '@/lib/auth';
 
 type LinkItem = {
   title: string;
@@ -126,19 +126,18 @@ function useScroll(threshold: number) {
 
 export function Header() {
   const [open, setOpen] = React.useState(false);
-  const [authModalOpen, setAuthModalOpen] = React.useState(false);
-  const [authModalMode, setAuthModalMode] = React.useState<AuthModalMode>('signin');
   const [session, setSession] = React.useState<NeonSession | null>(null);
   const scrolled = useScroll(10);
 
-  const openAuthModal = React.useCallback((nextMode: AuthModalMode) => {
-    setAuthModalMode(nextMode);
-    setAuthModalOpen(true);
-    setOpen(false);
-  }, []);
-
   React.useEffect(() => {
     setSession(getStoredSession());
+    // Pick up a Managed Better Auth session (e.g. after an OAuth redirect) so
+    // the signed-in indicator appears without a hard refresh.
+    if (!getStoredSession()) {
+      syncOAuthSession().then((s) => {
+        if (s) setSession(s);
+      });
+    }
   }, []);
 
   React.useEffect(() => {
@@ -155,18 +154,25 @@ export function Header() {
   return (
     <>
       <header
-        className={cn('sticky top-0 z-50 w-full border-b border-transparent', {
-          'border-border bg-background/95 supports-[backdrop-filter]:bg-background/50 backdrop-blur-lg':
-            scrolled,
-        })}
+        className={cn(
+          'sticky top-0 z-50 w-full transition-[padding] duration-500 ease-out',
+          scrolled && 'py-2.5',
+        )}
       >
-        <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-5 sm:px-8">
+        <nav
+          className={cn(
+            'mx-auto flex w-full items-center justify-between px-5 transition-all duration-500 ease-out sm:px-8',
+            scrolled
+              ? 'h-14 max-w-6xl rounded-2xl border border-border/60 bg-background/85 shadow-lg shadow-black/5 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60'
+              : 'h-16 max-w-7xl border-b border-transparent bg-transparent',
+          )}
+        >
           <div className="flex items-center gap-5">
             <a
               href="#top"
-              className="rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+              className="group rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
             >
-              <Logo />
+              <Logo shimmer />
             </a>
             <NavigationMenu className="hidden md:flex">
               <NavigationMenuList>
@@ -249,16 +255,14 @@ export function Header() {
               </div>
             ) : (
               <>
-                <Button variant="outline" size="sm" onClick={() => openAuthModal('signin')}>
-                  Sign In
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/signin">Sign In</Link>
                 </Button>
-                <Button
-                  size="sm"
-                  className="group relative overflow-hidden"
-                  onClick={() => openAuthModal('signup')}
-                >
-                  <span aria-hidden className="btn-shine absolute inset-0" />
-                  <span className="relative">Request Demo</span>
+                <Button size="sm" className="group relative overflow-hidden" asChild>
+                  <Link href="/signup">
+                    <span aria-hidden className="btn-shine absolute inset-0" />
+                    <span className="relative">Request Demo</span>
+                  </Link>
                 </Button>
               </>
             )}
@@ -278,7 +282,13 @@ export function Header() {
             </Button>
           </div>
         </nav>
-        <MobileMenu open={open} className="flex flex-col justify-between gap-2 overflow-y-auto">
+        <MobileMenu
+          open={open}
+          className={cn(
+            'flex flex-col justify-between gap-2 overflow-y-auto',
+            scrolled ? 'top-[4.75rem]' : 'top-16',
+          )}
+        >
           <NavigationMenu className="max-w-full">
             <div className="flex w-full flex-col gap-y-2">
               <span className="text-sm font-medium text-muted-foreground">Product</span>
@@ -309,28 +319,17 @@ export function Header() {
               </Button>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => openAuthModal('signin')}
-                >
-                  Sign In
+                <Button variant="outline" className="w-full bg-transparent" asChild>
+                  <Link href="/signin">Sign In</Link>
                 </Button>
-                <Button className="w-full" onClick={() => openAuthModal('signup')}>
-                  Request Demo
+                <Button className="w-full" asChild>
+                  <Link href="/signup">Request Demo</Link>
                 </Button>
               </>
             )}
           </div>
         </MobileMenu>
       </header>
-
-      <AuthModal
-        isOpen={authModalOpen}
-        mode={authModalMode}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={(newSession) => setSession(newSession)}
-      />
     </>
   );
 }
@@ -347,7 +346,8 @@ function MobileMenu({ open, children, className, ...props }: MobileMenuProps) {
       id="mobile-menu"
       className={cn(
         'bg-background/95 supports-[backdrop-filter]:bg-background/50 backdrop-blur-lg',
-        'fixed bottom-0 left-0 right-0 top-16 z-40 flex flex-col overflow-hidden border-y md:hidden',
+        // top offset is passed by the caller (top-16 at rest, below the floating pill when scrolled)
+        'fixed bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden border-y md:hidden',
       )}
     >
       <div

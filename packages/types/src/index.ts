@@ -64,3 +64,36 @@ export interface LiveSignalsSnapshot {
   heatMap: number[];
   spark: SparkSeries[];
 }
+
+/**
+ * Standard API response envelope.
+ *
+ * Every PeopleLens API response is wrapped by the global response interceptor
+ * into this shape so clients rely on a single, stable contract:
+ * `{ success, message, data, timestamp }`.
+ */
+export interface ApiResponse<T> {
+  success: true;
+  /** Human-readable summary, e.g. `OK`. */
+  message: string;
+  data: T;
+  /** ISO-8601 timestamp of when the response was produced. */
+  timestamp: IsoDate;
+}
+
+/** Error payload produced by the global exception filter. */
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  data: null;
+  /** ISO-8601 timestamp of when the error was produced. */
+  timestamp: IsoDate;
+  /** HTTP status code. */
+  statusCode: number;
+  /** Stable error category, e.g. `Bad Request`. */
+  error: string;
+  /** Request path that produced the error. */
+  path: string;
+  /** Optional machine-readable detail (e.g. DTO validation messages). */
+  details?: unknown;
+}

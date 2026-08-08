@@ -1,22 +1,40 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import Joi from 'joi';
+import { AnalyticsModule } from '@app/analytics/analytics.module';
 import { AppController } from '@app/app.controller';
 import { AppService } from '@app/app.service';
+import { AuthModule } from '@app/auth/auth.module';
+import { CommonModule } from '@app/common/common.module';
+import { AppConfigModule } from '@app/config/config.module';
+import { DashboardModule } from '@app/dashboard/dashboard.module';
+import { DatabaseModule } from '@app/database/database.module';
+import { DepartmentsModule } from '@app/departments/departments.module';
+import { EmployeesModule } from '@app/employees/employees.module';
 import { SignalsModule } from '@app/signals/signals.module';
+import { UsersModule } from '@app/users/users.module';
 
+/**
+ * Root application module — the composition root.
+ *
+ * Layered by responsibility:
+ *
+ * - `AppConfigModule`  → validated environment + typed configuration
+ * - `CommonModule`     → global exception filter + response/logging interceptors
+ * - `DatabaseModule`   → Prisma data layer
+ * - `AuthModule`       → JWT infrastructure (no endpoints yet)
+ * - Feature modules    → registered as skeletons; the graph stays stable as
+ *                        business logic lands in Phase 2
+ */
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      validationSchema: Joi.object({
-        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
-        PORT: Joi.number().port().default(3001),
-        CORS_ORIGINS: Joi.string().default('http://localhost:3000'),
-        // Required once Phase 2 introduces the Prisma data layer.
-        DATABASE_URL: Joi.string().optional(),
-      }),
-    }),
+    AppConfigModule,
+    CommonModule,
+    DatabaseModule,
+    AuthModule,
+    UsersModule,
+    EmployeesModule,
+    DepartmentsModule,
+    DashboardModule,
+    AnalyticsModule,
     SignalsModule,
   ],
   controllers: [AppController],
