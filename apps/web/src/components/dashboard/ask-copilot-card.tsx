@@ -1,7 +1,7 @@
 'use client';
 
 import type { DashboardFilters, FilterOptions } from '@peoplelens/types';
-import { Sparkles } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { useMemo } from 'react';
 import { useCopilot } from '@/components/copilot/copilot-context';
 // "Ask PeopleLens" card — the copilot's front door on the dashboard. The suggestions are contextual: when a…
@@ -42,7 +42,7 @@ export function AskCopilotCard({
     >
       <div className="flex items-center gap-3 sm:min-w-0">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 text-white shadow-sm">
-          <Sparkles className="size-5" aria-hidden />
+          <Bot className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-foreground">Ask PeopleLens</h2>

@@ -2,7 +2,7 @@
 
 import { ArrowRight, Lock, Mail, User } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { getStoredSession, signInWithEmail, signUpWithEmail, syncOAuthSession } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,8 @@ const FIELD_CLASS =
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justReset = searchParams.get('reset') === '1';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +67,12 @@ export function AuthForm({ mode }: AuthFormProps) {
           ? 'Start with a free workspace and get real-time predictive workforce intelligence.'
           : 'Sign in to access your organization workspace and live workforce signals.'}
       </p>
+
+      {justReset && !isSignUp ? (
+        <div className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
+          Password updated — sign in with your new password.
+        </div>
+      ) : null}
 
       {errorMsg ? (
         <div
@@ -134,10 +142,18 @@ export function AuthForm({ mode }: AuthFormProps) {
         </div>
 
         <div>
-          <div className="mb-1.5">
+          <div className="mb-1.5 flex items-center justify-between">
             <label htmlFor="auth-password" className="block text-xs font-medium">
               Password
             </label>
+            {!isSignUp ? (
+              <Link
+                href="/forgot-password"
+                className="text-[11px] font-medium text-indigo-600 underline underline-offset-2 hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+              >
+                Forgot password?
+              </Link>
+            ) : null}
           </div>
           <div className="relative">
             <Lock className="absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden />

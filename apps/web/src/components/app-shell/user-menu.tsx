@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
+import { SignOutConfirmDialog } from './sign-out-confirm-dialog';
 
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Administrator',
@@ -17,6 +18,7 @@ export function UserMenu() {
   const router = useRouter();
   const { profile, signOut, initializing } = useAuth();
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click or Escape.
@@ -85,7 +87,10 @@ export function UserMenu() {
             <button
               type="button"
               role="menuitem"
-              onClick={() => void handleSignOut()}
+              onClick={() => {
+                setOpen(false);
+                setConfirmOpen(true);
+              }}
               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
             >
               <LogOut className="size-4" aria-hidden />
@@ -94,6 +99,13 @@ export function UserMenu() {
           </div>
         </div>
       ) : null}
+
+      <SignOutConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleSignOut}
+        userName={profile.name || profile.email}
+      />
     </div>
   );
 }

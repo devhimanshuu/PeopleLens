@@ -1,7 +1,7 @@
 # PeopleLens — Architecture
 
-This document describes the _implemented_ system (Phases 1–3), not just the
-intent. Engineers should read this before changing cross-cutting behavior.
+This document describes the _implemented_ system, not just the intent.
+Engineers should read this before changing cross-cutting behavior.
 
 ---
 
@@ -234,12 +234,7 @@ unwraps the response envelope, and retries once after a 401 session re-sync.
 | Per-row inserts in imports       | Exact per-row outcomes, transactional                | Slower than `createMany` for huge files                 |
 | No React Query yet               | `useAsync` suffices at this scale                    | Manual refetch wiring                                   |
 
-## 10. Evolution plan
+## 10. What's next
 
-| Phase  | Scope                                                                                   |
-| ------ | --------------------------------------------------------------------------------------- |
-| 1–2 ✅ | Foundation + MVP (auth/RBAC, org, employees, dashboard, CSV, landing)                   |
-| 3 ✅   | Production readiness: security review, health checks, filters, request ids, docs, tests |
-| 4      | AI assistant, predictive analytics, workforce insights                                  |
-| 5      | Reports, notifications, email service, workflow automation                              |
-| 6      | Integrations, billing, multi-tenancy, background jobs                                   |
+- Reports, notifications, email service, workflow automation
+- Integrations, billing, multi-tenancy, background jobs

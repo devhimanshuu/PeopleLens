@@ -200,3 +200,38 @@ export async function signOutNeon(): Promise<void> {
     setStoredSession(null);
   }
 }
+
+/**
+ * Start the password-reset flow: Managed Better Auth sends a reset link to the
+ * address (when the account exists and email delivery is configured). Returns
+ * a generic success so we never leak which emails are registered.
+ */
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { error } = await authClient.requestPasswordReset({ email });
+    if (error) return { ok: false, error: error.message || 'Could not start password reset' };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Could not reach the authentication service. Please try again.' };
+  }
+}
+
+/**
+ * Complete the password reset with the token from the emailed link and a new
+ * password. On success the user can sign in with the new password.
+ */
+export async function resetPasswordWithToken(
+  newPassword: string,
+  token?: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!token) return { ok: false, error: 'This reset link is invalid or expired.' };
+  try {
+    const { error } = await authClient.resetPassword({ newPassword, token });
+    if (error) return { ok: false, error: error.message || 'Could not reset your password' };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Could not reach the authentication service. Please try again.' };
+  }
+}

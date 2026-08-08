@@ -27,6 +27,7 @@ import { CompareSection } from '@/components/dashboard/compare-section';
 import { CompositionSection } from '@/components/dashboard/composition-section';
 import { DataQualityCard } from '@/components/dashboard/data-quality-card';
 import { EngagementSection } from '@/components/dashboard/engagement-section';
+import { TalentSection } from '@/components/dashboard/talent-section';
 import { ExecutiveSummaryCard } from '@/components/dashboard/executive-summary';
 import { InsightsSection } from '@/components/dashboard/insights-section';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ const SECTIONS = [
   { id: 'overview', label: 'Overview' },
   { id: 'retention', label: 'Retention & Attrition' },
   { id: 'engagement', label: 'Engagement & Culture' },
+  { id: 'talent', label: 'Talent & Hiring' },
   { id: 'composition', label: 'Composition' },
   { id: 'compare', label: 'Compare' },
   { id: 'insights', label: 'Insights' },
@@ -261,6 +263,15 @@ export default function DashboardPage() {
               description="Satisfaction dimensions measured on a 1–4 scale, plus overtime prevalence."
             />
             <EngagementSection overview={overview} />
+          </section>
+
+          <section id="talent" className="scroll-mt-28 space-y-6">
+            <SectionHeading
+              eyebrow="Talent / Hiring"
+              title="How is new talent entering and staying?"
+              description="Hiring velocity, quality-of-hire proxies and early attrition — computed from the current dataset."
+            />
+            <TalentSection overview={overview} />
           </section>
 
           <section id="composition" className="scroll-mt-28 space-y-6">

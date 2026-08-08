@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { AuthForm } from '@/components/auth/auth-form';
 import { AuthShell } from '@/components/auth/auth-shell';
 
@@ -11,7 +12,11 @@ export const metadata: Metadata = {
 export default function SignUpPage() {
   return (
     <AuthShell>
-      <AuthForm mode="signup" />
+      <Suspense
+        fallback={<p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>}
+      >
+        <AuthForm mode="signup" />
+      </Suspense>
     </AuthShell>
   );
 }

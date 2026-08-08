@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/landing/logo';
 import { ThemeToggle } from '@/components/landing/theme-toggle';
 import { getStoredSession, signOutNeon, syncOAuthSession, type NeonSession } from '@/lib/auth';
+import { SignOutConfirmDialog } from '@/components/app-shell/sign-out-confirm-dialog';
 
 type LinkItem = {
   title: string;
@@ -127,6 +128,7 @@ function useScroll(threshold: number) {
 export function Header() {
   const [open, setOpen] = React.useState(false);
   const [session, setSession] = React.useState<NeonSession | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const scrolled = useScroll(10);
 
   React.useEffect(() => {
@@ -251,14 +253,7 @@ export function Header() {
                     <span className="relative">Open dashboard</span>
                   </Link>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    await signOutNeon();
-                    setSession(null);
-                  }}
-                >
+                <Button variant="outline" size="sm" onClick={() => setConfirmOpen(true)}>
                   Sign Out
                 </Button>
               </div>
@@ -324,11 +319,7 @@ export function Header() {
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"
-                  onClick={async () => {
-                    await signOutNeon();
-                    setSession(null);
-                    setOpen(false);
-                  }}
+                  onClick={() => setConfirmOpen(true)}
                 >
                   Sign Out ({session.user.name || session.user.email})
                 </Button>
@@ -345,6 +336,16 @@ export function Header() {
             )}
           </div>
         </MobileMenu>
+        <SignOutConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          onConfirm={async () => {
+            await signOutNeon();
+            setSession(null);
+            setOpen(false);
+          }}
+          userName={session?.user?.name || session?.user?.email}
+        />
       </header>
     </>
   );

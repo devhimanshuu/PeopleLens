@@ -1,5 +1,5 @@
 import type { CopilotDeepLink, CopilotMessageView, CopilotStreamEvent } from '@peoplelens/types';
-import { Bot, Copy, Loader2, Send, Sparkles, Trash2, TriangleAlert, X } from 'lucide-react';
+import { Bot, Copy, Loader2, Send, Trash2, TriangleAlert, X } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -257,7 +257,7 @@ export function CopilotDrawer() {
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/60 px-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 text-white shadow-sm">
-              <Sparkles className="size-4" aria-hidden />
+              <Bot className="size-4" aria-hidden />
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">PeopleLens Copilot</p>
@@ -432,7 +432,7 @@ function EmptyState({
     <div className="flex h-full flex-col justify-center gap-4">
       <div className="text-center">
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white shadow-sm">
-          <Sparkles className="size-6" aria-hidden />
+          <Bot className="size-6" aria-hidden />
         </span>
         <h2 className="mt-3 text-sm font-semibold text-foreground">Ask about your workforce</h2>
         <p className="mx-auto mt-1 max-w-xs text-[13px] leading-relaxed text-muted-foreground">
@@ -473,7 +473,7 @@ function ThinkingBubble({ activeTool }: { activeTool?: string | null }) {
 function BotAvatar() {
   return (
     <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 text-white shadow-sm">
-      <Sparkles className="size-3.5" aria-hidden />
+      <Bot className="size-3.5" aria-hidden />
     </span>
   );
 }
@@ -499,7 +499,7 @@ function GenerativeUIWidget({
     return (
       <div className="mt-3 rounded-xl border border-indigo-500/25 bg-indigo-950/20 p-3 shadow-sm">
         <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-400">
-          <Sparkles className="size-3" /> Visual Department Comparison
+          <Bot className="size-3" /> Visual Department Comparison
         </p>
         <div className="h-44 w-full">
           <ResponsiveContainer width="100%" height="100%">

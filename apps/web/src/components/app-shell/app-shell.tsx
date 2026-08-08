@@ -14,13 +14,13 @@ import {
   ScrollText,
   Search,
   ShieldCheck,
-  Sparkles,
   Users as UsersIcon,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import { CopilotDrawer } from '@/components/copilot/copilot-drawer';
-import { CopilotProvider, useCopilot } from '@/components/copilot/copilot-context';
+import { CopilotProvider } from '@/components/copilot/copilot-context';
+import { FloatingCopilotButton } from '@/components/copilot/floating-copilot-button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -30,6 +30,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { CommandPalette, CommandPaletteTrigger } from './command-palette';
+import { SignOutConfirmDialog } from './sign-out-confirm-dialog';
 import { UserMenu } from './user-menu';
 
 interface NavItem {
@@ -129,18 +130,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <CopilotProvider>
       <AppShellInner>{children}</AppShellInner>
+      <FloatingCopilotButton />
       <CopilotDrawer />
     </CopilotProvider>
   );
 }
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
-  const copilot = useCopilot();
   const pathname = usePathname();
   const router = useRouter();
   const { role, profile, initializing, profileError, refreshProfile, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -217,15 +219,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Search className="size-5" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={() => copilot.openWithQuestion()}
-            aria-label="Open PeopleLens Copilot"
-            title="Ask PeopleLens"
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Sparkles className="size-5" aria-hidden />
           </button>
           <ThemeToggle />
           <UserMenu />
@@ -423,7 +416,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     <Tooltip content="Sign out" side="right">
                       <button
                         type="button"
-                        onClick={() => void handleSignOut()}
+                        onClick={() => setSignOutConfirmOpen(true)}
                         aria-label="Sign out of PeopleLens"
                         className="flex size-9 items-center justify-center rounded-lg border border-border text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
@@ -448,7 +441,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     </div>
                     <button
                       type="button"
-                      onClick={() => void handleSignOut()}
+                      onClick={() => setSignOutConfirmOpen(true)}
                       aria-label="Sign out of PeopleLens"
                       title="Sign out"
                       className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -512,16 +505,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
-              <button
-                type="button"
-                onClick={() => copilot.openWithQuestion()}
-                aria-label="Open PeopleLens Copilot"
-                title="Ask PeopleLens"
-                className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Sparkles className="size-3.5 text-primary" aria-hidden />
-                Ask PeopleLens
-              </button>
               <ThemeToggle />
               <UserMenu />
             </div>
@@ -546,6 +529,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <SignOutConfirmDialog
+        open={signOutConfirmOpen}
+        onOpenChange={setSignOutConfirmOpen}
+        onConfirm={handleSignOut}
+        userName={profile?.name || profile?.email}
+      />
     </div>
   );
 }

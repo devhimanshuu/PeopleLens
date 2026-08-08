@@ -211,6 +211,81 @@ describe('AnalyticsService', () => {
     });
   });
 
+  describe('talent / hiring', () => {
+    it('computes hiring velocity, quality of hire and early attrition from the dataset', async () => {
+      const now = Date.now();
+      const days = (n: number) => new Date(now - n * 24 * 3600 * 1000);
+      mocks.repo.getEmployeeRows.mockResolvedValue([
+        // Hired 6 months ago: counts as a recent hire + recent-hire performance.
+        row({
+          id: 'a',
+          departmentId: 'd1',
+          hiredAt: days(180),
+          performanceRating: 4,
+          attrition: false,
+        }),
+        // Hired 10 days ago: recent + early-tenure (<1 yr) + not attrition.
+        row({
+          id: 'b',
+          departmentId: 'd1',
+          hiredAt: days(10),
+          performanceRating: 3,
+          attrition: false,
+        }),
+        // Hired 6 months ago in Sales with early attrition.
+        row({
+          id: 'c',
+          departmentId: 'd2',
+          hiredAt: days(150),
+          performanceRating: 2,
+          attrition: true,
+          status: 'terminated',
+        }),
+        // Long-tenured (5 yrs): excluded from hiring windows and early attrition.
+        row({
+          id: 'd',
+          departmentId: 'd2',
+          hiredAt: days(365 * 5),
+          performanceRating: 3,
+          attrition: true,
+          status: 'terminated',
+        }),
+      ]);
+
+      const overview = await service.getOverview(actor());
+
+      expect(overview.talent.recentHires).toBe(3);
+      const eng = overview.talent.hiresByDepartment.find((s) => s.name === 'Engineering');
+      const sales = overview.talent.hiresByDepartment.find((s) => s.name === 'Sales');
+      expect(eng?.value).toBe(2);
+      expect(sales?.value).toBe(1);
+      // Recent hires with ratings: a(4), b(3), c(2) → avg 3.
+      expect(overview.talent.averageRecentHireRating).toBeCloseTo(3, 5);
+      expect(overview.talent.recentHirePerformance).toHaveLength(3);
+      // Early attrition: <1-yr tenure employees a, b, c → 1 leaver of 3.
+      expect(overview.talent.earlyAttrition).toMatchObject({
+        headcount: 3,
+        attritionCount: 1,
+      });
+      expect(overview.talent.earlyAttrition.attritionRate).toBeCloseTo(1 / 3, 5);
+      // Hiring-pipeline metrics are declared unavailable, never fabricated.
+      expect(overview.talent.unavailable).toContain('Time-to-hire');
+      expect(overview.talent.unavailable).toContain('Cost-per-hire');
+    });
+
+    it('handles an empty dataset without inventing talent metrics', async () => {
+      mocks.repo.getEmployeeRows.mockResolvedValue([]);
+
+      const overview = await service.getOverview(actor());
+
+      expect(overview.talent.recentHires).toBe(0);
+      expect(overview.talent.hiresByDepartment).toEqual([]);
+      expect(overview.talent.recentHirePerformance).toEqual([]);
+      expect(overview.talent.averageRecentHireRating).toBeNull();
+      expect(overview.talent.earlyAttrition.attritionRate).toBeNull();
+    });
+  });
+
   describe('data quality', () => {
     it('drops the readiness score when core fields are missing and lists them', async () => {
       mocks.repo.getEmployeeRows.mockResolvedValue([

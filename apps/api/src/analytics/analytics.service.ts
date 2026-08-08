@@ -13,6 +13,7 @@ import type {
   ExecutiveSummary,
   FilterOptions,
   OrgHierarchy,
+  TalentData,
   WorkforceInsight,
 } from '@peoplelens/types';
 import { AGE_GROUPS, TENURE_GROUPS } from '@peoplelens/types';
@@ -82,6 +83,7 @@ export class AnalyticsService {
     const kpis = this.computeKpis(rows, orgCounts);
     const attrition = this.computeAttrition(rows, departmentNameById);
     const engagement = this.computeEngagement(rows);
+    const talent = this.computeTalent(rows, departmentNameById);
     const composition = this.computeComposition(rows, departmentNameById);
     const insights = this.generateInsights(rows, kpis, departmentNameById);
     const executiveSummary = this.computeExecutiveSummary(kpis, insights);
@@ -92,6 +94,7 @@ export class AnalyticsService {
       departments,
       attrition,
       engagement,
+      talent,
       composition,
       insights,
       executiveSummary,
@@ -270,6 +273,61 @@ export class AnalyticsService {
       averageJobSatisfaction: averageOf('jobSatisfaction'),
       averageWorkLifeBalance: averageOf('workLifeBalance'),
       overtimeRate: rate(overtimeRows.filter((r) => r.overTime).length, overtimeRows.length),
+    };
+  }
+
+  private computeTalent(
+    rows: AnalyticsEmployeeRow[],
+    deptNameById: Map<string, string>,
+  ): TalentData {
+    // Hiring velocity window: hires in the last 12 months.
+    const recentHires = rows.filter((r) => {
+      const years = tenureYears(r.hiredAt);
+      return years !== null && years <= 1;
+    });
+    // Quality-of-hire proxy window: hires in the last 24 months with a rating.
+    const recentHirePerformance = rows.filter((r) => {
+      const years = tenureYears(r.hiredAt);
+      return years !== null && years <= 2 && r.performanceRating !== null;
+    });
+    const performanceGroups = new Map<number, number>();
+    for (const r of recentHirePerformance) {
+      const v = r.performanceRating;
+      if (typeof v === 'number') performanceGroups.set(v, (performanceGroups.get(v) ?? 0) + 1);
+    }
+    const hiresByDepartment = new Map<string, number>();
+    for (const r of recentHires) {
+      const name = deptNameById.get(r.departmentId) ?? 'Unassigned';
+      hiresByDepartment.set(name, (hiresByDepartment.get(name) ?? 0) + 1);
+    }
+
+    // Early attrition: observed leavers among <1-year-tenure employees.
+    const early = rows.filter((r) => {
+      const years = tenureYears(r.hiredAt);
+      return years !== null && years < 1;
+    });
+    const earlyAttritionCount = early.filter((r) => r.attrition).length;
+
+    return {
+      recentHires: recentHires.length,
+      hiresByDepartment: [...hiresByDepartment.entries()]
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value),
+      recentHirePerformance: [1, 2, 3, 4]
+        .map((level) => ({
+          name: `Level ${level}`,
+          value: performanceGroups.get(level) ?? 0,
+        }))
+        .filter((s) => s.value > 0),
+      averageRecentHireRating: average(recentHirePerformance.map((r) => r.performanceRating)),
+      earlyAttrition: {
+        headcount: early.length,
+        attritionCount: earlyAttritionCount,
+        attritionRate: rate(earlyAttritionCount, early.length),
+      },
+      // Hiring-pipeline metrics the IBM HR dataset cannot support. Stated
+      // explicitly rather than fabricated.
+      unavailable: ['Time-to-hire', 'Cost-per-hire', 'Offer acceptance rate'],
     };
   }
 

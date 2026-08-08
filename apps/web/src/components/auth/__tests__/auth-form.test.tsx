@@ -11,6 +11,8 @@ vi.mock('next/navigation', () => ({
   // Stable router object — an unstable reference would re-trigger the
   // AuthForm's session-sync effect on every render and redirect away.
   useRouter: vi.fn(() => ({ replace, push })),
+  // No reset flag on the URL in these tests.
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock('@/lib/auth', () => ({

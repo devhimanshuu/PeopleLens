@@ -474,6 +474,27 @@ export interface DepartmentComparison {
   averagePerformanceRating: number | null;
 }
 
+/** Talent / hiring view — quality-of-hire proxies computable from the dataset. */
+export interface TalentData {
+  /** Hires in the last 12 months. */
+  recentHires: number;
+  /** Employees hired in the last 12 months, grouped by department. */
+  hiresByDepartment: DistributionSlice[];
+  /** Quality-of-hire proxy: performance rating distribution of hires in the last 24 months. */
+  recentHirePerformance: DistributionSlice[];
+  /** Average performance rating of recent (≤24 months) hires, 1–4. */
+  averageRecentHireRating: number | null;
+  /** Observed attrition among employees with <1 year tenure (early attrition). */
+  earlyAttrition: {
+    headcount: number;
+    attritionCount: number;
+    /** 0–1, null when the slice has no attrition data. */
+    attritionRate: number | null;
+  };
+  /** PRD talent metrics the current dataset cannot support (e.g. cost-per-hire). */
+  unavailable: string[];
+}
+
 /** Dataset-health indicator — analytics quality depends on data quality. */
 export interface DataQuality {
   totalRecords: number;
@@ -502,6 +523,7 @@ export interface AnalyticsOverview {
   departments: Array<Pick<Department, 'id' | 'name'>>;
   attrition: AttritionBreakdown;
   engagement: EngagementData;
+  talent: TalentData;
   composition: CompositionData;
   insights: WorkforceInsight[];
   executiveSummary: ExecutiveSummary;

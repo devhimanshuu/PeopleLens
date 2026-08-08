@@ -35,6 +35,53 @@ const ROLE_ORDER: Role[] = ['admin', 'manager', 'viewer'];
 function isAuthFailure(error: unknown): boolean {
   return error instanceof ApiClientError && (error.status === 401 || error.status === 403);
 }
+
+/** Inactivity auto-logout — signs the user out after this many idle minutes. */
+const IDLE_TIMEOUT_MINUTES = Number(process.env.NEXT_PUBLIC_SESSION_IDLE_MINUTES ?? 30);
+// Activity events that reset the idle timer (browser supports all of these).
+const IDLE_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'] as const;
+
+/**
+ * Signs out automatically after `minutes` of inactivity (protects sensitive
+ * workforce data on shared devices). Every activity event resets the timer;
+ * only a signed-in session arms it.
+ */
+function useIdleSignOut(minutes: number, active: boolean, signOut: () => Promise<void>): void {
+  useEffect(() => {
+    if (!active || minutes <= 0) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let signedOut = false;
+
+    const reset = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(
+        () => {
+          signedOut = true;
+          void signOut().then(() => {
+            // Hard redirect: clears client state and lets the middleware see the
+            // removed marker cookie, bouncing to the sign-in page.
+            window.location.assign('/signin');
+          });
+        },
+        minutes * 60 * 1000,
+      );
+    };
+
+    const onActivity = () => reset();
+    const events: (keyof WindowEventMap)[] = [...IDLE_EVENTS];
+    events.forEach((ev) => window.addEventListener(ev, onActivity, { passive: true }));
+    reset();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      events.forEach((ev) => window.removeEventListener(ev, onActivity));
+      // If the timeout fired and this cleanup runs afterwards, make sure the
+      // sign-out isn't dropped by an unmount racing the navigation.
+      if (signedOut) void signOut();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, minutes]);
+}
 // Client-side auth provider for the app shell. Boots from the persisted Neon session, resolves the platform…
 // profile + RBAC role from `GET /users/me`, and stores the role back into the session marker so the edge…
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -104,6 +151,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setProfileError(null);
   }, []);
+
+  // Auto-logout after inactivity once a real session exists. The signOut call
+  // below clears the marker cookie, so the middleware bounces to /signin.
+  useIdleSignOut(IDLE_TIMEOUT_MINUTES, Boolean(session), signOut);
 
   const value = useMemo<AuthState>(
     () => ({
