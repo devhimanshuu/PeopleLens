@@ -8,6 +8,7 @@
  */
 
 import { authClient } from '@/lib/auth/client';
+import type { Role } from '@peoplelens/types';
 
 export interface NeonUser {
   id: string;
@@ -21,6 +22,8 @@ export interface NeonSession {
   user: NeonUser;
   token?: string;
   expiresAt?: string;
+  /** Platform RBAC role — resolved from the API after sign-in. */
+  role?: Role;
 }
 
 export type OAuthProvider = 'google' | 'github';
@@ -73,6 +76,7 @@ function syncSessionCookie(session: NeonSession | null): void {
   const marker = JSON.stringify({
     id: session.user.id,
     email: session.user.email,
+    ...(session.role ? { role: session.role } : {}),
     ...(session.expiresAt ? { expiresAt: session.expiresAt } : {}),
   });
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
@@ -99,24 +103,46 @@ function toNeonSession(
 /**
  * Pull the current session from the Better Auth server and mirror it into the
  * local session marker. Returns the session (or null when signed out).
- * Used after OAuth redirects so the header + middleware see the new session.
+ *
+ * Used after OAuth redirects and on 401-refresh so the header + middleware
+ * see the new session. Preserves any previously resolved role.
+ *
+ * Robustness rule: a TRANSIENT failure (network error / auth server down)
+ * must never destroy a valid stored session — we keep the local marker and
+ * return it so the user stays signed in. Only an explicit "no session"
+ * response (or a fatal error with no stored session) clears the marker.
  */
 export async function syncOAuthSession(): Promise<NeonSession | null> {
   if (typeof window === 'undefined') return null;
+  const previous = getStoredSession();
   try {
     const { data, error } = await authClient.getSession();
     // `getSession` returns `{ session, user }` — the user is top-level, not on the session.
-    if (error || !data?.user) {
+    if (error) {
+      // Auth server unreachable — keep any existing session rather than
+      // signing the user out because of a network blip.
+      return previous;
+    }
+    if (!data?.user) {
       setStoredSession(null);
       return null;
     }
-    const session = toNeonSession(data.user, undefined, data.session?.expiresAt);
+    const session = toNeonSession(data.user, data.session?.token, data.session?.expiresAt);
+    if (previous?.role) session.role = previous.role;
     setStoredSession(session);
     return session;
   } catch {
-    setStoredSession(null);
-    return null;
+    // Unexpected client failure — preserve an existing stored session.
+    return previous;
   }
+}
+
+/** Updates the stored session's RBAC role (resolved from the API profile). */
+export function setStoredRole(role: Role): void {
+  const session = getStoredSession();
+  if (!session) return;
+  session.role = role;
+  setStoredSession(session);
 }
 
 /** Sign in with Email and Password via Managed Better Auth */
@@ -136,7 +162,13 @@ export async function signInWithEmail(
   }
 }
 
-/** Register a new user with Email, Password, and Name via Managed Better Auth */
+/**
+ * Register a new user with Email, Password, and Name via Managed Better Auth.
+ *
+ * When Neon Auth requires email verification, sign-up succeeds but NO session
+ * is issued — redirecting to the workspace would dead-end, so this surfaces a
+ * clear "verify your email" message instead.
+ */
 export async function signUpWithEmail(
   email: string,
   password: string,
@@ -150,6 +182,12 @@ export async function signUpWithEmail(
     });
     if (error) return { error: error.message || 'Failed to register' };
     if (!data?.user) return { error: 'Failed to register' };
+    if (!data.token) {
+      // Neon issues no session until the email is verified — keep the message
+      // vendor-neutral for end users; setup guidance lives in the README and
+      // on the sign-in page.
+      return { error: 'Account created — please verify your email, then sign in.' };
+    }
     const session = toNeonSession(data.user, data.token);
     setStoredSession(session);
     return { session };
@@ -161,11 +199,13 @@ export async function signUpWithEmail(
 /**
  * Start an OAuth sign-in with Google or GitHub. The SDK redirects the browser
  * to the provider; on success Managed Better Auth lands the user back on
- * `callbackURL` with a session established.
+ * `callbackURL` with a session established. Defaults to the workspace
+ * dashboard — landing on the public marketing page after login would show the
+ * landing site to a signed-in user.
  */
 export async function signInWithOAuth(
   provider: OAuthProvider,
-  callbackURL = '/',
+  callbackURL = '/dashboard',
 ): Promise<{ error?: string }> {
   try {
     await authClient.signIn.social({ provider, callbackURL });

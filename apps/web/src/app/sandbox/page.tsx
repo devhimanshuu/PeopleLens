@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     'Explore PeopleLens with live workforce intelligence — real-time health score, attrition risk, and unified signals across HRIS, ATS, and engagement sources.',
 };
 
-export default function DashboardPage() {
+export default function SandboxPage() {
   return (
     // #top anchor so the header logo and footer watermark scroll-to-top work here too
     <div

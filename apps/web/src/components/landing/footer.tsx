@@ -108,7 +108,7 @@ export function Footer() {
                 { label: 'Capabilities', href: '/#capabilities' },
                 { label: 'Solutions', href: '/#solutions' },
                 { label: 'Pricing', href: '/#pricing' },
-                { label: 'Live Sandbox', href: '/dashboard' },
+                { label: 'Live Sandbox', href: '/sandbox' },
               ]}
             />
             <FooterColumn
@@ -123,7 +123,7 @@ export function Footer() {
               title="Resources"
               links={[
                 { label: 'Documentation', href: '/#capabilities' },
-                { label: 'API Reference', href: '/dashboard' },
+                { label: 'API Reference', href: '/sandbox' },
                 { label: 'Guides', href: '/#solutions' },
                 { label: 'Compliance', href: '/#enterprise' },
               ]}

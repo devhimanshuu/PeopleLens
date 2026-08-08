@@ -17,12 +17,22 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: {
     default: 'PeopleLens — Enterprise Workforce Intelligence Platform',
     template: '%s · PeopleLens',
   },
   description:
     'PeopleLens unifies HRIS, ATS, performance, and engagement data into real-time predictive workforce intelligence for HR leaders and executives.',
+  applicationName: 'PeopleLens',
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    siteName: 'PeopleLens',
+    title: 'PeopleLens — Enterprise Workforce Intelligence Platform',
+    description:
+      'Unify HRIS, ATS, performance, and engagement data into real-time workforce intelligence for HR leaders and executives.',
+  },
 };
 
 export const viewport: Viewport = {

@@ -29,14 +29,14 @@ export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === 'signup';
 
   // Already signed in (locally or via a Better Auth session, e.g. returning
-  // from an OAuth callback)? Skip the form and head home.
+  // from an OAuth callback)? Skip the form and head to the workspace.
   useEffect(() => {
     if (getStoredSession()) {
-      router.replace('/');
+      router.replace('/dashboard');
       return;
     }
     syncOAuthSession().then((session) => {
-      if (session) router.replace('/');
+      if (session) router.replace('/dashboard');
     });
   }, [router]);
 
@@ -51,7 +51,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (res.error) {
       setErrorMsg(res.error);
     } else if (res.session) {
-      router.push('/');
+      router.push('/dashboard');
     }
     setLoading(false);
   }

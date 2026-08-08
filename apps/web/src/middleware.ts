@@ -1,31 +1,79 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 /**
- * Server-side auth guard for the public auth pages.
+ * Server-side route guards.
  *
- * Runs in the Edge runtime before any route renders: if a session cookie is
- * present (mirrored by `lib/auth`'s `setStoredSession`), a signed-in user is
- * redirected to the landing page — the sign-in/sign-up form never loads.
+ * - **Home** (`/`): the landing page is the marketing site for visitors;
+ *   signed-in users are sent straight into the workspace so a fresh login
+ *   never strands them on the public site.
+ * - **App routes** (`/dashboard`, `/employees`, `/departments`, `/teams`,
+ *   `/imports`, `/users`): redirect to `/signin` when no session marker cookie
+ *   is present.
+ * - **Auth pages** (`/signin`, `/signup`): redirect signed-in users home.
+ * - **Admin route** (`/users`): additionally requires `role: admin` in the
+ *   marker cookie; non-admins go to `/dashboard`.
  *
- * NOTE: this is a UX guard, not a security boundary — the cookie is forgeable
- * client-side. It exists so signed-in users aren't shown an auth form;
- * protected content (once it exists) must enforce access on the server.
- *
- * The check is intentionally minimal (cookie existence + expiry) so the edge
- * bundle stays tiny; the localStorage session remains the client-side source
- * of truth for the header's session indicator.
+ * NOTE: the marker cookie is a UX guard, not a security boundary — it mirrors
+ * the Neon session client-side. The API enforces real RBAC on every request.
  */
-
 const SESSION_COOKIE_KEY = 'peoplelens_session';
 
+const APP_ROUTES = [
+  '/dashboard',
+  '/employees',
+  '/departments',
+  '/teams',
+  '/imports',
+  '/users',
+  '/audit-logs',
+];
+const ADMIN_ONLY_ROUTES = ['/users', '/audit-logs'];
+const AUTH_PAGES = ['/signin', '/signup'];
+
 export function middleware(request: NextRequest): NextResponse {
+  const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get(SESSION_COOKIE_KEY)?.value;
 
-  if (sessionCookie && !isExpired(sessionCookie)) {
-    return NextResponse.redirect(new URL('/', request.url));
+  if (pathname === '/') {
+    // Signed-in visitors get the workspace, not the marketing site. (The
+    // marker cookie is only set by client-side JS, so a fresh OAuth callback
+    // lands here before it exists — /signin's session-sync effect then
+    // completes the hop to the dashboard.)
+    if (sessionCookie && !isExpired(sessionCookie)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (AUTH_PAGES.includes(pathname)) {
+    if (sessionCookie && !isExpired(sessionCookie)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (APP_ROUTES.includes(pathname)) {
+    if (!sessionCookie || isExpired(sessionCookie)) {
+      const url = new URL('/signin', request.url);
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
+    }
+    if (ADMIN_ONLY_ROUTES.includes(pathname) && !hasRole(sessionCookie, 'admin')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();
+}
+
+function hasRole(cookieValue: string, role: string): boolean {
+  try {
+    const session = JSON.parse(cookieValue) as { role?: string };
+    return session.role === role;
+  } catch {
+    return false;
+  }
 }
 
 function isExpired(cookieValue: string): boolean {
@@ -43,5 +91,16 @@ function isExpired(cookieValue: string): boolean {
 }
 
 export const config = {
-  matcher: ['/signin', '/signup'],
+  matcher: [
+    '/',
+    '/signin',
+    '/signup',
+    '/dashboard',
+    '/employees',
+    '/departments',
+    '/teams',
+    '/imports',
+    '/users',
+    '/audit-logs',
+  ],
 };

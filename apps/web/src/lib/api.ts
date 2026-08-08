@@ -1,46 +1,159 @@
-import type { ApiResponse, HealthStatus, LiveSignalsSnapshot } from '@peoplelens/types';
+import type {
+  ApiErrorResponse,
+  ApiResponse,
+  HealthStatus,
+  LiveSignalsSnapshot,
+} from '@peoplelens/types';
+import { getStoredSession, syncOAuthSession } from '@/lib/auth';
 
 /**
- * Browser-facing API base. Overridable per environment; defaults to the
- * local NestJS dev server (see apps/web/.env.example).
+ * Browser-facing API client.
  *
- * NOTE: real deployments must set NEXT_PUBLIC_API_URL to their API origin
- * at build time — the localhost fallback is for local development only.
+ * Every request carries the Neon Auth session token as
+ * `Authorization: Bearer <token>`; the API validates it against the Neon Auth
+ * server and resolves the caller's RBAC role from the local User row.
+ *
+ * On a 401 the client re-syncs the Neon session (silent refresh) and retries
+ * the request once. All helpers unwrap the standard `{ success, message, data }`
+ * envelope and throw an `ApiClientError` carrying the server message.
  */
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+const REQUEST_TIMEOUT_MS = 15000;
 
-const REQUEST_TIMEOUT_MS = 4000;
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiClientError';
+  }
+}
 
-/**
- * GET a versioned API endpoint and unwrap the standard response envelope
- * (`{ success, message, data, timestamp }`), returning the `data` payload.
- * Any failure (network, timeout, non-2xx) resolves to `null` — the landing
- * degrades gracefully to its deterministic mock snapshot.
- */
-async function get<T>(path: string): Promise<T | null> {
+interface RequestOptions extends Omit<RequestInit, 'body'> {
+  body?: unknown;
+  /** Do not attach the auth header (public endpoints only). */
+  noAuth?: boolean;
+  /** Skip the 401-refresh-and-retry cycle (used by the refresh itself). */
+  skipRetry?: boolean;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { body, noAuth, skipRetry, headers, ...rest } = options;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  const authHeader = !noAuth ? getAuthHeader() : undefined;
+  const isFormData = body instanceof FormData;
+
   try {
     const response = await fetch(`${API_URL}${path}`, {
+      ...rest,
       signal: controller.signal,
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(authHeader ? { Authorization: authHeader } : {}),
+        ...headers,
+      },
+      ...(body !== undefined && !isFormData ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined && isFormData ? { body } : {}),
     });
-    if (!response.ok) return null;
+
+    if (response.status === 401 && !skipRetry && !noAuth) {
+      await syncOAuthSession();
+      if (getStoredSession()) {
+        return request<T>(path, { ...options, skipRetry: true });
+      }
+    }
+
+    if (!response.ok) {
+      throw await toError(response);
+    }
+
     const payload = (await response.json()) as ApiResponse<T>;
-    return payload.success ? payload.data : null;
-  } catch {
-    return null;
+    return payload.data;
+  } catch (error) {
+    if (error instanceof ApiClientError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiClientError('Request timed out — please try again', 408);
+    }
+    throw new ApiClientError('Could not reach the PeopleLens API. Is the API running?', 0, error);
   } finally {
     clearTimeout(timeout);
   }
 }
 
-/** `GET /api/v1/health` — process health + uptime. */
-export function fetchHealth(): Promise<HealthStatus | null> {
-  return get<HealthStatus>('/health');
+function getAuthHeader(): string | undefined {
+  const session = getStoredSession();
+  return session?.token ? `Bearer ${session.token}` : undefined;
 }
 
-/** `GET /api/v1/signals/live` — current workforce signal snapshot. */
+async function toError(response: Response): Promise<ApiClientError> {
+  try {
+    const payload = (await response.json()) as ApiErrorResponse;
+    return new ApiClientError(
+      payload.message || `Request failed (${response.status})`,
+      response.status,
+      payload.details,
+    );
+  } catch {
+    return new ApiClientError(`Request failed (${response.status})`, response.status);
+  }
+}
+
+// ── typed helpers ────────────────────────────────────────────────────────────
+
+export const api = {
+  get: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: 'GET' }),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: 'POST', body }),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: 'PATCH', body }),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: 'PUT', body }),
+  delete: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: 'DELETE' }),
+};
+
+// ── public (unauthenticated) helpers for the marketing site ──────────────────
+
+/** `GET /api/v1/health` — process health + uptime (public). */
+export function fetchHealth(): Promise<HealthStatus | null> {
+  return request<HealthStatus>('/health', { noAuth: true }).catch(() => null);
+}
+
+/** `GET /api/v1/signals/live` — live workforce signal snapshot (public). */
 export function fetchLiveSignals(): Promise<LiveSignalsSnapshot | null> {
-  return get<LiveSignalsSnapshot>('/signals/live');
+  return request<LiveSignalsSnapshot>('/signals/live', { noAuth: true }).catch(() => null);
+}
+
+// ── authenticated downloads (e.g. CSV template) ──────────────────────────────
+
+/**
+ * Fetches an auth-protected endpoint as a Blob and triggers a browser
+ * download. Plain `<a href download>` cannot attach the bearer token, so any
+ * protected file must go through this helper.
+ */
+export async function downloadAuthenticated(path: string, filename: string): Promise<void> {
+  const authHeader = getAuthHeader();
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: {
+      Accept: 'text/csv, application/octet-stream',
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+  });
+  if (!response.ok) throw await toError(response);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

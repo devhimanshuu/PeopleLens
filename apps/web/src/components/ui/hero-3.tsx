@@ -67,14 +67,14 @@ export function HeroSection() {
         <NoiseOverlay />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 sm:px-8">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 sm:px-8">
         <motion.div variants={staggerContainer} initial="hidden" animate="show">
           {/* Status pill */}
           <motion.div variants={fadeUpItem} className="flex justify-center">
             <a
               href="#capabilities"
               className={cn(
-                'group flex w-fit items-center gap-3 rounded-full border border-border bg-card/80 p-1 pr-2 shadow-sm backdrop-blur-md transition-colors hover:border-foreground/25',
+                'group flex w-fit items-center gap-3 rounded-full border border-border bg-card/80 p-1 pr-3 shadow-sm backdrop-blur-md transition-colors hover:border-foreground/25',
               )}
             >
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 shadow-sm">
@@ -85,8 +85,8 @@ export function HeroSection() {
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-widest">Now</p>
               </span>
 
-              <span className="text-xs text-foreground/80">
-                Announcing PeopleLens 2.0 — Predictive Flight Risk AI
+              <span className="text-xs font-medium text-foreground/80">
+                Announcing PeopleLens 2.0 — Predictive Flight Risk &amp; Sentiment Intelligence
               </span>
               <span className="hidden h-5 border-l border-border sm:block" aria-hidden />
 
@@ -100,22 +100,29 @@ export function HeroSection() {
         <motion.div variants={staggerContainer} initial="hidden" animate="show">
           <motion.h1
             variants={fadeUpItem}
-            className="mx-auto max-w-4xl text-balance text-center font-display text-4xl font-semibold leading-tight tracking-tight text-foreground md:text-6xl"
+            className="mx-auto max-w-5xl text-balance text-center font-display text-4xl font-semibold leading-tight tracking-tight text-foreground md:text-6xl lg:text-7xl"
           >
-            Turn Fragmented HR Data into{' '}
-            <span className="text-gradient">Enterprise Workforce Intelligence</span>
+            Transform Fragmented HR Signals into{' '}
+            <span className="text-gradient">Predictive Enterprise Intelligence</span>
           </motion.h1>
         </motion.div>
 
-        <motion.p
+        <motion.div
           variants={fadeUpItem}
           initial="hidden"
           animate="show"
-          className="mx-auto max-w-2xl text-pretty text-center text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl"
+          className="mx-auto max-w-3xl text-center space-y-3"
         >
-          Unify signals across HRIS, ATS, and engagement. Move from rearview metrics to real-time
-          predictive organizational foresight.
-        </motion.p>
+          <p className="text-balance text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl font-normal">
+            PeopleLens unifies disaggregated data across your HRIS, ATS, Slack, and engagement tools
+            into a single real-time workforce intelligence layer.
+          </p>
+          <p className="text-pretty text-xs leading-relaxed text-muted-foreground/80 sm:text-sm max-w-2xl mx-auto">
+            Empower HR leaders, executives, and managers to accurately predict flight risks, prevent
+            key talent burnout, and deliver board-ready organizational analytics in seconds—backed
+            by zero-trust enterprise governance.
+          </p>
+        </motion.div>
 
         <motion.div
           variants={staggerContainer}
@@ -125,10 +132,14 @@ export function HeroSection() {
         >
           <motion.div variants={fadeUpItem} className="w-full sm:w-auto">
             <Magnetic className="w-full sm:w-auto">
-              <Button asChild size="lg" className="group relative w-full overflow-hidden sm:w-auto">
+              <Button
+                asChild
+                size="lg"
+                className="group relative w-full overflow-hidden sm:w-auto px-6"
+              >
                 <Link href="/signup">
                   <span aria-hidden className="btn-shine absolute inset-0" />
-                  <span className="relative">Schedule Enterprise Demo</span>
+                  <span className="relative font-medium">Schedule Enterprise Demo</span>
                   <ArrowRight
                     className="relative size-4 transition-transform group-hover:translate-x-0.5"
                     aria-hidden
@@ -138,8 +149,8 @@ export function HeroSection() {
             </Magnetic>
           </motion.div>
           <motion.div variants={fadeUpItem} className="w-full sm:w-auto">
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-              <Link href="/dashboard">
+            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto px-6">
+              <Link href="/sandbox">
                 <span className="flex size-6 items-center justify-center rounded-full bg-indigo-500/20">
                   <Play className="size-3 fill-current" aria-hidden />
                 </span>
@@ -149,7 +160,7 @@ export function HeroSection() {
           </motion.div>
         </motion.div>
 
-        {/* Social proof */}
+        {/* Social proof & compliance */}
         <motion.div
           variants={fadeUpItem}
           initial="hidden"
@@ -169,12 +180,12 @@ export function HeroSection() {
               </span>
             ))}
           </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Trusted by HR &amp; People Operations leaders at{' '}
-            <span className="font-medium text-foreground">200+ enterprises</span>
-            <span className="mt-1 flex items-center justify-center gap-1.5">
+          <p className="text-xs leading-relaxed text-muted-foreground text-center sm:text-left">
+            Trusted by People Leaders at{' '}
+            <span className="font-semibold text-foreground">200+ enterprises</span>
+            <span className="mt-1 flex items-center justify-center sm:justify-start gap-1.5">
               <ShieldCheck className="size-3.5 text-emerald-500" aria-hidden />
-              SOC 2 Type II · GDPR · ISO 27001
+              SOC 2 Type II · GDPR Compliant · ISO 27001 Certified
             </span>
           </p>
         </motion.div>
