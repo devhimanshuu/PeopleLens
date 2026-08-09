@@ -33,10 +33,12 @@ async function bootstrap(): Promise<void> {
   // Versioned API namespace: every route lives under /api/v1.
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
   app.enableShutdownHooks();
-  // Explicit origin allowlist — never a reflected wildcard, since credentials
-  // are allowed. Comma-separated: CORS_ORIGINS=http://localhost:3000,https://app.example.com
+  // Explicit origin allowlist by default; `CORS_ORIGINS=*` opts into reflecting
+  // any origin (useful for public preview deployments). Comma-separated:
+  // CORS_ORIGINS=http://localhost:3000,https://app.example.com
+  const corsOrigins = config.get<string[]>('corsOrigins', ['http://localhost:3000']);
   app.enableCors({
-    origin: config.get<string[]>('corsOrigins', ['http://localhost:3000']),
+    origin: corsOrigins.includes('*') ? true : corsOrigins,
     credentials: true,
   });
   // Request contract validation. DTOs arrive with Phase 2; the pipe is wired

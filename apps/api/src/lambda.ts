@@ -26,8 +26,11 @@ async function bootstrapServer(): Promise<Handler> {
   app.use(requestLoggerMiddleware(config));
 
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
+  // Explicit origin allowlist by default; `CORS_ORIGINS=*` reflects any origin
+  // (credentials allowed — RBAC, not CORS, is the security boundary).
+  const corsOrigins = config.get<string[]>('corsOrigins', ['http://localhost:3000']);
   app.enableCors({
-    origin: config.get<string[]>('corsOrigins', ['http://localhost:3000']),
+    origin: corsOrigins.includes('*') ? true : corsOrigins,
     credentials: true,
   });
 

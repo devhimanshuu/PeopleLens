@@ -265,7 +265,7 @@ Backend unit tests (Jest) cover the highest-risk business logic:
 - **DTO metadata** — regression guard ensuring `design:paramtypes` survives compilation so validation can never be silently disabled
 - **Audit & Health** — best-effort recording; DB-up and degraded states
 
-Frontend unit tests (Vitest + Testing Library) cover formatting, RBAC gating, and auth forms. The GitHub Actions workflow runs **typecheck → lint → test → build** on every push and pull request.
+Frontend unit tests (Vitest + Testing Library) cover formatting, RBAC gating, and auth forms. The GitHub Actions workflow runs **typecheck → lint → test → build** on every push and pull request, plus a **Lambda package guard** job that builds the deployment zip, verifies the RHEL Prisma engine is packaged, and boot-tests the bundle (no secrets required) so a broken artifact can never be deployed. The zip is uploaded as a workflow artifact for the deploy step.
 
 ## Deployment
 
@@ -273,9 +273,31 @@ The stack deploys as two stateless services plus a managed database:
 
 1. **PostgreSQL** — a Neon project (managed) or any Postgres 16 instance.
 2. **API** (`apps/api`) — Node 20+, `pnpm install`, `prisma deploy`, `pnpm build`, `node dist/index` on port 3001. Set the env vars from `apps/api/.env.example` — including the Copilot keys (`GROQ_API_KEY` / `OPENROUTER_API_KEY`) if enabled.
-3. **Web** (`apps/web`) — `pnpm build && pnpm start` on port 3000, pointed at the API via `NEXT_PUBLIC_API_URL` (must be the public, browser-reachable API origin).
+3. **Web** (`apps/web`) — deploy to Vercel (or `pnpm build && pnpm start` on port 3000). The web app calls the API from the browser, so three things must line up or the workspace renders nothing after sign-in:
+   - **`NEXT_PUBLIC_API_URL`** (Vercel env var) must be the deployed API origin **including the `/api/v1` prefix** — e.g. `https://<api-gateway>.execute-api.<region>.amazonaws.com/api/v1`. Missing the prefix makes every API call 404.
+   - **`CORS_ORIGINS`** on the API must include the **exact** frontend origin (e.g. `https://yourapp.vercel.app`). Without it the API answers requests but omits `Access-Control-Allow-Origin`, and the browser silently blocks every response — the app appears to "not render" after login. The API ships with `http://localhost:3000` as the default for local development; add your deployed origin (comma-separated) to `apps/api/.env` before deploying to Lambda.
+   - The API validates sessions via the `Authorization: Bearer <token>` header for cross-origin clients, so no cookie configuration is needed on Vercel.
 
 Both services are horizontally scalable behind a reverse proxy. For production: set `NODE_ENV=production`, enable `TRUST_PROXY=true`, configure `CORS_ORIGINS` to your exact web origin, and keep `SWAGGER_ENABLED=false` unless you intentionally expose the docs. The Copilot rate limiter is in-memory per instance — if you run multiple API replicas, swap it for a shared store.
+
+### Deploying the API to AWS Lambda
+
+The API also deploys to AWS Lambda via the Serverless Framework (`apps/api/serverless.yml`):
+
+```bash
+cd apps/api
+pnpm deploy   # = node scripts/package-lambda.mjs && npx serverless deploy
+```
+
+`scripts/package-lambda.mjs` builds the app, **bundles it into a single file with esbuild** (everything except Prisma, which needs its native engines at runtime), stages only the Prisma runtime pieces, and produces a small, deterministic zip at `.serverless-build/peoplelens-api.zip`. This exists because Serverless Framework cannot package pnpm's symlinked `node_modules` (symlinked packages are silently dropped), and a raw `node_modules/**` package exceeds Lambda's 250 MB unzipped limit. The Prisma schema pins `binaryTargets = ["native", "rhel-openssl-3.0.x"]` so the generated client works on Lambda (Node 20 / Amazon Linux 2023).
+
+Before deploying, make sure the real values for `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `ADMIN_EMAILS`, and the Copilot keys are present in `apps/api/.env` (Serverless embeds them into the function environment at deploy time — an empty `.env` value would overwrite the function's config). To verify a freshly built package boots before pushing it, run:
+
+```bash
+node scripts/boot-test-lambda.cjs .serverless-build/peoplelens-api <env-json>
+```
+
+It boots the bundle with your function's env vars and issues a mock health request.
 
 ## Engineering Decisions & Trade-offs
 

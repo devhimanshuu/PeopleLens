@@ -91,7 +91,13 @@ console.log(`\nLambda package ready: ${zipPath} (${zipMb} MB zip)`);
 
 function findStorePackageDir(prefix, relativePath) {
   const pnpmDir = path.join(repoRoot, 'node_modules', '.pnpm');
-  const candidates = fs.readdirSync(pnpmDir).filter((d) => d.startsWith(prefix));
+  // Sorted: the monorepo may hold several versions of a package in the store
+  // (e.g. @prisma/client 6.x for the API and 7.x for the web app); the lowest
+  // version is the API's pinned one.
+  const candidates = fs
+    .readdirSync(pnpmDir)
+    .filter((d) => d.startsWith(prefix))
+    .sort();
   if (candidates.length === 0) throw new Error(`No ${prefix} package in the workspace store`);
   const dir = path.join(pnpmDir, candidates[0], relativePath);
   if (!fs.existsSync(dir)) throw new Error(`Missing ${dir} in workspace store`);
