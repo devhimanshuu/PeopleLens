@@ -1,25 +1,16 @@
-import { PrismaPg } from '@prisma/adapter-pg';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
-// Prisma data-access wrapper. - Resolves the connection string from validated configuration. - Connects at boot…
-// and disconnects cleanly on shutdown. - Degrades gracefully: if PostgreSQL is unreachable (e.g. local dev…
+
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   private connected = false;
 
   constructor(config: ConfigService) {
-    const dbUrl = config.get<string>('databaseUrl');
-    let adapter: PrismaPg | undefined;
-    if (dbUrl) {
-      try {
-        adapter = new PrismaPg({ connectionString: dbUrl });
-      } catch (err) {
-        Logger.warn(`Failed to initialize PrismaPg adapter: ${err}`, 'PrismaService');
-      }
-    }
-    super(adapter ? { adapter } : undefined);
+    super({
+      datasourceUrl: config.getOrThrow<string>('databaseUrl'),
+    });
   }
 
   async onModuleInit(): Promise<void> {

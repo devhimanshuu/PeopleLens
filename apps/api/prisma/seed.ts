@@ -1,17 +1,13 @@
 // PeopleLens database seed. Provisions a realistic demo workspace inside a single transaction: - Departments…
 // with an org hierarchy. - Teams inside departments. - ~40 employees across the org with varied…
-import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, type Gender } from '@prisma/client';
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
+if (!process.env.DATABASE_URL) {
   console.error('[seed] DATABASE_URL is required to seed the database.');
   process.exit(1);
 }
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString }),
-});
+const prisma = new PrismaClient();
 
 const GENDERS: Gender[] = ['female', 'male', 'non_binary', 'prefer_not_to_say'];
 
