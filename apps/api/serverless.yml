@@ -1,5 +1,7 @@
 service: peoplelens-api
 
+useDotenv: true
+
 provider:
   name: aws
   runtime: nodejs20.x
@@ -8,12 +10,12 @@ provider:
   timeout: 29
   environment:
     NODE_ENV: production
-    DATABASE_URL: ${env:DATABASE_URL}
-    NEON_AUTH_BASE_URL: ${env:NEON_AUTH_BASE_URL}
+    DATABASE_URL: ${env:DATABASE_URL, ""}
+    NEON_AUTH_BASE_URL: ${env:NEON_AUTH_BASE_URL, ""}
     SESSION_CACHE_TTL_MS: ${env:SESSION_CACHE_TTL_MS, "60000"}
-    ADMIN_EMAILS: ${env:ADMIN_EMAILS}
-    GROQ_API_KEY: ${env:GROQ_API_KEY}
-    OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY}
+    ADMIN_EMAILS: ${env:ADMIN_EMAILS, ""}
+    GROQ_API_KEY: ${env:GROQ_API_KEY, ""}
+    OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY, ""}
 
 functions:
   api:
