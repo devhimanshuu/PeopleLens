@@ -11,8 +11,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   constructor(config: ConfigService) {
     const dbUrl = config.get<string>('databaseUrl');
-    // Prisma 7 dropped `datasources`/`datasourceUrl` — direct connections require a driver adapter.
-    super(dbUrl ? { adapter: new PrismaPg({ connectionString: dbUrl }) } : undefined);
+    let adapter: PrismaPg | undefined;
+    if (dbUrl) {
+      try {
+        adapter = new PrismaPg({ connectionString: dbUrl });
+      } catch (err) {
+        Logger.warn(`Failed to initialize PrismaPg adapter: ${err}`, 'PrismaService');
+      }
+    }
+    super(adapter ? { adapter } : undefined);
   }
 
   async onModuleInit(): Promise<void> {

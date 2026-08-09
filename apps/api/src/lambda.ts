@@ -47,7 +47,12 @@ async function bootstrapServer(): Promise<Handler> {
 
 export const handler: Handler = async (event: unknown, context: Context, callback: Callback) => {
   if (!cachedServer) {
-    cachedServer = await bootstrapServer();
+    try {
+      cachedServer = await bootstrapServer();
+    } catch (err) {
+      console.error('Error bootstrapping NestJS server:', err);
+      throw err;
+    }
   }
   return cachedServer(event, context, callback);
 };
