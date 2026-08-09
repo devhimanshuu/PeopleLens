@@ -5,8 +5,9 @@
     "paths": {
       "@app/*": ["src/*"]
     },
+    "rootDir": "./src",
     "outDir": "./dist"
   },
-  "include": ["src", "prisma.config.ts", "prisma/**/*"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

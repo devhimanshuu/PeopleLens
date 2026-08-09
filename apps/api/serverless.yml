@@ -23,14 +23,8 @@ functions:
     events:
       - httpApi: '*'
 
+# The zip is produced by `scripts/package-lambda.mjs` (pnpm's symlinked
+# node_modules cannot be packaged directly; the script stages a real
+# production-only tree and dereferences symlinks at zip time).
 package:
-  individually: true
-  patterns:
-    - '!src/**'
-    - '!test/**'
-    - '!**/*.md'
-    - '!**/*.d.ts'
-    - '!**/*.map'
-    - 'dist/**'
-    - 'prisma/**'
-    - 'node_modules/**'
+  artifact: .serverless-build/peoplelens-api.zip

@@ -1,14 +1,15 @@
-// PeopleLens Prisma schema — Phase 2 core domain. Design notes: - `User` mirrors the Neon Auth identity (email)…
-// and adds the platform role (admin / manager / viewer). Auth itself stays on Neon Auth; the API maps a…
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" keeps local development on the host platform; the Linux target
+  // lets the generated client run on AWS Lambda (Node 20 / AL2023, OpenSSL 3).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
 // ───────────────────────────────────────────────────────────────────────────── Enums…
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ enum ImportStatus {
   partial
   failed
 }
+
 // ───────────────────────────────────────────────────────────────────────────── Identity & access…
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -62,25 +64,26 @@ model User {
   // Departments this user manages (RBAC scope for managers).
   managedDepartments Department[] @relation("DepartmentManager")
 
-  imports  ImportHistory[]
-  auditLogs AuditLog[]
+  imports         ImportHistory[]
+  auditLogs       AuditLog[]
   aiConversations AiConversation[]
 
   @@index([role])
   @@index([email])
 }
+
 // ───────────────────────────────────────────────────────────────────────────── AI copilot (Phase 5)…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// One copilot conversation thread. Owned by a user; messages are stored only when necessary for lightweight…
 /// context — never auth tokens, API keys or raw tool payloads.
 model AiConversation {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  AiMessage[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
   @@index([userId, updatedAt])
 }
@@ -98,46 +101,47 @@ model AiMessage {
 
   @@index([conversationId, createdAt])
 }
+
 // ───────────────────────────────────────────────────────────────────────────── Organization…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Organizational unit. Supports a hierarchy (`parentId`) and an assigned
 /// manager (`managerUserId`) that defines RBAC scope for manager accounts.
 model Department {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   // Org hierarchy — a department may sit under a parent department.
   parentId String?
-  parent   Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children Department[] @relation("DepartmentHierarchy")
 
   // Assigned manager — the user whose RBAC scope includes this department.
   managerUserId String?
-  managerUser   User?  @relation("DepartmentManager", fields: [managerUserId], references: [id], onDelete: SetNull)
+  managerUser   User?   @relation("DepartmentManager", fields: [managerUserId], references: [id], onDelete: SetNull)
 
   teams     Team[]
   employees Employee[]
 
+  @@unique([name, deletedAt])
   @@index([parentId])
   @@index([managerUserId])
   @@index([deletedAt])
-  @@unique([name, deletedAt])
 }
 
 /// Sub-unit of a department (e.g. Platform, Growth under Engineering).
 model Team {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   departmentId String
@@ -149,29 +153,30 @@ model Team {
 
   employees Employee[]
 
+  @@unique([name, departmentId, deletedAt])
   @@index([departmentId])
   @@index([deletedAt])
-  @@unique([name, departmentId, deletedAt])
 }
+
 // ───────────────────────────────────────────────────────────────────────────── Workforce…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Employee record — the core workforce domain.
 model Employee {
-  id           String   @id @default(cuid())
-  employeeCode String   @unique
+  id           String         @id @default(cuid())
+  employeeCode String         @unique
   firstName    String
   lastName     String
-  email        String   @unique
+  email        String         @unique
   phone        String?
   jobTitle     String
   gender       Gender
   dateOfBirth  DateTime?
   hiredAt      DateTime
   status       EmployeeStatus @default(active)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
   deletedAt    DateTime?
 
   // Org placement.
@@ -191,44 +196,44 @@ model Employee {
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Team leads are employees too.
-  ledTeams Team[] @relation("TeamLead")
+  ledTeams                 Team[]    @relation("TeamLead")
   // ── Analytics & engagement profile (Phase 4) ───────────────────────────── IBM HR-style dimensions powering…
   // the workforce-intelligence engine. All nullable so legacy rows and minimal imports report "not available" in…
-  attrition Boolean @default(false)
+  attrition                Boolean   @default(false)
   /// When the attrition event occurred (null while employed).
-  attritionDate DateTime?
+  attritionDate            DateTime?
   /// Monthly income in USD — gated to admin/manager roles in API views.
-  monthlyIncome Int?
+  monthlyIncome            Int?
   /// 1 (low) – 4 (high).
-  jobSatisfaction Int?
+  jobSatisfaction          Int?
   /// 1 (low) – 4 (high).
-  environmentSatisfaction Int?
+  environmentSatisfaction  Int?
   /// 1 (low) – 4 (high).
   relationshipSatisfaction Int?
   /// 1 (low) – 4 (high).
-  workLifeBalance Int?
+  workLifeBalance          Int?
   /// Works beyond standard hours.
-  overTime Boolean @default(false)
+  overTime                 Boolean   @default(false)
   /// 1 (low) – 4 (high).
-  performanceRating Int?
+  performanceRating        Int?
   /// 1 (below) – 5 (doctorate).
-  education Int?
+  education                Int?
   /// e.g. Life Sciences, Marketing, Technical Degree.
-  educationField String?
+  educationField           String?
   /// 1 (entry) – 5 (executive).
-  jobLevel Int?
-  yearsAtCompany Int?
-  yearsInCurrentRole Int?
-  yearsSinceLastPromotion Int?
-  yearsWithCurrManager Int?
-  totalWorkingYears Int?
-  distanceFromHome Int?
-  maritalStatus String?
-  businessTravel String?
-  numCompaniesWorked Int?
-  trainingTimesLastYear Int?
-  percentSalaryHike Int?
-  stockOptionLevel Int?
+  jobLevel                 Int?
+  yearsAtCompany           Int?
+  yearsInCurrentRole       Int?
+  yearsSinceLastPromotion  Int?
+  yearsWithCurrManager     Int?
+  totalWorkingYears        Int?
+  distanceFromHome         Int?
+  maritalStatus            String?
+  businessTravel           String?
+  numCompaniesWorked       Int?
+  trainingTimesLastYear    Int?
+  percentSalaryHike        Int?
+  stockOptionLevel         Int?
 
   @@index([departmentId])
   @@index([teamId])
@@ -245,25 +250,26 @@ model Employee {
   @@index([monthlyIncome])
   @@index([jobTitle])
 }
+
 // ───────────────────────────────────────────────────────────────────────────── Imports & audit…
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Result of a CSV bulk import, including a per-row error report.
 model ImportHistory {
-  id           String       @id @default(cuid())
-  fileName     String
-  status       ImportStatus
-  totalRows    Int
-  successCount Int
-  failedCount  Int
-  duplicateCount Int        @default(0)
+  id               String       @id @default(cuid())
+  fileName         String
+  status           ImportStatus
+  totalRows        Int
+  successCount     Int
+  failedCount      Int
+  duplicateCount   Int          @default(0)
   /// JSON array of `{ row, email?, employeeCode?, errors: string[] }`.
-  errorReport  Json?
+  errorReport      Json?
   importedByUserId String
-  importedByUser   User     @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
-  createdAt    DateTime     @default(now())
+  importedByUser   User         @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
+  createdAt        DateTime     @default(now())
   /// Processing time in milliseconds (import-history view).
-  durationMs   Int?
+  durationMs       Int?
 
   @@index([importedByUserId])
   @@index([createdAt])
@@ -271,15 +277,15 @@ model ImportHistory {
 
 /// Basic audit trail for state-changing operations.
 model AuditLog {
-  id         String   @id @default(cuid())
+  id          String   @id @default(cuid())
   actorUserId String?
-  actorUser  User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
-  action     String
-  entityType String
-  entityId   String?
-  details    Json?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String
+  entityId    String?
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
 
   @@index([entityType, entityId])
   @@index([actorUserId])
