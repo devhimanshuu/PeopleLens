@@ -11,7 +11,7 @@ import type {
   ImportHistoryView,
   TenureGroup,
 } from '@peoplelens/types';
-import { AGE_GROUPS, TENURE_GROUPS } from '@peoplelens/types';
+import { AGE_GROUPS, TENURE_GROUPS } from '@app/common/constants/shared-types.constants';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { AnalyticsService } from '@app/analytics/analytics.service';
 import { EmployeesService } from '@app/employees/employees.service';

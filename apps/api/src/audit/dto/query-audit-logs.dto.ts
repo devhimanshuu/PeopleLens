@@ -1,12 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import {
-  AUDIT_ACTIONS,
-  AUDIT_ENTITY_TYPES,
-  type AuditAction,
-  type AuditEntityType,
-} from '@peoplelens/types';
+import type { AuditAction, AuditEntityType } from '@peoplelens/types';
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from '@app/common/constants/shared-types.constants';
 // Query parameters for the audit-logs list endpoint — pagination plus filters on action, entity type, and…
 // actor/entity search.
 export class QueryAuditLogsDto {

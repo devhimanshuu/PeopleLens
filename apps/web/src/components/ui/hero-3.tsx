@@ -203,10 +203,12 @@ export function HeroSection() {
           transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="relative mt-8 sm:mt-12 md:mt-16"
         >
-          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-lg border border-border bg-background p-2 shadow-xl ring-1 ring-card">
-            <HeroDashboard />
+          <div className="relative mx-auto max-w-5xl">
+            <div className="relative overflow-hidden rounded-lg border border-border bg-background p-2 shadow-xl ring-1 ring-card">
+              <HeroDashboard />
+            </div>
 
-            {/* Floating metric chips — offset from corners, never overlapping content */}
+            {/* Floating metric chips — siblings of the frame so overflow-hidden never clips them */}
             <motion.div
               initial={{ opacity: 0, y: 12, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
