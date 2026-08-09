@@ -38,6 +38,7 @@
     "@nestjs/swagger": "^11.4.6",
     "@nestjs/throttler": "^6.5.0",
     "@peoplelens/types": "workspace:*",
+    "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.0.0",
     "aws-lambda": "^1.0.7",
     "class-transformer": "^0.5.1",

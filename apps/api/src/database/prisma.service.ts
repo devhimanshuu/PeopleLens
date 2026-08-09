@@ -1,3 +1,4 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
@@ -9,7 +10,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private connected = false;
 
   constructor(config: ConfigService) {
-    super({ datasourceUrl: config.getOrThrow<string>('databaseUrl') });
+    const dbUrl = config.get<string>('databaseUrl');
+    // Prisma 7 dropped `datasources`/`datasourceUrl` — direct connections require a driver adapter.
+    super(dbUrl ? { adapter: new PrismaPg({ connectionString: dbUrl }) } : undefined);
   }
 
   async onModuleInit(): Promise<void> {
