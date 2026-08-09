@@ -1,0 +1,25 @@
+service: peoplelens-api
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-south-1
+  memorySize: 512
+  timeout: 29
+  environment:
+    NODE_ENV: production
+
+functions:
+  api:
+    handler: dist/lambda.handler
+    events:
+      - httpApi: '*'
+
+package:
+  individually: true
+  patterns:
+    - '!src/**'
+    - '!test/**'
+    - 'dist/**'
+    - 'prisma/**'
+    - 'node_modules/**'

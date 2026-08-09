@@ -7,9 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Connection string also supplied via prisma.config.ts for newer CLIs;
-  // kept here so the Prisma 6 CLI resolves the datasource at migrate time.
-  url      = env("DATABASE_URL")
 }
 // ───────────────────────────────────────────────────────────────────────────── Enums…
 // ─────────────────────────────────────────────────────────────────────────────

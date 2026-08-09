@@ -1,0 +1,56 @@
+{
+  "D:\\PeopleLens\\apps\\api\\serverless.yml": {
+    "versionFramework": "4.40.0",
+    "servicePath": "D:\\PeopleLens\\apps\\api\\serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "peoplelens-api",
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs20.x",
+        "region": "ap-south-1",
+        "memorySize": 512,
+        "timeout": 29,
+        "environment": {
+          "NODE_ENV": "production"
+        }
+      },
+      "functions": {
+        "api": {
+          "handler": "dist/lambda.handler",
+          "events": [
+            {
+              "httpApi": "*"
+            }
+          ]
+        }
+      },
+      "package": {
+        "individually": true,
+        "patterns": ["!src/**", "!test/**", "dist/**", "prisma/**", "node_modules/**"]
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs20.x",
+      "region": "ap-south-1",
+      "memorySize": 512,
+      "timeout": 29,
+      "environment": {
+        "NODE_ENV": "production"
+      }
+    },
+    "error": {
+      "message": "Forbidden",
+      "code": "AUTH_FAILED"
+    },
+    "serviceRawFile": "service: peoplelens-api\n\nprovider:\n  name: aws\n  runtime: nodejs20.x\n  region: ap-south-1\n  memorySize: 512\n  timeout: 29\n  environment:\n    NODE_ENV: production\n\nfunctions:\n  api:\n    handler: dist/lambda.handler\n    events:\n      - httpApi: '*'\n\npackage:\n  individually: true\n  patterns:\n    - '!src/**'\n    - '!test/**'\n    - 'dist/**'\n    - 'prisma/**'\n    - 'node_modules/**'\n",
+    "command": ["deploy"],
+    "options": {},
+    "serviceProviderAwsCfStackId": null,
+    "serviceProviderAwsCfStackCreated": null,
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": null,
+    "serviceProviderAwsCfStackOutputs": null
+  }
+}
