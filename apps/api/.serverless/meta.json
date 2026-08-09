@@ -12,7 +12,13 @@
         "memorySize": 512,
         "timeout": 29,
         "environment": {
-          "NODE_ENV": "production"
+          "NODE_ENV": "production",
+          "DATABASE_URL": "${env:DATABASE_URL}",
+          "NEON_AUTH_BASE_URL": "${env:NEON_AUTH_BASE_URL}",
+          "SESSION_CACHE_TTL_MS": "${env:SESSION_CACHE_TTL_MS, \"60000\"}",
+          "ADMIN_EMAILS": "${env:ADMIN_EMAILS}",
+          "GROQ_API_KEY": "<REDACTED>",
+          "OPENROUTER_API_KEY": "<REDACTED>"
         }
       },
       "functions": {
@@ -37,14 +43,20 @@
       "memorySize": 512,
       "timeout": 29,
       "environment": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "DATABASE_URL": "${env:DATABASE_URL}",
+        "NEON_AUTH_BASE_URL": "${env:NEON_AUTH_BASE_URL}",
+        "SESSION_CACHE_TTL_MS": "${env:SESSION_CACHE_TTL_MS, \"60000\"}",
+        "ADMIN_EMAILS": "${env:ADMIN_EMAILS}",
+        "GROQ_API_KEY": "<REDACTED>",
+        "OPENROUTER_API_KEY": "<REDACTED>"
       }
     },
     "error": {
       "message": "Forbidden",
       "code": "AUTH_FAILED"
     },
-    "serviceRawFile": "service: peoplelens-api\n\nprovider:\n  name: aws\n  runtime: nodejs20.x\n  region: ap-south-1\n  memorySize: 512\n  timeout: 29\n  environment:\n    NODE_ENV: production\n\nfunctions:\n  api:\n    handler: dist/lambda.handler\n    events:\n      - httpApi: '*'\n\npackage:\n  individually: true\n  patterns:\n    - '!src/**'\n    - '!test/**'\n    - 'dist/**'\n    - 'prisma/**'\n    - 'node_modules/**'\n",
+    "serviceRawFile": "service: peoplelens-api\n\nprovider:\n  name: aws\n  runtime: nodejs20.x\n  region: ap-south-1\n  memorySize: 512\n  timeout: 29\n  environment:\n    NODE_ENV: production\n    DATABASE_URL: ${env:DATABASE_URL}\n    NEON_AUTH_BASE_URL: ${env:NEON_AUTH_BASE_URL}\n    SESSION_CACHE_TTL_MS: ${env:SESSION_CACHE_TTL_MS, \"60000\"}\n    ADMIN_EMAILS: ${env:ADMIN_EMAILS}\n    GROQ_API_KEY: ${env:GROQ_API_KEY}\n    OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY}\n\nfunctions:\n  api:\n    handler: dist/lambda.handler\n    events:\n      - httpApi: '*'\n\npackage:\n  individually: true\n  patterns:\n    - '!src/**'\n    - '!test/**'\n    - 'dist/**'\n    - 'prisma/**'\n    - 'node_modules/**'\n",
     "command": ["deploy"],
     "options": {},
     "serviceProviderAwsCfStackId": null,
