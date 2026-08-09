@@ -28,6 +28,9 @@ package:
   patterns:
     - '!src/**'
     - '!test/**'
+    - '!**/*.md'
+    - '!**/*.d.ts'
+    - '!**/*.map'
     - 'dist/**'
     - 'prisma/**'
     - 'node_modules/**'
