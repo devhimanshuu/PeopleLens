@@ -2,11 +2,12 @@
 
 import type { Department, EmployeeView, Gender, Team } from '@peoplelens/types';
 import { Loader2 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { api } from '@/lib/api';
 import { GENDER_LABELS, STATUS_LABELS } from '@/lib/format';
 
 export interface EmployeeFormValues {
@@ -28,7 +29,7 @@ export interface EmployeeFormValues {
 type EmployeeFormProps = {
   initial?: EmployeeView | null;
   departments: Department[];
-  teams: Team[];
+  /** Manager candidates — a backend-fetched reference list, never filtered client-side. */
   employees: EmployeeView[];
   submitting: boolean;
   onSubmit: (values: EmployeeFormValues) => void;
@@ -72,7 +73,6 @@ function toValues(employee: EmployeeView): EmployeeFormValues {
 export function EmployeeForm({
   initial,
   departments,
-  teams,
   employees,
   submitting,
   onSubmit,
@@ -81,20 +81,47 @@ export function EmployeeForm({
     initial ? toValues(initial) : EMPTY_VALUES,
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Teams of the selected department — fetched from the backend on department
+  // change (the client never filters a full team list itself).
+  const [departmentTeams, setDepartmentTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
 
   useEffect(() => {
     setValues(initial ? toValues(initial) : EMPTY_VALUES);
     setErrors({});
+    setDepartmentTeams([]);
   }, [initial]);
+
+  // Backend-driven dependent select: `GET /teams?departmentId=` returns only
+  // the teams of the chosen department.
+  useEffect(() => {
+    if (!values.departmentId) {
+      setDepartmentTeams([]);
+      return;
+    }
+    let cancelled = false;
+    // Drop the previous department's options immediately so the disabled
+    // "Loading teams…" state never shows stale teams.
+    setDepartmentTeams([]);
+    setTeamsLoading(true);
+    api
+      .get<Team[]>(`/teams?departmentId=${encodeURIComponent(values.departmentId)}`)
+      .then((teams) => {
+        if (!cancelled) setDepartmentTeams(teams);
+      })
+      .catch(() => {
+        if (!cancelled) setDepartmentTeams([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTeamsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [values.departmentId]);
 
   const set = <K extends keyof EmployeeFormValues>(key: K, value: EmployeeFormValues[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
-
-  // Teams belonging to the selected department.
-  const departmentTeams = useMemo(
-    () => teams.filter((team) => team.departmentId === values.departmentId),
-    [teams, values.departmentId],
-  );
 
   const validate = (): boolean => {
     const next: Record<string, string> = {};
@@ -256,7 +283,14 @@ export function EmployeeForm({
           id="team"
           value={values.teamId}
           onChange={(e) => set('teamId', e.target.value)}
-          placeholder={values.departmentId ? 'Select team' : 'Choose a department first'}
+          disabled={teamsLoading}
+          placeholder={
+            teamsLoading
+              ? 'Loading teams…'
+              : values.departmentId
+                ? 'Select team'
+                : 'Choose a department first'
+          }
           options={departmentTeams.map((t) => ({ value: t.id, label: t.name }))}
         />
       </div>

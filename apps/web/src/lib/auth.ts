@@ -39,15 +39,21 @@ export function getStoredSession(): NeonSession | null {
     if (!raw) return null;
     const session = JSON.parse(raw) as NeonSession;
     // Rehydrate the in-memory token for the current page load so the Bearer
-    // header keeps working until refresh (when the cookie takes over).
+    // header keeps working; the token itself never touches localStorage.
     session.token = memoryToken;
     return session;
   } catch {
     return null;
   }
 }
-// Store session locally in browser (and mirror it to a cookie for the server-side middleware guard on /signin…
-// and /signup). The raw token never touches localStorage — see `memoryToken` above.
+
+/**
+ * Store session locally in browser. The raw token lives only in module memory
+ * (`memoryToken`) — localStorage holds a non-sensitive marker (identity,
+ * role, expiry) and a cookie mirror for the edge middleware. Reloads
+ * re-authenticate via the HttpOnly `__Secure-neon-auth.*` cookie (which the
+ * API validates), and `syncOAuthSession` restores the in-memory token.
+ */
 export function setStoredSession(session: NeonSession | null) {
   memoryToken = session?.token;
   if (typeof window === 'undefined') return;
@@ -61,12 +67,14 @@ export function setStoredSession(session: NeonSession | null) {
   syncSessionCookie(session);
 }
 // Mirrors a minimal session marker to a cookie so Next.js middleware (Edge runtime — no localStorage) can…
-// redirect signed-in users away from auth pages server-side. The full session stays in localStorage; the cookie…
+// redirect signed-in users away from auth pages server-side. localStorage holds the same non-sensitive marker…
+// (no token); the cookie exists for the edge runtime.
 function syncSessionCookie(session: NeonSession | null): void {
   if (typeof document === 'undefined') return;
   const base = `${SESSION_STORAGE_KEY}=`;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   if (!session) {
-    document.cookie = `${base}; Path=/; Max-Age=0; SameSite=Lax`;
+    document.cookie = `${base}; Path=/; Max-Age=0; SameSite=Lax${secure}`;
     return;
   }
   const marker = JSON.stringify({
@@ -75,7 +83,6 @@ function syncSessionCookie(session: NeonSession | null): void {
     ...(session.role ? { role: session.role } : {}),
     ...(session.expiresAt ? { expiresAt: session.expiresAt } : {}),
   });
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `${base}${encodeURIComponent(marker)}; Path=/; Max-Age=${SESSION_COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
 }
 

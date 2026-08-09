@@ -30,7 +30,9 @@ async function bootstrap(): Promise<void> {
   app.use(requestIdMiddleware());
   app.use(requestLoggerMiddleware(config));
 
-  // Versioned API namespace: every route lives under /api/v1.
+  // Versioned API namespace: every route lives under /api/v1 — including
+  // /health and /signals/live, which the frontend and uptime monitors call at
+  // their prefixed paths (excluding them here would 404 those consumers).
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
   app.enableShutdownHooks();
   // Explicit origin allowlist by default; `CORS_ORIGINS=*` opts into reflecting

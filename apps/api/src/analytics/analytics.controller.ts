@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '@app/common/decorators/current-user.decorator';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 // Value imports — NOT type-only: the global ValidationPipe resolves the DTO
@@ -52,9 +52,14 @@ export class AnalyticsController {
   @ApiOperation({
     summary: 'Organization hierarchy',
     description:
-      'Tree of departments → teams → employees with employee profile previews. Scoped to a manager assigned departments.',
+      'Tree of departments → teams → employees with employee profile previews. Scoped to a manager assigned departments. Optional `search` filters the tree server-side (matching employees, or department/team names) keeping ancestor paths.',
   })
-  getHierarchy(@CurrentUser() user: RequestUser) {
-    return this.analyticsService.getHierarchy(user);
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Filter the tree to matching employees / department names (server-side)',
+  })
+  getHierarchy(@CurrentUser() user: RequestUser, @Query('search') search?: string) {
+    return this.analyticsService.getHierarchy(user, search);
   }
 }

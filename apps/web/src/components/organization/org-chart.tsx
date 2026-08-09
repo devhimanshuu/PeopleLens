@@ -3,7 +3,7 @@
 import type { OrgHierarchy, OrgHierarchyNode } from '@peoplelens/types';
 import { Building2, ChevronDown, ChevronRight, FolderTree, Search, UserRound } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { EmptyState, LoadingState, ErrorState } from '@/components/ui/empty-state';
@@ -15,56 +15,19 @@ interface OrgChartProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  /** Current search input (filtering happens server-side via the hierarchy API). */
+  query: string;
+  onQueryChange: (query: string) => void;
 }
-// Organization hierarchy — departments → teams → employees as an expandable tree. Built client-side from one…
-// scoped API response (no graph database, no per-node round trips). Search filters employees instantly.
-export function OrgChart({ data, loading, error, onRetry }: OrgChartProps) {
-  const [query, setQuery] = useState('');
+// Organization hierarchy — departments → teams → employees as an expandable tree. Built from one scoped API…
+// response (no graph database, no per-node round trips); search is delegated to the backend (`?search=`) so the
+// full dataset is never shipped to or filtered by the client.
+export function OrgChart({ data, loading, error, onRetry, query, onQueryChange }: OrgChartProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  const tree = useMemo(() => {
-    if (!data || !query.trim()) return data?.nodes ?? [];
-    const term = query.trim().toLowerCase();
-    // When searching, return the tree pruned to matching employees (parents
-    // of matches are kept so the path stays visible).
-    const prune = (nodes: OrgHierarchyNode[]): OrgHierarchyNode[] =>
-      nodes
-        .map((node) => {
-          const employee = node.employee;
-          const selfMatches = employee
-            ? `${employee.firstName} ${employee.lastName} ${employee.jobTitle}`
-                .toLowerCase()
-                .includes(term)
-            : node.name.toLowerCase().includes(term);
-          const children = prune(node.children);
-          if (selfMatches || children.length > 0) {
-            return { ...node, children };
-          }
-          return null;
-        })
-        .filter((node): node is OrgHierarchyNode => node !== null);
-    return prune(data.nodes);
-  }, [data, query]);
-
+  // The tree arrives already pruned to matches when searching.
+  const tree = data?.nodes ?? [];
   const searching = query.trim().length > 0;
-  const totalMatches = useMemo(() => {
-    if (!data) return 0;
-    const count = (nodes: OrgHierarchyNode[]): number =>
-      nodes.reduce(
-        (sum, node) =>
-          sum +
-          (node.employee
-            ? `${node.employee.firstName} ${node.employee.lastName} ${node.employee.jobTitle}`
-                .toLowerCase()
-                .includes(query.trim().toLowerCase())
-              ? 1
-              : 0
-            : 0) +
-          count(node.children),
-        0,
-      );
-    return query.trim() ? count(data.nodes) : 0;
-  }, [data, query]);
 
   const toggle = (id: string) => {
     setCollapsed((current) => {
@@ -110,7 +73,7 @@ export function OrgChart({ data, loading, error, onRetry }: OrgChartProps) {
           />
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Search employees…"
             className="pl-9"
             aria-label="Search employees in the organization"
@@ -132,12 +95,12 @@ export function OrgChart({ data, loading, error, onRetry }: OrgChartProps) {
             Collapse all
           </button>
           <span className="ml-1 text-muted-foreground/70">
-            {data.totalEmployees} employees · {searching ? `${totalMatches} matching` : ''}
+            {data.totalEmployees} {searching ? 'matching' : ''} employees
           </span>
         </div>
       </div>
 
-      {searching && totalMatches === 0 ? (
+      {searching && data.nodes.length === 0 ? (
         <EmptyState
           icon={UserRound}
           title="No matching employees"

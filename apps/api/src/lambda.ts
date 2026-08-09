@@ -22,15 +22,27 @@ async function bootstrapServer(): Promise<Handler> {
 
   app.use(helmet());
   app.use(compression());
+  if (config.get<boolean>('trustProxy', false)) {
+    expressApp.set('trust proxy', 'loopback');
+  }
   app.use(requestIdMiddleware());
   app.use(requestLoggerMiddleware(config));
 
+  // Every route lives under /api/v1 — including /health and /signals/live,
+  // which the frontend calls at their prefixed paths.
   app.setGlobalPrefix(API_GLOBAL_PREFIX);
-  // Explicit origin allowlist by default; `CORS_ORIGINS=*` reflects any origin
-  // (credentials allowed — RBAC, not CORS, is the security boundary).
+
   const corsOrigins = config.get<string[]>('corsOrigins', ['http://localhost:3000']);
   app.enableCors({
-    origin: corsOrigins.includes('*') ? true : corsOrigins,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean | string | string[]) => void,
+    ) => {
+      if (!origin) return callback(null, true);
+      if (corsOrigins.includes('*') || corsOrigins.includes(origin)) return callback(null, true);
+      if (origin.endsWith('.vercel.app')) return callback(null, true);
+      return callback(null, corsOrigins);
+    },
     credentials: true,
   });
 
@@ -45,7 +57,18 @@ async function bootstrapServer(): Promise<Handler> {
 
   await app.init();
 
-  return configureServerlessExpress({ app: expressApp });
+  return configureServerlessExpress({
+    app: expressApp,
+    binarySettings: {
+      contentTypes: [
+        'multipart/form-data',
+        'text/csv',
+        'application/octet-stream',
+        'image/*',
+        'application/pdf',
+      ],
+    },
+  });
 }
 
 export const handler: Handler = async (event: unknown, context: Context, callback: Callback) => {

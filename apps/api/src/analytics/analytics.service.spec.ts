@@ -48,6 +48,7 @@ function createMocks(rows: AnalyticsEmployeeRow[]) {
     countDeleted: jest.fn().mockResolvedValue(0),
     getLastImport: jest.fn().mockResolvedValue(null),
     getHierarchy: jest.fn().mockResolvedValue({ nodes: [], totalEmployees: 0 }),
+    getJobTitles: jest.fn().mockResolvedValue([]),
   };
   const rbac = {
     departmentScope: jest.fn().mockResolvedValue(null),
@@ -367,6 +368,33 @@ describe('AnalyticsService', () => {
 
       expect(comparison[0]!.averageMonthlyIncome).toBeNull();
       expect(comparison[0]!.headcount).toBe(1);
+    });
+  });
+
+  describe('filter options', () => {
+    it('builds the job-title list from the dedicated distinct query, not every employee row', async () => {
+      mocks.repo.getJobTitles.mockResolvedValue(['Engineer', 'Manager']);
+
+      const options = await service.getFilters(actor());
+
+      expect(options.jobTitles).toEqual(['Engineer', 'Manager']);
+      expect(mocks.repo.getEmployeeRows).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('organization hierarchy search', () => {
+    it('passes the search term through to the repository', async () => {
+      await service.getHierarchy(actor(), 'alex');
+
+      expect(mocks.repo.getHierarchy).toHaveBeenCalledWith(null, 'alex');
+    });
+
+    it('trims the term and caps it at 100 characters', async () => {
+      await service.getHierarchy(actor(), '   alex   ');
+      expect(mocks.repo.getHierarchy).toHaveBeenCalledWith(null, 'alex');
+
+      await service.getHierarchy(actor(), 'x'.repeat(200));
+      expect(mocks.repo.getHierarchy).toHaveBeenCalledWith(null, 'x'.repeat(100));
     });
   });
 });

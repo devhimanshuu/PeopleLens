@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { User } from '@peoplelens/types';
 import { AuditService } from '@app/audit/audit.service';
+import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { PrismaService } from '@app/database/prisma.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -27,20 +28,38 @@ export class UsersService {
     return this.toDto(user);
   }
 
-  async findAll(actor: RequestUser, search?: string): Promise<User[]> {
+  async findAll(actor: RequestUser, search?: string, role?: string): Promise<User[]> {
+    const roleFilter = this.parseRoleFilter(role);
     const users = await this.prisma.user.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
+      where: {
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(roleFilter ? { role: { in: roleFilter } } : {}),
+      },
       orderBy: { createdAt: 'asc' },
       include: { employee: { select: { id: true, employeeCode: true } } },
     });
     return users.map((u) => this.toDto(u));
+  }
+
+  /** Parses a comma-separated role filter (`manager,admin`) into valid role values. */
+  private parseRoleFilter(role?: string): Role[] | undefined {
+    if (!role) return undefined;
+    const valid = Object.values(Role) as string[];
+    const parsed = role
+      .split(',')
+      .map((r) => r.trim().toLowerCase())
+      .filter((r) => valid.includes(r)) as Role[];
+    if (parsed.length === 0) {
+      throw new BadRequestException(`Invalid role filter "${role}"`);
+    }
+    return [...new Set(parsed)];
   }
 
   async updateRole(

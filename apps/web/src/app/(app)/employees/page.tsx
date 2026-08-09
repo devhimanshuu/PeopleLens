@@ -91,6 +91,8 @@ export default function EmployeesPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [jobTitles, setJobTitles] = useState<string[]>([]);
+  /** Full reference list for the form's manager picker (fetched server-side). */
+  const [managerCandidates, setManagerCandidates] = useState<EmployeeView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,14 +105,18 @@ export default function EmployeesPage() {
 
   const loadReferences = useCallback(async () => {
     try {
-      const [depts, teamsResult, filterOptions] = await Promise.all([
+      const [depts, teamsResult, filterOptions, candidates] = await Promise.all([
         api.get<Department[]>('/departments'),
         api.get<Team[]>('/teams'),
         api.get<FilterOptions>('/analytics/filters'),
+        // Manager picker options come from the backend (fullest allowed page),
+        // not from the current 10-row table page.
+        api.get<Paginated<EmployeeView>>('/employees?pageSize=100'),
       ]);
       setDepartments(depts);
       setTeams(teamsResult);
       setJobTitles(filterOptions.jobTitles);
+      setManagerCandidates(candidates.items);
     } catch {
       // Reference load failure is non-fatal; forms will show empty selects.
     }
@@ -767,8 +773,7 @@ export default function EmployeesPage() {
           key={editing?.id ?? 'new'}
           initial={editing}
           departments={departments}
-          teams={teams}
-          employees={result?.items ?? []}
+          employees={managerCandidates}
           submitting={submitting}
           onSubmit={(values) => void handleSubmit(values)}
         />

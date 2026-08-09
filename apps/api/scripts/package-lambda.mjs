@@ -89,11 +89,27 @@ await new Promise((resolve, reject) => {
 const zipMb = (fs.statSync(zipPath).size / 1024 / 1024).toFixed(1);
 console.log(`\nLambda package ready: ${zipPath} (${zipMb} MB zip)`);
 
+function getPackageDir(pkgName) {
+  const require = createRequire(import.meta.url);
+  try {
+    const pkgJsonPath = require.resolve(`${pkgName}/package.json`, { paths: [apiRoot] });
+    return path.dirname(pkgJsonPath);
+  } catch {
+    return null;
+  }
+}
+
 function findStorePackageDir(prefix, relativePath) {
+  if (prefix === '@prisma+client@') {
+    const exactDir = getPackageDir('@prisma/client');
+    if (exactDir) {
+      const rel = relativePath.replace(/^node_modules\/@prisma\/client\/?/, '');
+      const target = rel ? path.join(exactDir, rel) : exactDir;
+      if (fs.existsSync(target)) return target;
+    }
+  }
+
   const pnpmDir = path.join(repoRoot, 'node_modules', '.pnpm');
-  // Sorted: the monorepo may hold several versions of a package in the store
-  // (e.g. @prisma/client 6.x for the API and 7.x for the web app); the lowest
-  // version is the API's pinned one.
   const candidates = fs
     .readdirSync(pnpmDir)
     .filter((d) => d.startsWith(prefix))

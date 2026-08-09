@@ -64,11 +64,11 @@ export default (): AppConfig => ({
   port: Number.parseInt(process.env.PORT ?? '3001', 10),
   corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean),
   databaseUrl: process.env.DATABASE_URL ?? '',
   auth: {
-    neonBaseUrl: process.env.NEON_AUTH_BASE_URL ?? '',
+    neonBaseUrl: (process.env.NEON_AUTH_BASE_URL ?? '').replace(/\/+$/, ''),
     sessionCacheTtlMs: Number.parseInt(process.env.SESSION_CACHE_TTL_MS ?? '60000', 10),
     bootstrapAdminEmails: (process.env.ADMIN_EMAILS ?? '')
       .split(',')

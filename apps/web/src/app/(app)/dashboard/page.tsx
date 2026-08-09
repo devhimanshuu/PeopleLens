@@ -35,7 +35,7 @@ import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalyticsFilters } from '@/hooks/use-analytics-filters';
 import { useAsync } from '@/hooks/use-async';
-import { api } from '@/lib/api';
+import { api, purgeApiCache } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate, formatRelative } from '@/lib/format';
 import { filtersToQuery } from '@/lib/analytics-filters';
@@ -132,6 +132,8 @@ export default function DashboardPage() {
 
   const handleRefresh = () => {
     setRefreshedAt(null);
+    // A manual refresh must bypass the 30s GET cache.
+    purgeApiCache();
     void refetch();
   };
 

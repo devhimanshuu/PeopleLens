@@ -25,8 +25,17 @@ export class UsersController {
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'List users', description: 'Admin only.' })
   @ApiQuery({ name: 'search', required: false, description: 'Filter by name or email' })
-  findAll(@CurrentUser() user: RequestUser, @Query('search') search?: string) {
-    return this.usersService.findAll(user, search);
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    description: 'Filter by role — comma-separated values, e.g. `manager,admin`',
+  })
+  findAll(
+    @CurrentUser() user: RequestUser,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+  ) {
+    return this.usersService.findAll(user, search, role);
   }
 
   @Patch(':id/role')

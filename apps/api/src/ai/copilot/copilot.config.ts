@@ -64,12 +64,22 @@ export class CopilotConfig {
     const primaryName =
       this.provider === 'groq' || this.provider === 'openrouter' ? this.provider : 'openai';
 
+    const primaryApiKey =
+      (this.config.get<string>('ai.apiKey') ?? '').trim() ||
+      (this.config.get<string>(`ai.${primaryName}.apiKey`) ?? '').trim();
+    const primaryModel =
+      (this.config.get<string>('ai.model') ?? '').trim() ||
+      (this.config.get<string>(`ai.${primaryName}.model`) ?? '').trim();
+    const primaryBaseUrl =
+      (this.config.get<string>('ai.baseUrl') ?? '').trim() ||
+      (this.config.get<string>(`ai.${primaryName}.baseUrl`) ?? '').trim();
+
     const chain: ProviderSettings[] = [
       {
         name: primaryName,
-        apiKey: this.config.get<string>('ai.apiKey') ?? '',
-        model: this.modelFor(primaryName, this.config.get<string>('ai.model') ?? ''),
-        baseUrl: this.baseUrlFor(primaryName, this.config.get<string>('ai.baseUrl') ?? ''),
+        apiKey: primaryApiKey,
+        model: this.modelFor(primaryName, primaryModel),
+        baseUrl: this.baseUrlFor(primaryName, primaryBaseUrl),
         ...common,
       },
       {

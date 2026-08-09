@@ -88,7 +88,10 @@ export default function AuditLogsPage() {
       if (search) params.set('search', search);
       if (action) params.set('action', action);
       if (entityType) params.set('entityType', entityType);
-      const data = await api.get<Paginated<AuditLogView>>(`/audit-logs?${params.toString()}`);
+      // noCache: the 30s live poll must always hit the server, never a cached page.
+      const data = await api.get<Paginated<AuditLogView>>(`/audit-logs?${params.toString()}`, {
+        noCache: true,
+      });
       setResult(data);
       hasDataRef.current = true;
       setStale(false);

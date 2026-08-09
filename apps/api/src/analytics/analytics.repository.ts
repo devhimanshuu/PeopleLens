@@ -76,16 +76,40 @@ export class AnalyticsRepository {
     yearsAtCompany: true,
   } as const satisfies Prisma.EmployeeSelect;
 
-  /** Scoped employee projection for one filter state. */
+  /**
+   * Scoped employee projection for one filter state, optionally narrowed to
+   * specific departments. `departmentIds` must not be combined with a
+   * `filters.departmentId` — it is an explicit widen/override (used by compare,
+   * which always passes an empty filter set).
+   */
   async getEmployeeRows(
     scope: string[] | null,
     filters: DashboardFilters,
+    departmentIds?: string[],
   ): Promise<AnalyticsEmployeeRow[]> {
     return this.prisma.employee.findMany({
-      where: buildAnalyticsWhere(scope, filters),
+      where: {
+        ...buildAnalyticsWhere(scope, filters),
+        // Narrow the scan to the departments actually being compared — never
+        // ship every scoped row to compute a 2-department comparison.
+        ...(departmentIds && departmentIds.length > 0
+          ? { departmentId: { in: departmentIds } }
+          : {}),
+      },
       select: this.rowSelect,
       orderBy: { hiredAt: 'asc' },
     });
+  }
+
+  /** Distinct job titles within scope — powers the filter bar without shipping every employee row. */
+  async getJobTitles(scope: string[] | null): Promise<string[]> {
+    const rows = await this.prisma.employee.findMany({
+      where: buildAnalyticsWhere(scope, {}),
+      select: { jobTitle: true },
+      distinct: ['jobTitle'],
+      orderBy: { jobTitle: 'asc' },
+    });
+    return rows.map((r) => r.jobTitle);
   }
 
   /** Scope-wide department options (id + name) for filter dropdowns. */
@@ -150,8 +174,11 @@ export class AnalyticsRepository {
     });
   }
   // Organization hierarchy: departments → teams → employees. For scoped callers only their departments (with…
-  // their teams/employees) are returned; departments whose parent is outside the scope become roots.
-  async getHierarchy(scope: string[] | null): Promise<OrgHierarchy> {
+  // their teams/employees) are returned; departments whose parent is outside the scope become roots. An
+  // optional `search` term filters the tree server-side (matching employees + department/team names, with
+  // ancestor paths kept) so the client never receives or filters the full dataset.
+  async getHierarchy(scope: string[] | null, search?: string): Promise<OrgHierarchy> {
+    const term = search?.trim();
     const deptWhere: Prisma.DepartmentWhereInput = {
       deletedAt: null,
       ...(scope ? { id: { in: scope } } : {}),
@@ -168,7 +195,19 @@ export class AnalyticsRepository {
         orderBy: { name: 'asc' },
       }),
       this.prisma.employee.findMany({
-        where: { deletedAt: null, ...(scope ? { departmentId: { in: scope } } : {}) },
+        where: {
+          deletedAt: null,
+          ...(scope ? { departmentId: { in: scope } } : {}),
+          ...(term
+            ? {
+                OR: [
+                  { firstName: { contains: term, mode: 'insensitive' } },
+                  { lastName: { contains: term, mode: 'insensitive' } },
+                  { jobTitle: { contains: term, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
         select: {
           id: true,
           firstName: true,
@@ -224,6 +263,28 @@ export class AnalyticsRepository {
     const rootNodes = departments
       .filter((d) => !d.parentId || !deptIds.has(d.parentId))
       .map((d) => nodes.get(d.id)!);
+
+    // While searching, prune nodes that neither match the term nor contain a
+    // match (employees were already filtered by the query; department/team
+    // nodes additionally match on their own name). Ancestor paths to matches
+    // are kept so the tree stays navigable.
+    if (term) {
+      const needle = term.toLowerCase();
+      const prune = (node: OrgHierarchyNode): OrgHierarchyNode | null => {
+        if (node.type === 'employee') return node;
+        const selfMatches = node.name.toLowerCase().includes(needle);
+        const children: OrgHierarchyNode[] = [];
+        for (const child of node.children) {
+          const kept = prune(child);
+          if (kept) children.push(kept);
+        }
+        return selfMatches || children.length > 0 ? { ...node, children } : null;
+      };
+      const pruned = rootNodes
+        .map((node) => prune(node))
+        .filter((node): node is OrgHierarchyNode => node !== null);
+      return { nodes: pruned, totalEmployees: employees.length };
+    }
 
     return { nodes: rootNodes, totalEmployees: employees.length };
   }

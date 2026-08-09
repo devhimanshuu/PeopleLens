@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api, ApiClientError } from '@/lib/api';
+import { api, ApiClientError, purgeApiCache } from '@/lib/api';
 import { setStoredRole, signOutNeon, syncOAuthSession, type NeonSession } from '@/lib/auth';
 
 interface AuthState {
@@ -147,6 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await signOutNeon();
+    // Drop the previous account's cached responses (belt-and-suspenders on top
+    // of the per-user cache key).
+    purgeApiCache();
     setSession(null);
     setProfile(null);
     setProfileError(null);

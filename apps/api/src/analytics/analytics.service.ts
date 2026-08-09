@@ -118,16 +118,16 @@ export class AnalyticsService {
     const allowed = scope ? requested.filter((id) => scope.includes(id)) : requested;
     if (allowed.length === 0) return [];
 
-    const [departments, rows] = await Promise.all([
-      this.repo.getDepartmentNames(scope),
-      this.repo.getEmployeeRows(scope, {}),
-    ]);
+    // Resolve names first so the employee query can be narrowed to exactly the
+    // departments being compared — never ship every scoped row for a 2-row table.
+    const departments = await this.repo.getDepartmentNames(scope);
     const nameById = new Map(departments.map((d) => [d.id, d.name]));
     // Unknown / deleted ids are silently dropped — never fabricated into a
     // synthetic "Unassigned" comparison row.
     const known = allowed.filter((id) => nameById.has(id));
     if (known.length === 0) return [];
 
+    const rows = await this.repo.getEmployeeRows(scope, {}, known);
     return known.map((id) =>
       this.computeDepartmentComparison(
         rows.filter((r) => r.departmentId === id),
@@ -141,11 +141,10 @@ export class AnalyticsService {
   /** Filter-option lists for the global analytics filter bar. */
   async getFilters(actor: RequestUser): Promise<FilterOptions> {
     const scope = await this.rbac.departmentScope(actor);
-    const [departments, rows] = await Promise.all([
+    const [departments, jobTitles] = await Promise.all([
       this.repo.getDepartmentNames(scope),
-      this.repo.getEmployeeRows(scope, {}),
+      this.repo.getJobTitles(scope),
     ]);
-    const jobTitles = [...new Set(rows.map((r) => r.jobTitle))].sort((a, b) => a.localeCompare(b));
     return {
       departments,
       jobTitles,
@@ -158,10 +157,10 @@ export class AnalyticsService {
     };
   }
 
-  /** Organization hierarchy (departments → teams → employees). */
-  async getHierarchy(actor: RequestUser): Promise<OrgHierarchy> {
+  /** Organization hierarchy (departments → teams → employees), optionally filtered server-side by term. */
+  async getHierarchy(actor: RequestUser, search?: string): Promise<OrgHierarchy> {
     const scope = await this.rbac.departmentScope(actor);
-    return this.repo.getHierarchy(scope);
+    return this.repo.getHierarchy(scope, search?.trim().slice(0, 100) || undefined);
   }
 
   // ── calculations ──────────────────────────────────────────────────────────

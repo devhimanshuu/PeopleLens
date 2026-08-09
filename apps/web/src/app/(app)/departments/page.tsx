@@ -29,7 +29,12 @@ export default function DepartmentsPage() {
     error,
     refetch,
   } = useAsync<DepartmentSummary[]>(() => api.get('/departments'));
-  const { data: users } = useAsync<User[]>(() => api.get<User[]>('/users').catch(() => []), []);
+  // Manager candidates are filtered server-side by role — never fetched in
+  // full and filtered in the browser.
+  const { data: users } = useAsync<User[]>(
+    () => api.get<User[]>('/users?role=manager,admin').catch(() => []),
+    [],
+  );
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<DepartmentSummary | null>(null);
@@ -100,9 +105,10 @@ export default function DepartmentsPage() {
     }
   };
 
-  const managerOptions = (users ?? [])
-    .filter((u) => u.role === 'manager' || u.role === 'admin')
-    .map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }));
+  const managerOptions = (users ?? []).map((u) => ({
+    value: u.id,
+    label: `${u.name} (${u.email})`,
+  }));
 
   return (
     <div>
