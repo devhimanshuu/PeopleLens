@@ -1,5 +1,4 @@
 service: peoplelens-api
-org: himanshuu
 
 provider:
   name: aws
