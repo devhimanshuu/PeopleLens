@@ -19,7 +19,7 @@ provider:
 
 functions:
   api:
-    handler: lambda.handler
+    handler: dist/lambda.handler
     events:
       - httpApi: '*'
 
