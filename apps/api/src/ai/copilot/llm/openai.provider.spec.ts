@@ -3,7 +3,7 @@ import { OpenAiProvider } from './openai.provider';
 
 function settings(overrides: Partial<ProviderSettings> = {}): ProviderSettings {
   return {
-    name: 'openai',
+    name: 'groq',
     apiKey: 'test-key',
     model: 'test-model',
     baseUrl: 'https://llm.test/v1',

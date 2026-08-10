@@ -25,7 +25,7 @@ export interface AppConfig {
   };
   /** AI Copilot (Phase 5) — provider chain + cost controls. */
   ai: {
-    /** Primary provider name: openai | groq | openrouter. */
+    /** Primary provider name: groq | openrouter. */
     provider: string;
     /** Empty when not configured — the copilot reports "unavailable" instead of failing the dashboard. */
     apiKey: string;
@@ -80,7 +80,7 @@ export default (): AppConfig => ({
     max: Number.parseInt(process.env.RATE_LIMIT_MAX ?? '120', 10),
   },
   ai: {
-    provider: (process.env.AI_PROVIDER ?? 'openai').trim().toLowerCase(),
+    provider: (process.env.AI_PROVIDER ?? 'groq').trim().toLowerCase(),
     apiKey: process.env.AI_API_KEY ?? '',
     model: process.env.AI_MODEL ?? '',
     baseUrl: (process.env.AI_BASE_URL ?? '').replace(/\/+$/, ''),

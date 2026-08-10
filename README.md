@@ -46,17 +46,17 @@ PeopleLens is the single source of truth for workforce intelligence. It turns em
 
 ## Tech Stack
 
-| Layer        | Technology                                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| Frontend     | Next.js 15 (App Router) · React 19 · TypeScript · Tailwind 4                                                 |
-| Charts       | Recharts 3                                                                                                   |
-| Backend      | NestJS 11 · TypeScript (strict)                                                                              |
-| Database     | PostgreSQL (managed: Neon; local dev via Docker) · Prisma 6                                                  |
-| Auth         | Neon Auth (Managed Better Auth) — email/password + OAuth                                                     |
-| AI           | OpenAI-compatible providers with automatic failover: OpenAI · Groq · OpenRouter (free-tier models supported) |
-| API docs     | Swagger / OpenAPI (served at `/api/v1/docs`)                                                                 |
-| Monorepo     | pnpm workspaces · Turborepo                                                                                  |
-| Code quality | ESLint 9 (flat) · Prettier · Husky · lint-staged · Commitlint · CI                                           |
+| Layer        | Technology                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| Frontend     | Next.js 15 (App Router) · React 19 · TypeScript · Tailwind 4                                        |
+| Charts       | Recharts 3                                                                                          |
+| Backend      | NestJS 11 · TypeScript (strict)                                                                     |
+| Database     | PostgreSQL (managed: Neon; local dev via Docker) · Prisma 6                                         |
+| Auth         | Neon Auth (Managed Better Auth) — email/password + OAuth                                            |
+| AI           | OpenAI-compatible providers with automatic failover: Groq · OpenRouter (free-tier models supported) |
+| API docs     | Swagger / OpenAPI (served at `/api/v1/docs`)                                                        |
+| Monorepo     | pnpm workspaces · Turborepo                                                                         |
+| Code quality | ESLint 9 (flat) · Prettier · Husky · lint-staged · Commitlint · CI                                  |
 
 ## Architecture
 
@@ -168,7 +168,7 @@ Copies `.env.example` → `.env` / `.env.local` for each app (idempotent), then 
   ADMIN_EMAILS=you@example.com,ops@example.com
   ```
 
-- **Copilot** (optional) — set `GROQ_API_KEY` and/or `OPENROUTER_API_KEY` in `apps/api/.env` to enable the AI Copilot. Provider chain order is `AI_PROVIDER` (openai | groq | openrouter) → Groq → OpenRouter; any provider without a key is skipped, and the next one takes over on rate limit / timeout / error. Free-tier models are the defaults. The Copilot is fully optional — the dashboard works without it.
+- **Copilot** (optional) — set `GROQ_API_KEY` and/or `OPENROUTER_API_KEY` in `apps/api/.env` to enable the AI Copilot. Provider chain order is `AI_PROVIDER` (groq | openrouter) → Groq → OpenRouter; any provider without a key is skipped, and the next one takes over on rate limit / timeout / error. Free-tier models are the defaults. The Copilot is fully optional — the dashboard works without it.
 
 > **Optional:** a local Postgres is available via `docker compose up -d` — the `.env.example` defaults point at it.
 
@@ -230,7 +230,7 @@ The Copilot answers natural-language questions about workforce data — _"Which 
 
 - **Grounded, not generative** — the model plans with a controlled tool set, the backend executes trusted services, and a second pass writes the answer from the structured result. It cannot invent metrics the dataset lacks and says so when data is unavailable.
 - **Tool layer** — overview, attrition, engagement, composition, compare, department metrics, employee search/details, data quality, and import history tools, each with schema validation and authorization checks.
-- **Provider failover** — OpenAI, Groq, and OpenRouter are all supported; providers without keys are skipped, and the next provider serves the request automatically on rate limit, timeout, or error.
+- **Provider failover** — Groq and OpenRouter are supported; providers without keys are skipped, and the next provider serves the request automatically on rate limit, timeout, or error.
 - **Safe by default** — the LLM never touches PostgreSQL, never sees API keys, and cannot bypass RBAC even if prompted. Unknown tool arguments are stripped, conversation input is length-capped, and per-user rate limiting applies.
 - **Deep links** — answers include buttons that open the filtered dashboard or Employee Explorer.
 - **Conversations** — lightweight history stored per user (conversation + messages only; no tokens, keys, or salaries), resumable from the drawer.

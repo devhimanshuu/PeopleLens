@@ -102,12 +102,12 @@ describe('FallbackProvider', () => {
 
   it('describes the full chain for capabilities/metrics', () => {
     const chain = new FallbackProvider([
-      stubProvider('openai'),
-      stubProvider('groq', { configured: false }),
+      stubProvider('groq'),
+      stubProvider('openrouter', { configured: false }),
     ]);
     expect(chain.describeProviders()).toEqual([
-      { name: 'openai', model: 'openai-model', configured: true },
-      { name: 'groq', model: 'groq-model', configured: false },
+      { name: 'groq', model: 'groq-model', configured: true },
+      { name: 'openrouter', model: 'openrouter-model', configured: false },
     ]);
   });
 });

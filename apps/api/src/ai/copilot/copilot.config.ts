@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 /** Concrete connection settings for one OpenAI-compatible provider. */
 export interface ProviderSettings {
-  name: 'openai' | 'groq' | 'openrouter';
+  name: 'groq' | 'openrouter';
   apiKey: string;
   model: string;
   baseUrl: string;
@@ -14,24 +14,21 @@ export interface ProviderSettings {
 
 /** Per-provider free-model defaults (used when AI_MODEL / *_MODEL are unset). */
 const DEFAULT_MODELS: Record<ProviderSettings['name'], string> = {
-  openai: 'gpt-4o-mini',
   groq: 'llama-3.3-70b-versatile',
   openrouter: 'meta-llama/llama-3.3-70b-instruct:free',
 };
 
 const DEFAULT_BASE_URLS: Record<ProviderSettings['name'], string> = {
-  openai: 'https://api.openai.com/v1',
   groq: 'https://api.groq.com/openai/v1',
   openrouter: 'https://openrouter.ai/api/v1',
 };
-// Typed, validated copilot configuration. Reads the `ai` block registered by `config/configuration.ts` and…
-// turns it into an ordered provider chain: 1. primary — AI_PROVIDER + AI_API_KEY (+ AI_MODEL / AI_BASE_URL…
+
 @Injectable()
 export class CopilotConfig {
   constructor(private readonly config: ConfigService) {}
 
   get provider(): string {
-    return this.config.get<string>('ai.provider') ?? 'openai';
+    return this.config.get<string>('ai.provider') ?? 'groq';
   }
 
   get requestsPerMinute(): number {
@@ -61,8 +58,8 @@ export class CopilotConfig {
       maxRetries: this.maxRetries,
       maxTokens: this.maxTokens,
     };
-    const primaryName =
-      this.provider === 'groq' || this.provider === 'openrouter' ? this.provider : 'openai';
+    const primaryName: ProviderSettings['name'] =
+      this.provider === 'openrouter' ? 'openrouter' : 'groq';
 
     const primaryApiKey =
       (this.config.get<string>('ai.apiKey') ?? '').trim() ||

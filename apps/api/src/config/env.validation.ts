@@ -29,7 +29,7 @@ export const envValidationSchema = Joi.object({
   RATE_LIMIT_MAX: Joi.number().integer().positive().default(120),
   // ── AI Copilot (Phase 5) ──────────────────────────────────────────────────── Optional: without any API key…
   // the copilot reports "unavailable" and the rest of the product is untouched. The primary provider is defined…
-  AI_PROVIDER: Joi.string().valid('openai', 'groq', 'openrouter').default('openai'),
+  AI_PROVIDER: Joi.string().valid('groq', 'openrouter').default('groq'),
   AI_API_KEY: Joi.string().allow('').default(''),
   AI_MODEL: Joi.string().allow('').default(''),
   AI_BASE_URL: Joi.string().uri({ allowRelative: false }).allow('').default(''),

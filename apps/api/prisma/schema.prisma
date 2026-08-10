@@ -1,8 +1,8 @@
 generator client {
   provider      = "prisma-client-js"
-  // "native" keeps local development on the host platform; the Linux target
-  // lets the generated client run on AWS Lambda (Node 20 / AL2023, OpenSSL 3).
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  // "native" keeps local development on the host platform; debian-openssl-3.0.x handles Render,
+  // and rhel-openssl-3.0.x handles AWS Lambda environments.
+  binaryTargets = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
