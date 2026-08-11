@@ -5,7 +5,7 @@ import type {
   CopilotResponse,
   CopilotStreamEvent,
 } from '@peoplelens/types';
-import { api } from './api';
+import { api, API_BASE_URL } from './api';
 // Browser client for the PeopleLens Copilot API. All calls carry the Neon session via the shared `api` client…
 // and unwrap the standard envelope.
 
@@ -29,9 +29,7 @@ export async function streamCopilotMessage(
   payload: CopilotChatRequest,
   onEvent: (event: CopilotStreamEvent) => void,
 ): Promise<void> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
-
-  const response = await fetch(`${API_URL}/ai/copilot/chat/stream`, {
+  const response = await fetch(`${API_BASE_URL}/ai/copilot/chat/stream`, {
     method: 'POST',
     credentials: 'include',
     headers: {

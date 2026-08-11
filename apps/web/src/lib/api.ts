@@ -8,7 +8,16 @@ import { getStoredSession, syncOAuthSession } from '@/lib/auth';
 // Browser-facing API client. Every request carries the Neon Auth session token as `Authorization: Bearer…
 // <token>`; the API validates it against the Neon Auth server and resolves the caller's RBAC role from the…
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+// Resolve the API base URL, always pointing at the `/api/v1` prefix. A bare host is a common
+// misconfiguration that 404s every request, so normalize it instead of failing silently.
+function resolveApiBaseUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
+const API_URL = API_BASE_URL;
 const REQUEST_TIMEOUT_MS = 15000;
 
 // ── GET response cache ─────────────────────────────────────────────────────
