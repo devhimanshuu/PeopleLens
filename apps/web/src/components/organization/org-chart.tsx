@@ -5,8 +5,10 @@ import { Building2, ChevronDown, ChevronRight, FolderTree, Search, UserRound } f
 import Link from 'next/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { EmptyState, LoadingState, ErrorState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { STATUS_LABELS, STATUS_VARIANTS } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -51,7 +53,21 @@ export function OrgChart({ data, loading, error, onRetry, query, onQueryChange }
     setCollapsed(ids);
   };
 
-  if (loading) return <LoadingState label="Loading organization hierarchy…" />;
+  if (loading) {
+    return (
+      <div aria-busy="true" aria-label="Loading organization hierarchy" className="space-y-2 p-2">
+        {[0, 1, 2, 3, 4].map((depth) => (
+          <div key={depth} className="flex items-center gap-2">
+            <Skeleton className="size-4 rounded" />
+            <Skeleton
+              className="h-4 rounded"
+              style={{ width: `${Math.max(30, 70 - depth * 10)}%` }}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
   if (error) return <ErrorState description={error} onRetry={onRetry} />;
   if (!data || data.nodes.length === 0) {
     return (
@@ -59,6 +75,11 @@ export function OrgChart({ data, loading, error, onRetry, query, onQueryChange }
         icon={Building2}
         title="No organization structure yet"
         description="Departments and teams will appear here once the organization is set up."
+        action={
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/imports">Import employee data</Link>
+          </Button>
+        }
       />
     );
   }

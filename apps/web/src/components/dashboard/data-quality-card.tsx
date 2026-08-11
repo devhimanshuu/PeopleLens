@@ -1,8 +1,18 @@
 'use client';
 
 import type { DataQuality } from '@peoplelens/types';
-import { CheckCircle2, Database, FileSpreadsheet, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  FileSpreadsheet,
+  Trash2,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -14,10 +24,12 @@ function readinessTone(percent: number): 'success' | 'warning' | 'danger' {
 // Dataset Health — analytics quality depends on data quality. Shows record counts, the share of analytics-ready…
 // records, and which fields are missing values so admins know exactly what to enrich next.
 export function DataQualityCard({ quality }: { quality: DataQuality }) {
+  const [showAllMissing, setShowAllMissing] = useState(false);
   const tone = readinessTone(quality.readinessPercent);
   const radius = 34;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - quality.readinessPercent / 100);
+  const hiddenMissingCount = Math.max(0, quality.missingFields.length - 4);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -91,16 +103,38 @@ export function DataQualityCard({ quality }: { quality: DataQuality }) {
             Missing values
           </p>
           <ul className="mt-1.5 space-y-1">
-            {quality.missingFields.slice(0, 4).map((m) => (
-              <li
-                key={m.field}
-                className="flex items-center justify-between rounded-lg border border-border/60 bg-card/50 px-2.5 py-1.5 text-xs"
-              >
-                <span className="text-foreground/90">{m.label}</span>
-                <span className="font-medium text-amber-500">{formatNumber(m.count)} missing</span>
-              </li>
-            ))}
+            {(showAllMissing ? quality.missingFields : quality.missingFields.slice(0, 4)).map(
+              (m) => (
+                <li
+                  key={m.field}
+                  className="flex items-center justify-between rounded-lg border border-border/60 bg-card/50 px-2.5 py-1.5 text-xs"
+                >
+                  <span className="text-foreground/90">{m.label}</span>
+                  <span className="font-medium text-amber-500">
+                    {formatNumber(m.count)} missing
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
+          {hiddenMissingCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllMissing((value) => !value)}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            >
+              {showAllMissing ? (
+                <>
+                  <ChevronUp className="size-3.5" aria-hidden /> Show fewer
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="size-3.5" aria-hidden /> Show all{' '}
+                  {quality.missingFields.length} fields
+                </>
+              )}
+            </button>
+          ) : null}
         </div>
       ) : (
         <p className="mt-4 flex items-center gap-1.5 text-xs text-emerald-500">
@@ -108,7 +142,11 @@ export function DataQualityCard({ quality }: { quality: DataQuality }) {
         </p>
       )}
 
-      <div className={cn('mt-4 border-t border-border/60 pt-3 text-[11px] text-muted-foreground')}>
+      <div
+        className={cn(
+          'mt-4 space-y-2.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground',
+        )}
+      >
         {quality.lastImport ? (
           <p className="flex items-center gap-1.5">
             <FileSpreadsheet className="size-3.5" aria-hidden />
@@ -121,6 +159,13 @@ export function DataQualityCard({ quality }: { quality: DataQuality }) {
         ) : (
           <p>No imports yet — upload a CSV to enrich the dataset.</p>
         )}
+        {quality.missingFields.length > 0 ? (
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/imports">
+              <FileSpreadsheet className="size-3.5" aria-hidden /> Fix in next import
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   );

@@ -18,7 +18,8 @@ import { PageHeader } from '@/components/app-shell/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/toast';
 import { useAsync } from '@/hooks/use-async';
 import { api, ApiClientError } from '@/lib/api';
@@ -65,7 +66,27 @@ export default function EmployeeDetailPage() {
     }
   };
 
-  if (loading) return <LoadingState label="Loading employee profile…" />;
+  if (loading) {
+    return (
+      <div aria-busy="true" aria-label="Loading employee profile">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-3.5 w-64" />
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="mt-3 h-4 w-32" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (error) return <ErrorState description={error} onRetry={() => void refetch()} />;
   if (!employee) return null;
 

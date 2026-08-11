@@ -19,6 +19,7 @@ import { DatabaseModule } from '@app/database/database.module';
 import { DepartmentsModule } from '@app/departments/departments.module';
 import { EmployeesModule } from '@app/employees/employees.module';
 import { ImportsModule } from '@app/imports/imports.module';
+import { NotificationsModule } from '@app/notifications/notifications.module';
 import { SignalsModule } from '@app/signals/signals.module';
 import { TeamsModule } from '@app/teams/teams.module';
 import { UsersModule } from '@app/users/users.module';
@@ -37,6 +38,7 @@ import { UsersModule } from '@app/users/users.module';
     DepartmentsModule,
     TeamsModule,
     ImportsModule,
+    NotificationsModule,
     DashboardModule,
     AnalyticsModule,
     SignalsModule,

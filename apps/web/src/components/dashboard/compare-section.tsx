@@ -4,6 +4,7 @@ import type { DepartmentComparison } from '@peoplelens/types';
 import { Loader2, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatIncome, formatPercent, formatRating, formatYears } from '@/lib/format';
+import { AskAboutDataButton, ExportCsvButton } from './chart-actions';
 
 interface CompareSectionProps {
   /** Scope-aware department options. */
@@ -14,6 +15,18 @@ interface CompareSectionProps {
   onClear: () => void;
   data: DepartmentComparison[] | null;
   loading: boolean;
+  /** Same-scope company averages (from the overview KPIs) for reference. */
+  companyAverage?: CompanyAverage | null;
+}
+
+interface CompanyAverage {
+  headcount: number;
+  attritionRate: number | null;
+  averageTenureYears: number | null;
+  averageMonthlyIncome: number | null;
+  overtimeRate: number | null;
+  averageJobSatisfaction: number | null;
+  averagePerformanceRating: number | null;
 }
 
 const MAX_COMPARE = 5;
@@ -26,6 +39,7 @@ export function CompareSection({
   onClear,
   data,
   loading,
+  companyAverage,
 }: CompareSectionProps) {
   const toggle = (id: string) => {
     if (selection.includes(id)) {
@@ -120,6 +134,24 @@ export function CompareSection({
               Clear ({selection.length})
             </button>
           ) : null}
+          {data && data.length >= 2 ? (
+            <div className="flex w-full items-center gap-1 sm:w-auto">
+              <ExportCsvButton
+                filename="department-comparison.csv"
+                rows={data.map((d) => ({
+                  department: d.name,
+                  headcount: d.headcount,
+                  attritionRate: d.attritionRate,
+                  averageTenureYears: d.averageTenureYears,
+                  averageMonthlyIncome: d.averageMonthlyIncome,
+                  overtimeRate: d.overtimeRate,
+                  averageJobSatisfaction: d.averageJobSatisfaction,
+                  averagePerformanceRating: d.averagePerformanceRating,
+                }))}
+              />
+              <AskAboutDataButton question={`Compare ${data.map((d) => d.name).join(' and ')}`} />
+            </div>
+          ) : null}
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
           Select 2–{MAX_COMPARE} departments to compare. Best value per metric is highlighted green;
@@ -148,6 +180,11 @@ export function CompareSection({
                     {d.name}
                   </th>
                 ))}
+                {companyAverage ? (
+                  <th className="border-l border-dashed border-border/60 px-4 py-3 text-left font-display font-semibold text-muted-foreground">
+                    Company avg
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -186,6 +223,14 @@ export function CompareSection({
                       </td>
                     );
                   })}
+                  {companyAverage ? (
+                    <td className="border-l border-dashed border-border/60 px-4 py-2.5 font-medium text-muted-foreground">
+                      {row.format(
+                        (companyAverage as unknown as Record<string, number | null>)[row.key] ??
+                          null,
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

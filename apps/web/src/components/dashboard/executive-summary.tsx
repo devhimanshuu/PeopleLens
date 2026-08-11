@@ -1,8 +1,9 @@
 'use client';
 
 import type { ExecutiveSummary } from '@peoplelens/types';
-import { Activity, AlertTriangle, HeartPulse, ListChecks } from 'lucide-react';
+import { Activity, AlertTriangle, HeartPulse, ListChecks, Printer } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatRelative } from '@/lib/format';
 
 const STATUS_META = {
@@ -48,6 +49,16 @@ export function ExecutiveSummaryCard({ summary }: { summary: ExecutiveSummary })
                 Workforce health
               </h2>
               <Badge variant={meta.variant}>{meta.label}</Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="no-print ml-auto h-7 gap-1.5 text-xs"
+                onClick={() => window.print()}
+              >
+                <Printer className="size-3.5" aria-hidden />
+                Print / Export PDF
+              </Button>
             </div>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               {summary.headline}

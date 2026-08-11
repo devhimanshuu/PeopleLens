@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  Upload,
   Search,
   Trash2,
 } from 'lucide-react';
@@ -29,10 +30,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
 import {
   Table,
   TableBody,
@@ -551,7 +553,7 @@ export default function EmployeesPage() {
       <Card className="mt-4">
         <CardContent className="p-0">
           {loading ? (
-            <LoadingState label="Loading employees…" />
+            <TableSkeleton rows={8} />
           ) : error ? (
             <ErrorState description={error} onRetry={() => void load()} />
           ) : result && result.items.length === 0 ? (
@@ -564,15 +566,22 @@ export default function EmployeesPage() {
               }
               action={
                 canWrite ? (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setEditing(null);
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="size-4" aria-hidden /> Add Employee
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setEditing(null);
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="size-4" aria-hidden /> Add Employee
+                    </Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href="/imports">
+                        <Upload className="size-4" aria-hidden /> Import CSV
+                      </Link>
+                    </Button>
+                  </div>
                 ) : null
               }
             />

@@ -338,3 +338,24 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Print: report-only output — hide app chrome and interactive controls. */
+@media print {
+  aside,
+  header,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .page-enter {
+    animation: none !important;
+  }
+}

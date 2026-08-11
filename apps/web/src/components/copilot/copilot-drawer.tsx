@@ -30,6 +30,27 @@ interface ChatMessage {
 
 const CONVERSATION_KEY = 'peoplelens_copilot_conversation';
 
+const COMMANDS = [
+  { prefix: 'compare', label: 'Compare departments', prompt: 'Compare ' },
+  {
+    prefix: 'risk',
+    label: 'Attrition risk',
+    prompt: 'Which groups have the highest observed attrition?',
+  },
+  { prefix: 'employees', label: 'Find employees', prompt: 'Show me employees with ' },
+  { prefix: 'overtime', label: 'Overtime', prompt: 'How many employees are working overtime?' },
+  {
+    prefix: 'patterns',
+    label: 'Workforce patterns',
+    prompt: 'What are the biggest workforce patterns I should investigate?',
+  },
+  {
+    prefix: 'health',
+    label: 'Workforce health',
+    prompt: 'How is overall workforce health right now?',
+  },
+] as const;
+
 const DEFAULT_SUGGESTIONS = [
   'Which department has the highest observed attrition?',
   'How many employees are working overtime?',
@@ -48,6 +69,7 @@ export function CopilotDrawer() {
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [commandIndex, setCommandIndex] = useState(0);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -228,7 +250,45 @@ export function CopilotDrawer() {
     }
   }, []);
 
+  const commandQuery = input.startsWith('/') ? input.slice(1).trim().toLowerCase() : null;
+  const visibleCommands =
+    commandQuery !== null
+      ? COMMANDS.filter(
+          (command) =>
+            command.label.toLowerCase().includes(commandQuery) ||
+            command.prefix.includes(commandQuery),
+        )
+      : [];
+
+  const selectCommand = (command: (typeof COMMANDS)[number]) => {
+    setInput(command.prompt);
+    setCommandIndex(0);
+    inputRef.current?.focus();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (visibleCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCommandIndex((index) => (index + 1) % visibleCommands.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCommandIndex((index) => (index - 1 + visibleCommands.length) % visibleCommands.length);
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        selectCommand(visibleCommands[commandIndex]!);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setInput('');
+        return;
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void send();
@@ -349,12 +409,44 @@ export function CopilotDrawer() {
         ) : null}
 
         {/* Input */}
-        <div className="shrink-0 border-t border-border/60 p-3">
+        <div className="relative shrink-0 border-t border-border/60 p-3">
+          {visibleCommands.length > 0 ? (
+            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+              <ul className="max-h-64 overflow-y-auto p-1">
+                {visibleCommands.map((command, index) => (
+                  <li key={command.prefix}>
+                    <button
+                      type="button"
+                      onClick={() => selectCommand(command)}
+                      onMouseEnter={() => setCommandIndex(index)}
+                      className={cn(
+                        'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none',
+                        index === commandIndex
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-primary">
+                        /{command.prefix}
+                      </span>
+                      {command.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="border-t border-border/50 px-3 py-1.5 text-[10px] text-muted-foreground/70">
+                ↑↓ to navigate · Enter to insert · Esc to cancel
+              </p>
+            </div>
+          ) : null}
           <div className="flex items-end gap-2">
             <Textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setCommandIndex(0);
+              }}
               onKeyDown={handleKeyDown}
               placeholder={
                 configured === false ? 'Copilot is not configured' : 'Ask about your workforce…'
@@ -379,8 +471,11 @@ export function CopilotDrawer() {
               )}
             </Button>
           </div>
-          <p className="mt-2 px-1 text-[11px] text-muted-foreground/70">
-            Answers are grounded in your current PeopleLens dataset and respect your access scope.
+          <p className="mt-2 flex items-center justify-between gap-2 px-1 text-[11px] text-muted-foreground/70">
+            <span>
+              Answers are grounded in your current PeopleLens dataset and respect your access scope.
+            </span>
+            <span className="shrink-0">Type / for commands</span>
           </p>
         </div>
       </aside>

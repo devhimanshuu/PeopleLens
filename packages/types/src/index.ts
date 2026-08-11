@@ -306,6 +306,18 @@ export interface AuditLogView {
   ipAddress?: string | null;
   createdAt: IsoDate;
 }
+
+/** One item in the topbar notifications feed. */
+export interface NotificationItem {
+  id: string;
+  type: 'import' | 'audit';
+  title: string;
+  description: string;
+  createdAt: IsoDate;
+  /** Optional workspace route the notification deep-links to. */
+  link?: string;
+  severity?: 'info' | 'success' | 'warning' | 'danger';
+}
 // ───────────────────────────────────────────────────────────────────────────── Dashboard…
 // ─────────────────────────────────────────────────────────────────────────────
 

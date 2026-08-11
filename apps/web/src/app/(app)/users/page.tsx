@@ -6,8 +6,9 @@ import { useCallback, useState } from 'react';
 import { PageHeader } from '@/components/app-shell/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Select } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
 import {
   Table,
   TableBody,
@@ -68,7 +69,7 @@ export default function UsersPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <LoadingState label="Loading users…" />
+            <TableSkeleton rows={5} />
           ) : error ? (
             <ErrorState description={error} onRetry={() => void refetch()} />
           ) : users && users.length === 0 ? (

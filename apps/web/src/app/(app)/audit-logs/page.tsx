@@ -8,9 +8,10 @@ import { PageHeader } from '@/components/app-shell/page-header';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { Select } from '@/components/ui/select';
 import {
   Table,
@@ -222,7 +223,7 @@ export default function AuditLogsPage() {
       <Card className="mt-4">
         <CardContent className="p-0">
           {loading ? (
-            <LoadingState label="Loading audit log…" />
+            <TableSkeleton rows={7} />
           ) : error ? (
             <ErrorState description={error} onRetry={() => void load()} />
           ) : result && result.items.length === 0 ? (

@@ -14,7 +14,7 @@ import { PageHeader } from '@/components/app-shell/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import {
   Table,
   TableBody,
@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { useToast } from '@/components/ui/toast';
 import { api, ApiClientError, downloadAuthenticated } from '@/lib/api';
 import { formatDate, formatDuration, formatNumber, formatRelative } from '@/lib/format';
@@ -217,13 +218,18 @@ export default function ImportsPage() {
         <Card className="mt-3">
           <CardContent className="p-0">
             {historyLoading ? (
-              <LoadingState label="Loading import history…" />
+              <TableSkeleton rows={4} toolbar={false} />
             ) : historyError ? (
               <ErrorState description={historyError} onRetry={() => void loadHistory()} />
             ) : history && history.items.length === 0 ? (
               <EmptyState
                 title="No imports yet"
                 description="Your CSV imports will appear here with their results."
+                action={
+                  <Button size="sm" onClick={() => inputRef.current?.click()}>
+                    <CloudUpload className="size-4" aria-hidden /> Upload your first CSV
+                  </Button>
+                }
               />
             ) : history ? (
               <Table>

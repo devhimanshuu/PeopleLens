@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
 import {
   Table,
   TableBody,
@@ -149,7 +150,7 @@ export default function TeamsPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <LoadingState label="Loading teams…" />
+            <TableSkeleton rows={5} />
           ) : error ? (
             <ErrorState description={error} onRetry={() => void refetch()} />
           ) : teams && teams.length === 0 ? (

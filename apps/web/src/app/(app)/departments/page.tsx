@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/empty-state';
+import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAsync } from '@/hooks/use-async';
@@ -126,7 +127,7 @@ export default function DepartmentsPage() {
       />
 
       {loading ? (
-        <LoadingState label="Loading departments…" />
+        <TableSkeleton variant="grid" rows={6} />
       ) : error ? (
         <ErrorState description={error} onRetry={() => void refetch()} />
       ) : departments && departments.length === 0 ? (

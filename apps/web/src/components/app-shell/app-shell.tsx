@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { CopilotDrawer } from '@/components/copilot/copilot-drawer';
-import { CopilotProvider } from '@/components/copilot/copilot-context';
+import { CopilotProvider, useCopilot } from '@/components/copilot/copilot-context';
 import { FloatingCopilotButton } from '@/components/copilot/floating-copilot-button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { CommandPalette, CommandPaletteTrigger } from './command-palette';
 import { SignOutConfirmDialog } from './sign-out-confirm-dialog';
+import { NotificationsButton } from '@/components/notifications/notifications-button';
 import { UserMenu } from './user-menu';
 
 interface NavItem {
@@ -120,6 +121,17 @@ const DETAIL_LABELS: Record<string, string> = {
   teams: 'Team details',
 };
 
+const SECTION_TITLES: Record<string, string> = {
+  dashboard: 'Dashboard',
+  employees: 'Employees',
+  departments: 'Departments',
+  teams: 'Teams',
+  imports: 'CSV Import',
+  organization: 'Organization Chart',
+  users: 'Users & Roles',
+  'audit-logs': 'Audit Log',
+};
+
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Administrator',
   manager: 'Manager',
@@ -199,6 +211,65 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
+  // Keep the browser tab in sync with the current section.
+  useEffect(() => {
+    const segment = pathname.split('/').filter(Boolean)[0];
+    const section = segment ? (SECTION_TITLES[segment] ?? null) : null;
+    document.title = section ? `${section} · PeopleLens` : 'PeopleLens';
+  }, [pathname]);
+
+  const { setOpen: setCopilotOpen } = useCopilot();
+  // Workspace shortcuts: `/` opens search, `g` then a key navigates sections,
+  // `a` opens the copilot. Never fires while typing in a field.
+  useEffect(() => {
+    let gPressed = false;
+    const isTyping = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      return Boolean(
+        el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable),
+      );
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isTyping(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+      if (key === 'a' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        setCopilotOpen(true);
+        return;
+      }
+      if (key === 'g') {
+        gPressed = true;
+        return;
+      }
+      if (!gPressed) return;
+      gPressed = false;
+      const routes: Record<string, string> = {
+        d: '/dashboard',
+        e: '/employees',
+        i: '/imports',
+        o: '/organization',
+        t: '/teams',
+        c: '/departments',
+      };
+      const href = routes[key];
+      if (href) router.push(href);
+    };
+    const reset = () => {
+      gPressed = false;
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('blur', reset);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('blur', reset);
+    };
+  }, [router, setCopilotOpen, setPaletteOpen]);
+
   const handleSignOut = async () => {
     await signOut();
     router.replace('/');
@@ -221,6 +292,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <Search className="size-5" aria-hidden />
           </button>
           <ThemeToggle />
+          <NotificationsButton />
           <UserMenu />
           <button
             type="button"
@@ -246,6 +318,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       >
         {/* Sidebar */}
         <aside
+          data-tour="sidebar"
           className={cn(
             'fixed inset-y-0 left-0 z-50 border-r border-border/60 bg-card/60 backdrop-blur-xl transition-all duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:bg-transparent',
             effectiveCollapsed ? 'w-[4.5rem]' : 'w-64',
@@ -334,6 +407,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                           <Link
                             key={item.href}
                             href={item.href}
+                            data-tour={item.href === '/imports' ? 'imports-link' : undefined}
                             aria-current={isActive ? 'page' : undefined}
                             className={cn(
                               'relative flex items-center rounded-xl font-medium transition-all duration-200',
@@ -505,6 +579,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
+              <NotificationsButton />
               <ThemeToggle />
               <UserMenu />
             </div>

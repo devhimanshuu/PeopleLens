@@ -37,6 +37,7 @@ export function FloatingCopilotButton() {
 
   return (
     <div
+      data-tour="copilot"
       className={cn(
         'fixed bottom-5 right-5 z-40 transition-all duration-200',
         hidden ? 'pointer-events-none -translate-y-1 opacity-0' : 'translate-y-0 opacity-100',

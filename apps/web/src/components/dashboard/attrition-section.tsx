@@ -3,6 +3,7 @@
 import type { AnalyticsOverview } from '@peoplelens/types';
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AskAboutDataButton, ExportCsvButton } from './chart-actions';
 import { AttritionRateChart, useExplorerNavigation, type SliceParams } from './analytics-charts';
 
 function deptParams(deptIdByName: Map<string, string>): SliceParams {
@@ -43,8 +44,24 @@ function AttritionCard({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
-        <p className="text-xs text-muted-foreground">{question}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <p className="text-xs text-muted-foreground">{question}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <ExportCsvButton
+              filename={`attrition-${title.replace(/\s+/g, '-').toLowerCase()}.csv`}
+              rows={slices.map((slice) => ({
+                segment: slice.name,
+                headcount: slice.headcount,
+                attritionCount: slice.attritionCount,
+                attritionRate: slice.attritionRate,
+              }))}
+            />
+            <AskAboutDataButton question={`What patterns are behind "${title.toLowerCase()}"?`} />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <AttritionRateChart

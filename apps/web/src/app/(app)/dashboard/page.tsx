@@ -30,6 +30,8 @@ import { EngagementSection } from '@/components/dashboard/engagement-section';
 import { TalentSection } from '@/components/dashboard/talent-section';
 import { ExecutiveSummaryCard } from '@/components/dashboard/executive-summary';
 import { InsightsSection } from '@/components/dashboard/insights-section';
+import { SavedViews } from '@/components/dashboard/saved-views';
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -118,6 +120,27 @@ export default function DashboardPage() {
         : Promise.resolve([]),
     [compareKey],
   );
+  // Company-wide averages for the comparison table — same filter scope as the
+  // selected departments, so deviations read against a fair baseline.
+  const companyAverage = useMemo(() => {
+    if (!overview) return null;
+    const kpis = overview.kpis;
+    const slices = overview.engagement.jobSatisfaction;
+    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+    const weighted = slices.reduce((sum, slice) => {
+      const level = Number.parseInt(String(slice.name).replace(/\D/g, ''), 10);
+      return Number.isFinite(level) ? sum + level * slice.value : sum;
+    }, 0);
+    return {
+      headcount: kpis.totalEmployees,
+      attritionRate: kpis.attritionRate,
+      averageTenureYears: kpis.averageTenureYears,
+      averageMonthlyIncome: kpis.averageMonthlyIncome,
+      overtimeRate: kpis.overtimeRate,
+      averageJobSatisfaction: total > 0 ? weighted / total : null,
+      averagePerformanceRating: kpis.averagePerformanceRating,
+    };
+  }, [overview]);
 
   const toggleCompare = (id: string) => {
     setCompareSelection((current) =>
@@ -180,6 +203,14 @@ export default function DashboardPage() {
           {/* Ask PeopleLens — the copilot's front door on the dashboard */}
           <AskCopilotCard filters={filters} options={filterOptions} />
 
+          {/* Saved views — named, persistent filter combinations */}
+          <SavedViews
+            filters={filters}
+            setFilter={setFilter}
+            resetFilters={resetFilters}
+            activeCount={activeCount}
+          />
+
           {/* Global filters — one coherent state feeding every section below */}
           <AnalyticsFilters
             filters={filters}
@@ -240,7 +271,7 @@ export default function DashboardPage() {
             ))}
           </nav>
 
-          <section id="overview" className="scroll-mt-28 space-y-6">
+          <section id="overview" data-tour="kpis" className="scroll-mt-28 space-y-6">
             <SectionHeading
               eyebrow="Workforce Overview"
               title="The workforce at a glance"
@@ -298,6 +329,7 @@ export default function DashboardPage() {
               onClear={() => setCompareSelection([])}
               data={compare}
               loading={compareLoading}
+              companyAverage={companyAverage}
             />
           </section>
 
@@ -320,6 +352,7 @@ export default function DashboardPage() {
               <DataQualityCard quality={overview.dataQuality} />
             </div>
           </section>
+          <OnboardingTour />
         </div>
       ) : null}
     </div>
