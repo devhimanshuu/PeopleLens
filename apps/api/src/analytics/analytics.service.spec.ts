@@ -275,7 +275,7 @@ describe('AnalyticsService', () => {
       );
       const overview = await service.getOverview(actor());
 
-      const pipeline = overview.talent.pipeline;
+      const pipeline = overview.talent.pipeline!;
       // h1: 30 days, h2: 29 days → avg 29.5; h3 declined and h4 open are excluded.
       expect(pipeline.filledRequisitions).toBe(2);
       expect(pipeline.openRequisitions).toBe(1);
@@ -304,9 +304,9 @@ describe('AnalyticsService', () => {
       );
       const overview = await service.getOverview(actor());
 
-      expect(overview.talent.pipeline.averageTimeToHireDays).toBeNull();
-      expect(overview.talent.pipeline.averageCostPerHire).toBeNull();
-      expect(overview.talent.pipeline.offerAcceptanceRate).toBeNull();
+      expect(overview.talent.pipeline!.averageTimeToHireDays).toBeNull();
+      expect(overview.talent.pipeline!.averageCostPerHire).toBeNull();
+      expect(overview.talent.pipeline!.offerAcceptanceRate).toBeNull();
       expect(overview.talent.unavailable).toEqual([
         'Time-to-hire',
         'Cost-per-hire',
@@ -325,7 +325,7 @@ describe('AnalyticsService', () => {
       const overview = await service.getOverview(actor(Role.MANAGER));
 
       expect(repo.getHiringRecords).toHaveBeenCalledWith(['d1']);
-      expect(overview.talent.pipeline.filledRequisitions).toBe(0);
+      expect(overview.talent.pipeline!.filledRequisitions).toBe(0);
     });
   });
 

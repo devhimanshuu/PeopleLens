@@ -503,8 +503,9 @@ export interface TalentData {
     /** 0–1, null when the slice has no attrition data. */
     attritionRate: number | null;
   };
-  /** Hiring-pipeline metrics computed from `HiringRecord` rows. */
-  pipeline: HiringPipelineData;
+  /** Hiring-pipeline metrics computed from `HiringRecord` rows. Optional —
+   * older API builds do not include it; the UI must tolerate its absence. */
+  pipeline?: HiringPipelineData;
   /** PRD talent metrics the current dataset cannot support (dynamic). */
   unavailable: string[];
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { AnalyticsOverview } from '@peoplelens/types';
+import type { AnalyticsOverview, HiringPipelineData } from '@peoplelens/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatNumber, formatPercent, formatRating } from '@/lib/format';
 import { ClickableBarChart, ClickableDonut, useExplorerNavigation } from './analytics-charts';
@@ -20,7 +20,9 @@ export function TalentSection({ overview }: { overview?: AnalyticsOverview | nul
   const hiresByDept = talent.hiresByDepartment ?? [];
   const recentPerf = talent.recentHirePerformance ?? [];
   const unavailableList = talent.unavailable ?? [];
-  const pipeline = talent.pipeline;
+  // Older API builds omit `pipeline` entirely — fall back so the section
+  // renders with em-dashes instead of crashing on missing fields.
+  const pipeline: Partial<HiringPipelineData> = talent.pipeline ?? {};
 
   return (
     <div className="space-y-5">
