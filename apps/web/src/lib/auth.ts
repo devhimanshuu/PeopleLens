@@ -102,6 +102,17 @@ function toNeonSession(
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
   };
 }
+/** Read the full signed session token back from the HttpOnly cookie via the same-origin proxy. */
+async function fetchFullSessionToken(): Promise<string | undefined> {
+  try {
+    const response = await fetch('/api/auth/session-token', { credentials: 'include' });
+    if (!response.ok) return undefined;
+    const payload = (await response.json()) as { token?: string | null };
+    return payload.token ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
 // Pull the current session from the Better Auth server and mirror it into the local session marker. Returns the…
 // session (or null when signed out). Used after OAuth redirects and on 401-refresh so the header + middleware…
 export async function syncOAuthSession(): Promise<NeonSession | null> {
@@ -120,6 +131,10 @@ export async function syncOAuthSession(): Promise<NeonSession | null> {
       return null;
     }
     const session = toNeonSession(data.user, data.session?.token, data.session?.expiresAt);
+    // The SDK only exposes the unsigned session id; the cross-origin API needs
+    // the full signed cookie value, which lives only in the HttpOnly cookie.
+    const fullToken = await fetchFullSessionToken();
+    if (fullToken) session.token = fullToken;
     if (previous?.role) session.role = previous.role;
     setStoredSession(session);
     return session;
@@ -146,10 +161,11 @@ export async function signInWithEmail(
     const { data, error } = await authClient.signIn.email({ email, password });
     if (error) return { error: error.message || 'Failed to sign in' };
     if (!data?.user) return { error: 'Failed to sign in' };
-    // The SDK returns the session token top-level on email sign-in
-    // (`{ token, user }`); `session` only exists on getSession responses.
+    // The SDK returns the session id top-level on email sign-in (`{ token, user }`),
+    // but the cross-origin API needs the full signed cookie value.
     if (!data.token) return { error: 'Failed to sign in' };
-    const session = toNeonSession(data.user, data.token);
+    const fullToken = await fetchFullSessionToken();
+    const session = toNeonSession(data.user, fullToken ?? data.token);
     setStoredSession(session);
     return { session };
   } catch {
@@ -176,7 +192,8 @@ export async function signUpWithEmail(
       // guidance lives in the README and on the sign-in page.
       return { error: 'Account created — please verify your email, then sign in.' };
     }
-    const session = toNeonSession(data.user, data.token);
+    const fullToken = await fetchFullSessionToken();
+    const session = toNeonSession(data.user, fullToken ?? data.token);
     setStoredSession(session);
     return { session };
   } catch {
