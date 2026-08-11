@@ -55,17 +55,17 @@ const views = [
     id: 'executive',
     label: 'Executive View',
     icon: LayoutDashboard,
-    headline: 'The board-level pulse, always current',
+    headline: 'The executive pulse, always current',
     points: [
-      'Workforce health index across every region and function',
-      'Attrition risk by segment with predicted runway impact',
-      'One-click narrative draft for quarterly board packs',
+      'Workforce health summary with key areas requiring attention',
+      'Attrition breakdown by department, role, tenure, and overtime',
+      'Deterministic executive summary with one-click print/PDF export',
     ],
     accent: 'from-indigo-500 to-violet-500',
     kpis: [
-      { label: 'Headcount', value: 12847 },
-      { label: 'Attrition', value: 4.2, decimals: 1, suffix: '%' },
-      { label: 'Revenue / employee', value: 342, prefix: '$', suffix: 'k' },
+      { label: 'Headcount', value: 150 },
+      { label: 'Attrition', value: 16.7, decimals: 1, suffix: '%' },
+      { label: 'Avg tenure', value: 4.9, decimals: 1, suffix: 'yrs' },
     ],
   },
   {
@@ -74,16 +74,16 @@ const views = [
     icon: Users,
     headline: 'Every team, every risk, one dashboard',
     points: [
-      'Heat-mapped risk for the teams you support',
-      'Escalation-ready narratives with root causes',
-      'What-if modeling before restructuring decisions',
+      'Team-level attrition and engagement at a glance',
+      'Department comparison against the company average',
+      'Drill from any insight to the employees behind it',
     ],
     accent: 'from-cyan-500 to-sky-500',
     teams: [
-      { name: 'Engineering', risk: '4.1%', tone: 'text-emerald-400', bar: 18 },
-      { name: 'Sales', risk: '8.9%', tone: 'text-rose-400', bar: 62 },
-      { name: 'Operations', risk: '5.6%', tone: 'text-amber-400', bar: 34 },
-      { name: 'Customer Success', risk: '3.2%', tone: 'text-emerald-400', bar: 12 },
+      { name: 'Engineering', risk: '11.5%', tone: 'text-emerald-400', bar: 18 },
+      { name: 'Sales', risk: '40.9%', tone: 'text-rose-400', bar: 62 },
+      { name: 'Marketing', risk: '16.7%', tone: 'text-amber-400', bar: 34 },
+      { name: 'Data & Analytics', risk: '8.3%', tone: 'text-emerald-400', bar: 12 },
     ],
   },
   {
@@ -92,15 +92,15 @@ const views = [
     icon: Target,
     headline: 'Daily actions, backed by data',
     points: [
-      '1:1 and goal completion tracking for your reports',
-      'Early-warning nudges before small issues grow',
-      'Team sentiment and engagement at a glance',
+      'Team dashboard scoped to the departments you manage',
+      'Attrition, overtime, and satisfaction for your team',
+      'Employee explorer with filters, sorting, and drill-down',
     ],
     accent: 'from-emerald-500 to-teal-500',
     goals: [
-      { label: '1:1 completion', value: 92 },
-      { label: 'Goal progress', value: 78 },
-      { label: 'Check-in coverage', value: 86 },
+      { label: 'Team engagement', value: 74 },
+      { label: 'Overtime rate', value: 38 },
+      { label: 'Open roles', value: 3 },
     ],
   },
 ] as const satisfies readonly ViewDef[];
@@ -204,8 +204,8 @@ function PreviewPane({ active }: { active: ViewDef }) {
               </div>
             ))}
             <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-300">
-              <CheckCircle2 className="size-4 shrink-0" aria-hidden />
-              Two reports flagged for early 1:1 this week
+              <CheckCircle2 className="size-4 shrink-0" aria-hidden />3 high-attrition patterns
+              flagged in your team
             </div>
           </div>
         ) : null}
@@ -313,7 +313,7 @@ export function Showcase() {
                 </ul>
                 <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-xs text-foreground/80 backdrop-blur">
                   <LineChart className="size-3.5 text-cyan-400" aria-hidden />
-                  Powered by the same governed data mesh
+                  Powered by the same governed workforce model
                 </div>
               </motion.div>
             </AnimatePresence>

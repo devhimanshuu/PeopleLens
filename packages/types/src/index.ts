@@ -503,8 +503,26 @@ export interface TalentData {
     /** 0–1, null when the slice has no attrition data. */
     attritionRate: number | null;
   };
-  /** PRD talent metrics the current dataset cannot support (e.g. cost-per-hire). */
+  /** Hiring-pipeline metrics computed from `HiringRecord` rows. */
+  pipeline: HiringPipelineData;
+  /** PRD talent metrics the current dataset cannot support (dynamic). */
   unavailable: string[];
+}
+
+/** Hiring-pipeline metrics (time-to-hire, cost-per-hire, offer acceptance). */
+export interface HiringPipelineData {
+  /** Requisitions still open or in review. */
+  openRequisitions: number;
+  /** Requisitions with an accepted offer (hired). */
+  filledRequisitions: number;
+  /** Offers sent (decided: accepted or declined). */
+  offersSent: number;
+  /** Avg calendar days from requisition opened → offer accepted (hired rows only). */
+  averageTimeToHireDays: number | null;
+  /** Avg sourcing + recruiting cost in USD (hired rows with cost data). */
+  averageCostPerHire: number | null;
+  /** 0–1 — accepted ÷ (accepted + declined) offers. */
+  offerAcceptanceRate: number | null;
 }
 
 /** Dataset-health indicator — analytics quality depends on data quality. */

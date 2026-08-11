@@ -2,7 +2,11 @@ import type { RbacService } from '@app/common/services/rbac.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { Role } from '@app/common/enums/role.enum';
 import { AnalyticsService } from './analytics.service';
-import { type AnalyticsRepository, type AnalyticsEmployeeRow } from './analytics.repository';
+import {
+  type AnalyticsRepository,
+  type AnalyticsEmployeeRow,
+  type HiringRecordRow,
+} from './analytics.repository';
 
 const actor = (role: Role = Role.ADMIN): RequestUser => ({
   sub: 'user-1',
@@ -47,6 +51,7 @@ function createMocks(rows: AnalyticsEmployeeRow[]) {
     getOrgCounts: jest.fn().mockResolvedValue({ departments: 2, managers: 1, teams: 3 }),
     countDeleted: jest.fn().mockResolvedValue(0),
     getLastImport: jest.fn().mockResolvedValue(null),
+    getHiringRecords: jest.fn().mockResolvedValue([]),
     getHierarchy: jest.fn().mockResolvedValue({ nodes: [], totalEmployees: 0 }),
     getJobTitles: jest.fn().mockResolvedValue([]),
   };
@@ -209,6 +214,118 @@ describe('AnalyticsService', () => {
 
       const overview = await service.getOverview(actor());
       expect(overview.executiveSummary.status).toBe('healthy');
+    });
+  });
+
+  function hiringRow(overrides: Partial<HiringRecordRow> = {}): HiringRecordRow {
+    return {
+      id: 'h1',
+      requisitionId: 'REQ-1',
+      jobTitle: 'Engineer',
+      departmentId: 'd1',
+      openedAt: new Date('2026-01-01'),
+      offerSentAt: new Date('2026-02-01'),
+      acceptedAt: new Date('2026-02-10'),
+      sourcingCost: 1000,
+      recruitingCost: 2000,
+      offerStatus: 'accepted',
+      status: 'hired',
+      ...overrides,
+    };
+  }
+
+  describe('talent / hiring pipeline', () => {
+    it('computes time-to-hire, cost-per-hire and offer acceptance from HiringRecord rows', async () => {
+      const { repo, rbac } = createMocks([row()]);
+      repo.getHiringRecords.mockResolvedValue([
+        hiringRow({
+          id: 'h1',
+          openedAt: new Date('2026-01-01'),
+          acceptedAt: new Date('2026-01-31'),
+          sourcingCost: 1000,
+          recruitingCost: 2000,
+        }),
+        hiringRow({
+          id: 'h2',
+          openedAt: new Date('2026-02-01'),
+          acceptedAt: new Date('2026-03-02'),
+          sourcingCost: 1500,
+          recruitingCost: 2500,
+        }),
+        hiringRow({
+          id: 'h3',
+          openedAt: new Date('2026-03-01'),
+          acceptedAt: new Date('2026-03-31'),
+          offerStatus: 'declined',
+          status: 'closed',
+        }),
+        hiringRow({
+          id: 'h4',
+          openedAt: new Date('2026-04-01'),
+          acceptedAt: null,
+          offerStatus: null,
+          status: 'open',
+          sourcingCost: null,
+          recruitingCost: null,
+        }),
+      ]);
+      const service = new AnalyticsService(
+        repo as unknown as AnalyticsRepository,
+        rbac as unknown as RbacService,
+      );
+      const overview = await service.getOverview(actor());
+
+      const pipeline = overview.talent.pipeline;
+      // h1: 30 days, h2: 29 days → avg 29.5; h3 declined and h4 open are excluded.
+      expect(pipeline.filledRequisitions).toBe(2);
+      expect(pipeline.openRequisitions).toBe(1);
+      expect(pipeline.offersSent).toBe(3); // h1 + h2 accepted, h3 declined
+      expect(pipeline.averageTimeToHireDays).toBeCloseTo(29.5, 5);
+      expect(pipeline.averageCostPerHire).toBe(3500); // (3000 + 4000) / 2
+      expect(pipeline.offerAcceptanceRate).toBeCloseTo(2 / 3, 5);
+      expect(overview.talent.unavailable).toEqual([]);
+    });
+
+    it('lists metrics as unavailable when no pipeline data supports them', async () => {
+      const { repo, rbac } = createMocks([row()]);
+      repo.getHiringRecords.mockResolvedValue([
+        hiringRow({
+          id: 'h1',
+          acceptedAt: null,
+          offerStatus: null,
+          status: 'open',
+          sourcingCost: null,
+          recruitingCost: null,
+        }),
+      ]);
+      const service = new AnalyticsService(
+        repo as unknown as AnalyticsRepository,
+        rbac as unknown as RbacService,
+      );
+      const overview = await service.getOverview(actor());
+
+      expect(overview.talent.pipeline.averageTimeToHireDays).toBeNull();
+      expect(overview.talent.pipeline.averageCostPerHire).toBeNull();
+      expect(overview.talent.pipeline.offerAcceptanceRate).toBeNull();
+      expect(overview.talent.unavailable).toEqual([
+        'Time-to-hire',
+        'Cost-per-hire',
+        'Offer acceptance rate',
+      ]);
+    });
+
+    it('keeps the whole pipeline hidden for managers outside their scope (no rows returned)', async () => {
+      const { repo, rbac } = createMocks([row()]);
+      rbac.departmentScope.mockResolvedValue(['d1']);
+      repo.getHiringRecords.mockResolvedValue([]);
+      const service = new AnalyticsService(
+        repo as unknown as AnalyticsRepository,
+        rbac as unknown as RbacService,
+      );
+      const overview = await service.getOverview(actor(Role.MANAGER));
+
+      expect(repo.getHiringRecords).toHaveBeenCalledWith(['d1']);
+      expect(overview.talent.pipeline.filledRequisitions).toBe(0);
     });
   });
 

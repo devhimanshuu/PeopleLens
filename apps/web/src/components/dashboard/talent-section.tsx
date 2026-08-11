@@ -6,10 +6,9 @@ import { formatNumber, formatPercent, formatRating } from '@/lib/format';
 import { ClickableBarChart, ClickableDonut, useExplorerNavigation } from './analytics-charts';
 
 // Talent / Hiring — quality-of-hire proxies computed from the dataset (hiring
-// velocity, recent-hire performance, early attrition). PRD metrics that need
-// hiring-pipeline data the IBM HR dataset does not contain (time-to-hire,
-// cost-per-hire, offer acceptance) are listed explicitly as unavailable rather
-// than fabricated.
+// velocity, recent-hire performance, early attrition) plus real pipeline
+// metrics (time-to-hire, cost-per-hire, offer acceptance) from HiringRecord
+// rows. Only genuinely unsupported metrics are listed as unavailable.
 export function TalentSection({ overview }: { overview?: AnalyticsOverview | null }) {
   const navigate = useExplorerNavigation();
 
@@ -21,6 +20,7 @@ export function TalentSection({ overview }: { overview?: AnalyticsOverview | nul
   const hiresByDept = talent.hiresByDepartment ?? [];
   const recentPerf = talent.recentHirePerformance ?? [];
   const unavailableList = talent.unavailable ?? [];
+  const pipeline = talent.pipeline;
 
   return (
     <div className="space-y-5">
@@ -36,7 +36,37 @@ export function TalentSection({ overview }: { overview?: AnalyticsOverview | nul
           value={formatPercent(talent.earlyAttrition?.attritionRate ?? null)}
           hint="<1 yr tenure"
         />
-        <StatChip label="Rating scale" value="1 – 4" muted />
+        <StatChip
+          label="Time-to-hire"
+          value={
+            pipeline.averageTimeToHireDays !== null && pipeline.averageTimeToHireDays !== undefined
+              ? `${Math.round(pipeline.averageTimeToHireDays)} days`
+              : '—'
+          }
+          hint="req. opened → offer accepted"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatChip
+          label="Cost-per-hire"
+          value={
+            pipeline.averageCostPerHire !== null && pipeline.averageCostPerHire !== undefined
+              ? `$${Math.round(pipeline.averageCostPerHire).toLocaleString()}`
+              : '—'
+          }
+          hint="sourcing + recruiting, avg"
+        />
+        <StatChip
+          label="Offer acceptance"
+          value={formatPercent(pipeline.offerAcceptanceRate ?? null)}
+          hint={`${pipeline.offersSent ?? 0} offers decided`}
+        />
+        <StatChip label="Open requisitions" value={formatNumber(pipeline.openRequisitions ?? 0)} />
+        <StatChip
+          label="Filled · pipeline"
+          value={formatNumber(pipeline.filledRequisitions ?? 0)}
+        />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -87,10 +117,9 @@ export function TalentSection({ overview }: { overview?: AnalyticsOverview | nul
             Not available in current dataset
           </p>
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            The current dataset is a workforce snapshot — it has no hiring-pipeline records, so
-            these talent-acquisition metrics cannot be calculated:{' '}
+            These metrics need data the current import does not contain:{' '}
             <span className="font-medium text-foreground">{unavailableList.join(', ')}</span>.
-            Connect sourcing or ATS data to unlock them.
+            Upload a hiring-pipeline CSV (or connect an ATS) to unlock them.
           </p>
         </div>
       ) : null}
@@ -98,25 +127,11 @@ export function TalentSection({ overview }: { overview?: AnalyticsOverview | nul
   );
 }
 
-function StatChip({
-  label,
-  value,
-  hint,
-  muted,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  muted?: boolean;
-}) {
+function StatChip({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-border/60 bg-card/60 p-3">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p
-        className={`mt-0.5 font-display text-lg font-semibold ${muted ? 'text-muted-foreground' : 'text-foreground'}`}
-      >
-        {value}
-      </p>
+      <p className="mt-0.5 font-display text-lg font-semibold text-foreground">{value}</p>
       {hint ? <p className="mt-0.5 text-[11px] text-muted-foreground/70">{hint}</p> : null}
     </div>
   );

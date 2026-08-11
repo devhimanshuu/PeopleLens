@@ -3,7 +3,7 @@ import type { ImportHistory } from '@prisma/client';
 import { type AuditService } from '@app/audit/audit.service';
 import { type RbacService } from '@app/common/services/rbac.service';
 import { type PrismaService } from '@app/database/prisma.service';
-import { type CsvService, type ParsedRow } from './csv.service';
+import { type CsvService, type ParsedHiringRow, type ParsedRow } from './csv.service';
 import { ImportsService } from './imports.service';
 // ImportsService pipeline tests — the riskiest CSV logic: file-type gates, RBAC, reference resolution…
 // (department/team/manager by name), duplicate detection (database + within-file), row filtering by error…
@@ -32,9 +32,10 @@ interface Mocks {
       findUnique: jest.Mock;
       count: jest.Mock;
     };
+    hiringRecord: { create: jest.Mock };
     $transaction: jest.Mock;
   };
-  csv: { parse: jest.Mock };
+  csv: { parse: jest.Mock; isHiringCsv: jest.Mock; parseHiring: jest.Mock };
   rbac: { canWrite: jest.Mock; departmentScope: jest.Mock; isAdmin: jest.Mock };
   audit: { record: jest.Mock };
 }
@@ -50,17 +51,47 @@ function createMocks(): Mocks {
       findUnique: jest.fn(),
       count: jest.fn(),
     },
+    hiringRecord: { create: jest.fn() },
     $transaction: jest.fn(),
   };
   return {
     prisma,
-    csv: { parse: jest.fn() },
+    csv: {
+      parse: jest.fn(),
+      isHiringCsv: jest.fn().mockReturnValue(false),
+      parseHiring: jest.fn(),
+    },
     rbac: {
       canWrite: jest.fn().mockReturnValue(true),
       departmentScope: jest.fn().mockResolvedValue(null),
       isAdmin: jest.fn().mockReturnValue(true),
     },
     audit: { record: jest.fn().mockResolvedValue(undefined) },
+  };
+}
+
+function hiringRow(
+  overrides: Partial<ParsedHiringRow['data']> = {},
+  errors: string[] = [],
+): ParsedHiringRow {
+  return {
+    data: {
+      requisitionId: 'REQ-101',
+      jobTitle: 'Engineer',
+      department: 'Engineering',
+      candidateName: 'Aisha Kapoor',
+      openedAt: '2026-07-01',
+      offerSentAt: '2026-07-22',
+      acceptedAt: '2026-07-30',
+      startDate: '2026-08-10',
+      offerStatus: 'accepted',
+      status: 'hired',
+      sourcingCost: 1800,
+      recruitingCost: 3200,
+      ...overrides,
+    },
+    rowNumber: 2,
+    errors,
   };
 }
 
@@ -258,6 +289,71 @@ describe('ImportsService', () => {
       await expect(service.findOne(ACTOR as never, 'nope')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('importCsv — hiring pipeline', () => {
+    it('routes hiring CSVs (requisitionId header) to the hiring importer', async () => {
+      mocks.csv.isHiringCsv.mockReturnValue(true);
+      mocks.csv.parseHiring.mockReturnValue({ rows: [hiringRow()], errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.hiringRecord.create.mockResolvedValue({ id: 'h-1' });
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<number>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, { status: 'completed', successCount: 1, totalRows: 1 });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      expect(mocks.csv.parse).not.toHaveBeenCalled();
+      expect(mocks.prisma.hiringRecord.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            requisitionId: 'REQ-101',
+            departmentId: 'dept-1',
+            status: 'hired',
+            offerStatus: 'accepted',
+            sourcingCost: 1800,
+          }),
+        }),
+      );
+      expect(result.status).toBe('completed');
+    });
+
+    it('rejects hiring rows for departments outside the manager scope', async () => {
+      mocks.csv.isHiringCsv.mockReturnValue(true);
+      mocks.csv.parseHiring.mockReturnValue({ rows: [hiringRow()], errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.rbac.departmentScope.mockResolvedValue(['dept-2']); // manager owns Sales only
+      mockHistoryCreate(mocks, { status: 'failed', successCount: 0, totalRows: 1 });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      expect(mocks.prisma.hiringRecord.create).not.toHaveBeenCalled();
+      expect(result.status).toBe('failed');
+      expect(result.errorReport?.[0]?.errors.join(' ')).toContain('outside your assigned scope');
+    });
+
+    it('flags invalid hiring rows without inserting them', async () => {
+      mocks.csv.isHiringCsv.mockReturnValue(true);
+      mocks.csv.parseHiring.mockReturnValue({
+        rows: [hiringRow({}, ['openedAt "nope" is not a valid date'])],
+        errorReport: [
+          {
+            row: 2,
+            employeeCode: 'REQ-101',
+            email: null,
+            errors: ['openedAt "nope" is not a valid date'],
+          },
+        ],
+      });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mockHistoryCreate(mocks, { status: 'failed', successCount: 0, totalRows: 1 });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      expect(mocks.prisma.hiringRecord.create).not.toHaveBeenCalled();
+      expect(result.status).toBe('failed');
     });
   });
 

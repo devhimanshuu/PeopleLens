@@ -12,12 +12,12 @@ import { GlowOrb, GridPattern, NoiseOverlay } from './decor';
 import { formatAgo, formatUptime, HeroDashboard, MOCK_SNAPSHOT } from './hero-dashboard';
 
 const SOURCE_TONES: Record<string, string> = {
-  Workday: 'from-indigo-500 to-indigo-400',
-  BambooHR: 'from-cyan-500 to-cyan-400',
-  Greenhouse: 'from-violet-500 to-violet-400',
-  Slack: 'from-emerald-500 to-emerald-400',
-  Performance: 'from-fuchsia-500 to-fuchsia-400',
-  Payroll: 'from-amber-500 to-amber-400',
+  'Employee records': 'from-indigo-500 to-indigo-400',
+  Departments: 'from-cyan-500 to-cyan-400',
+  Teams: 'from-violet-500 to-violet-400',
+  'Hiring records': 'from-emerald-500 to-emerald-400',
+  Imports: 'from-fuchsia-500 to-fuchsia-400',
+  'Copilot conversations': 'from-amber-500 to-amber-400',
 };
 
 type SyncMode = 'loading' | 'live' | 'demo';
@@ -89,8 +89,8 @@ export function Sandbox() {
               Workforce Intelligence, live
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Real-time workforce health, attrition risk, and unified signals across HRIS, ATS, and
-              engagement sources — running against the PeopleLens API.
+              Workforce health, attrition, and engagement computed from the PeopleLens dataset —
+              running against the live API.
             </p>
           </div>
 
@@ -183,7 +183,7 @@ export function Sandbox() {
             <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
               <li className="flex gap-2.5">
                 <TrendingUp className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden />
-                Predictive attrition model — refreshed{' '}
+                Workforce analytics — recomputed from imported data{' '}
                 {now === null ? 'recently' : formatAgo(data.modelRefreshedAt, now)}
               </li>
               <li className="flex gap-2.5">
@@ -193,7 +193,7 @@ export function Sandbox() {
               </li>
               <li className="flex gap-2.5">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-cyan-400" aria-hidden />
-                Enterprise governance — SOC 2 Type II · role-based access
+                Enterprise governance — role-based access · audit trail
               </li>
             </ul>
             <div className="mt-auto border-t border-border/60 pt-4 text-xs text-muted-foreground/80">

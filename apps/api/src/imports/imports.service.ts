@@ -16,7 +16,7 @@ import { AuditService } from '@app/audit/audit.service';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
 import { RbacService } from '@app/common/services/rbac.service';
 import { PrismaService } from '@app/database/prisma.service';
-import { CsvService, type ParsedRow } from './csv.service';
+import { CsvService, type ParsedHiringRow, type ParsedRow } from './csv.service';
 
 /** Analytics-profile columns accepted by the CSV pipeline — all nullable. */
 type AnalyticsProfileInput = {
@@ -65,6 +65,11 @@ export class ImportsService {
     if (!file) throw new BadRequestException('No file uploaded');
     if (file.mimetype !== 'text/csv' && !file.originalname.toLowerCase().endsWith('.csv')) {
       throw new BadRequestException('Only CSV files are supported');
+    }
+    // Hiring-pipeline CSVs carry a `requisitionId` column — route to the
+    // hiring importer instead of the employee pipeline.
+    if (this.csv.isHiringCsv(file.buffer)) {
+      return this.importHiringCsv(actor, file, ip);
     }
     if (!this.rbac.canWrite(actor)) {
       // Forbidden, not BadRequest — viewers hitting this (the @Roles guard normally intercepts first) must get the…
@@ -170,6 +175,111 @@ export class ImportsService {
     return this.toView(history);
   }
 
+  /** Imports a hiring-pipeline CSV (requisitionId header) into HiringRecord rows. */
+  private async importHiringCsv(
+    actor: RequestUser,
+    file: Express.Multer.File,
+    ip?: string,
+  ): Promise<ImportHistoryView> {
+    if (!this.rbac.canWrite(actor)) {
+      throw new ForbiddenException('Read-only access — your role cannot import hiring data');
+    }
+    const startedAt = Date.now();
+    const { rows, errorReport } = this.csv.parseHiring(file.buffer, file.originalname);
+    const scope = await this.rbac.departmentScope(actor);
+
+    // Resolve departments by name, enforcing the caller's RBAC scope.
+    const departmentNames = new Set(rows.map((r) => r.data.department.trim()).filter(Boolean));
+    const departments =
+      departmentNames.size > 0
+        ? await this.prisma.department.findMany({
+            where: { deletedAt: null, name: { in: [...departmentNames] } },
+          })
+        : [];
+    const deptByName = new Map(departments.map((d) => [d.name.trim().toLowerCase(), d.id]));
+
+    const resolved: Array<{ departmentId: string; row: ParsedHiringRow }> = [];
+    const fullReport: ImportRowError[] = [...errorReport];
+    for (const row of rows) {
+      const name = row.data.department.trim().toLowerCase();
+      const departmentId = deptByName.get(name);
+      const rowErrors = [...row.errors];
+      if (!departmentId) rowErrors.push(`Department "${row.data.department}" not found`);
+      else if (scope && !scope.includes(departmentId)) {
+        rowErrors.push(`Department "${row.data.department}" is outside your assigned scope`);
+      }
+      if (rowErrors.length > 0) {
+        fullReport.push({
+          row: row.rowNumber,
+          employeeCode: row.data.requisitionId,
+          email: null,
+          errors: rowErrors,
+        });
+        continue;
+      }
+      resolved.push({ departmentId: departmentId!, row });
+    }
+
+    let successCount = 0;
+    if (resolved.length > 0) {
+      successCount = await this.prisma.$transaction(async (tx) => {
+        let created = 0;
+        for (const { departmentId, row } of resolved) {
+          const d = row.data;
+          const status = d.status ?? (d.offerStatus === 'accepted' ? 'hired' : 'open');
+          await tx.hiringRecord.create({
+            data: {
+              requisitionId: d.requisitionId,
+              jobTitle: d.jobTitle,
+              departmentId,
+              candidateName: d.candidateName ?? null,
+              openedAt: new Date(d.openedAt!),
+              offerSentAt: d.offerSentAt ? new Date(d.offerSentAt) : null,
+              acceptedAt: d.acceptedAt ? new Date(d.acceptedAt) : null,
+              startDate: d.startDate ? new Date(d.startDate) : null,
+              offerStatus: d.offerStatus ?? null,
+              status,
+              sourcingCost: d.sourcingCost ?? null,
+              recruitingCost: d.recruitingCost ?? null,
+            },
+          });
+          created += 1;
+        }
+        return created;
+      });
+    }
+
+    const status =
+      successCount === 0 ? 'failed' : fullReport.length === 0 ? 'completed' : 'partial';
+    const history = await this.prisma.importHistory.create({
+      data: {
+        fileName: file.originalname,
+        status,
+        totalRows: rows.length,
+        successCount,
+        failedCount: rows.length - successCount,
+        duplicateCount: 0,
+        errorReport:
+          fullReport.length > 0
+            ? (fullReport as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+        importedByUserId: actor.sub,
+        durationMs: Date.now() - startedAt,
+      },
+      include: { importedByUser: { select: { id: true, name: true, email: true } } },
+    });
+
+    await this.audit.record(
+      actor.sub,
+      'import',
+      'import',
+      history.id,
+      { fileName: file.originalname, success: successCount, failed: rows.length - successCount },
+      ip,
+    );
+    return this.toView(history);
+  }
+
   async findAll(
     actor: RequestUser,
     page: number,
@@ -215,6 +325,11 @@ export class ImportsService {
 
   buildTemplate(): string {
     return this.csv.buildTemplate();
+  }
+
+  /** Downloadable hiring-pipeline CSV template (one example requisition). */
+  buildHiringTemplate(): string {
+    return this.csv.buildHiringTemplate();
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────

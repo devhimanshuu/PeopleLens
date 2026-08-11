@@ -117,6 +117,53 @@ describe('CsvService', () => {
     });
   });
 
+  describe('isHiringCsv', () => {
+    it('detects hiring CSVs by the requisitionId header', () => {
+      const csv =
+        'requisitionId,jobTitle,department,openedAt\nREQ-1,Engineer,Engineering,2026-07-01\n';
+      expect(service.isHiringCsv(Buffer.from(csv))).toBe(true);
+    });
+
+    it('tolerates header casing/spacing and returns false for employee CSVs', () => {
+      expect(service.isHiringCsv(Buffer.from(validCsv))).toBe(false);
+      expect(service.isHiringCsv(Buffer.from('Requisition Id,Job Title\nREQ-1,Engineer\n'))).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('parseHiring', () => {
+    it('parses valid hiring rows with normalized values', () => {
+      const csv =
+        'requisitionId,jobTitle,department,candidateName,openedAt,offerStatus,status,sourcingCost,recruitingCost\n' +
+        'REQ-2026-001,Senior Engineer,Engineering,Aisha Kapoor,2026-07-01,accepted,hired,1800,3200\n';
+      const { rows, errorReport } = service.parseHiring(Buffer.from(csv), 'hiring.csv');
+      expect(errorReport).toEqual([]);
+      expect(rows[0]!.data).toMatchObject({
+        requisitionId: 'REQ-2026-001',
+        department: 'Engineering',
+        offerStatus: 'accepted',
+        status: 'hired',
+        sourcingCost: 1800,
+        recruitingCost: 3200,
+      });
+    });
+
+    it('flags missing required fields and malformed dates/costs', () => {
+      const csv =
+        'requisitionId,jobTitle,department,openedAt,offerStatus,status,sourcingCost\n' +
+        'REQ-2,,Engineering,not-a-date,wat,hired,abc\n';
+      const { rows, errorReport } = service.parseHiring(Buffer.from(csv), 'hiring.csv');
+      expect(errorReport.length).toBe(1);
+      const errors = errorReport[0]!.errors.join(' ');
+      expect(errors).toContain('jobTitle is required');
+      expect(errors).toContain('not a valid date');
+      expect(errors).toContain('offerStatus "wat"');
+      expect(errors).toContain('sourcingCost "NaN"');
+      expect(rows[0]!.data.requisitionId).toBe('REQ-2');
+    });
+  });
+
   describe('buildTemplate', () => {
     it('produces a parseable template with the canonical headers and one example row', () => {
       const template = service.buildTemplate();

@@ -31,8 +31,8 @@ export function Cta() {
                 Ready to see your workforce in real time?
               </h2>
               <p className="mt-5 text-pretty leading-relaxed text-muted-foreground">
-                A dedicated onboarding engineer will map your data sources and stand up your first
-                live dashboard within two weeks.
+                Import your workforce CSV and see your first live dashboard in minutes — or explore
+                the sandbox with sample data before you connect anything.
               </p>
 
               {submitted ? (
@@ -78,18 +78,18 @@ export function Cta() {
                     className="size-3.5 text-emerald-500 dark:text-emerald-400"
                     aria-hidden
                   />
-                  90-day risk-free pilot
+                  Free to explore — live sandbox
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <ShieldCheck
                     className="size-3.5 text-emerald-500 dark:text-emerald-400"
                     aria-hidden
                   />
-                  SOC 2 certified infrastructure
+                  Role-based access control
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Sparkles className="size-3.5 text-indigo-600 dark:text-indigo-300" aria-hidden />
-                  Dedicated onboarding engineer
+                  Guided onboarding with sample data
                 </span>
               </div>
             </div>

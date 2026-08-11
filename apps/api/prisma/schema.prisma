@@ -125,8 +125,9 @@ model Department {
   managerUserId String?
   managerUser   User?   @relation("DepartmentManager", fields: [managerUserId], references: [id], onDelete: SetNull)
 
-  teams     Team[]
-  employees Employee[]
+  teams         Team[]
+  employees     Employee[]
+  hiringRecords HiringRecord[]
 
   @@unique([name, deletedAt])
   @@index([parentId])
@@ -253,6 +254,39 @@ model Employee {
 
 // ───────────────────────────────────────────────────────────────────────────── Imports & audit…
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// One job requisition in the hiring pipeline (Option B — real TA metrics).
+/// Carries the full requisition → offer → accept lifecycle so time-to-hire,
+/// cost-per-hire and offer-acceptance can be computed instead of fabricated.
+model HiringRecord {
+  id               String     @id @default(cuid())
+  /// e.g. REQ-2026-001
+  requisitionId    String
+  jobTitle         String
+  departmentId     String
+  department       Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  candidateName    String?
+  openedAt         DateTime
+  firstInterviewAt DateTime?
+  offerSentAt      DateTime?
+  /// When the offer was accepted (hired).
+  acceptedAt       DateTime?
+  startDate        DateTime?
+  /// pending | accepted | declined | withdrawn (null until an offer is sent).
+  offerStatus      String?
+  /// open | in_review | offer_sent | hired | closed
+  status           String
+  /// Direct sourcing cost in USD (agency, ads, referrals).
+  sourcingCost     Int?
+  /// Internal recruiting cost in USD (HR time, assessments).
+  recruitingCost   Int?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([openedAt])
+}
 
 /// Result of a CSV bulk import, including a per-row error report.
 model ImportHistory {

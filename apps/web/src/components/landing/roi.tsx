@@ -6,32 +6,32 @@ import { Reveal } from './reveal';
 
 const stats = [
   {
-    value: 34,
-    suffix: '%',
-    decimals: 0,
-    label: 'Reduction in unwanted turnover',
-    description: 'Early-warning interventions across pilot cohorts',
-  },
-  {
-    value: 10,
-    suffix: '×',
-    decimals: 0,
-    label: 'Faster board reporting',
-    description: 'From raw data pull to polished narrative in hours',
-  },
-  {
     value: 100,
     suffix: '%',
     decimals: 0,
-    label: 'Data governance coverage',
-    description: 'Field-level access control on every dataset',
+    label: 'Analytics coverage',
+    description: 'Every imported employee scored on engagement and risk dimensions',
   },
   {
-    value: 2.1,
-    suffix: '×',
-    decimals: 1,
-    label: 'Faster HRBP response',
-    description: 'Shorter risk-to-action cycle across supported teams',
+    value: 6,
+    suffix: '',
+    decimals: 0,
+    label: 'Auto-generated insights',
+    description: 'Observed patterns surfaced from your workforce data',
+  },
+  {
+    value: 4,
+    suffix: '',
+    decimals: 0,
+    label: 'Hiring metrics',
+    description: 'Time-to-hire, cost-per-hire, offer acceptance, pipeline health',
+  },
+  {
+    value: 1,
+    suffix: '',
+    decimals: 0,
+    label: 'One-click executive summary',
+    description: 'Board-ready narrative with print/PDF export',
   },
 ];
 
@@ -41,8 +41,8 @@ export function Roi() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="Impact"
-          title="Outcomes your leadership will feel"
-          description="Measured across enterprise deployments — not marketing averages."
+          title="Intelligence you can act on"
+          description="Every number here is computed from the data you import — no marketing averages."
         />
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, index) => (

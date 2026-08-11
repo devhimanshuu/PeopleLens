@@ -36,6 +36,21 @@ export type AnalyticsEmployeeRow = Pick<
   | 'yearsAtCompany'
 >;
 
+/** Hiring-pipeline row projection the talent engine reads. */
+export interface HiringRecordRow {
+  id: string;
+  requisitionId: string;
+  jobTitle: string;
+  departmentId: string;
+  openedAt: Date;
+  offerSentAt: Date | null;
+  acceptedAt: Date | null;
+  sourcingCost: number | null;
+  recruitingCost: number | null;
+  offerStatus: string | null;
+  status: string;
+}
+
 /** Minimal last-import projection for the data-quality indicator. */
 export interface LastImportRow {
   id: string;
@@ -110,6 +125,30 @@ export class AnalyticsRepository {
       orderBy: { jobTitle: 'asc' },
     });
     return rows.map((r) => r.jobTitle);
+  }
+
+  /**
+   * Scoped hiring-pipeline rows. Managers only see requisitions for the
+   * departments they manage; admins see the full pipeline.
+   */
+  async getHiringRecords(scope: string[] | null): Promise<HiringRecordRow[]> {
+    return this.prisma.hiringRecord.findMany({
+      where: scope ? { departmentId: { in: scope } } : {},
+      select: {
+        id: true,
+        requisitionId: true,
+        jobTitle: true,
+        departmentId: true,
+        openedAt: true,
+        offerSentAt: true,
+        acceptedAt: true,
+        sourcingCost: true,
+        recruitingCost: true,
+        offerStatus: true,
+        status: true,
+      },
+      orderBy: { openedAt: 'asc' },
+    });
   }
 
   /** Scope-wide department options (id + name) for filter dropdowns. */

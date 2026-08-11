@@ -4,31 +4,31 @@ import { Fingerprint, Globe, KeyRound, Lock, ShieldCheck } from 'lucide-react';
 import { SectionHeading } from './decor';
 import { Reveal } from './reveal';
 
-const certifications = [
+const controls = [
   {
     icon: ShieldCheck,
-    title: 'SOC 2 Type II',
-    description: 'Independently audited security and availability controls',
-  },
-  {
-    icon: Globe,
-    title: 'GDPR',
-    description: 'Data residency and subject-rights compliance built in',
-  },
-  {
-    icon: KeyRound,
-    title: 'ISO 27001',
-    description: 'Certified information security management system',
-  },
-  {
-    icon: Lock,
-    title: 'HIPAA',
-    description: 'Safeguards for protected workforce health data',
+    title: 'Role-based Access',
+    description: 'Admin, manager, and viewer roles with department-level scoping',
   },
   {
     icon: Fingerprint,
-    title: 'Role-based Access Control',
-    description: 'Field-level permissions with complete audit trails',
+    title: 'Secure Sessions',
+    description: 'Neon Auth sign-in with server-validated, expiring sessions',
+  },
+  {
+    icon: KeyRound,
+    title: 'Audit Trail',
+    description: 'Every state-changing action recorded with actor and timestamp',
+  },
+  {
+    icon: Lock,
+    title: 'Field-level Privacy',
+    description: 'Salary and personal fields gated to authorized roles',
+  },
+  {
+    icon: Globe,
+    title: 'Data Quality Governance',
+    description: 'Imports validated with per-row error reports and a dataset health score',
   },
 ];
 
@@ -38,11 +38,11 @@ export function Security() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="Enterprise Security & Governance"
-          title="Built for the most regulated workforce teams"
-          description="Your people data stays inside your perimeter — with certifications your security team will recognize."
+          title="Governance your workforce team can rely on"
+          description="Access control is enforced on the backend for every API — never just hidden in the UI."
         />
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {certifications.map((item, index) => (
+          {controls.map((item, index) => (
             <Reveal key={item.title} delay={0.08 * index}>
               <div className="group relative h-full overflow-hidden rounded-2xl border border-border surface p-6 backdrop-blur-md transition-colors duration-300 hover:border-indigo-400/40">
                 <div
@@ -64,8 +64,7 @@ export function Security() {
         </div>
         <Reveal delay={0.2} className="mt-10 text-center">
           <p className="text-sm text-muted-foreground/80">
-            Deployed in your cloud · data never leaves your perimeter · zero-knowledge encryption
-            for dormant records
+            Role-scoped access · complete audit trail · no sensitive data written to logs
           </p>
         </Reveal>
       </div>

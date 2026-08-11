@@ -91,6 +91,14 @@ export default function ImportsPage() {
     }
   }, [toast]);
 
+  const downloadHiringTemplate = useCallback(async () => {
+    try {
+      await downloadAuthenticated('/imports/template/hiring', 'peoplelens-hiring-template.csv');
+    } catch (err) {
+      toast.error(err instanceof ApiClientError ? err.message : 'Failed to download template');
+    }
+  }, [toast]);
+
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragging(false);
@@ -105,9 +113,14 @@ export default function ImportsPage() {
         title="CSV Import"
         description="Bulk-import employees from a CSV file. Rows are validated; a per-row error report is returned."
         actions={
-          <Button variant="outline" onClick={() => void downloadTemplate()}>
-            <Download className="size-4" aria-hidden /> Download Template
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => void downloadTemplate()}>
+              <Download className="size-4" aria-hidden /> Employee Template
+            </Button>
+            <Button variant="outline" onClick={() => void downloadHiringTemplate()}>
+              <Download className="size-4" aria-hidden /> Hiring Template
+            </Button>
+          </div>
         }
       />
 
@@ -163,7 +176,8 @@ export default function ImportsPage() {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Expected columns: employeeCode, firstName, lastName, email, jobTitle, gender,
-                hiredAt, department… (see template)
+                hiredAt, department… (see template) · a CSV with a requisitionId column is
+                auto-detected as hiring-pipeline data
               </p>
             </div>
           </>

@@ -90,6 +90,26 @@ export interface ParsedRow {
   errors: string[];
 }
 
+/** One parsed + validated hiring-pipeline row. */
+export interface ParsedHiringRow {
+  data: {
+    requisitionId: string;
+    jobTitle: string;
+    department: string;
+    candidateName?: string | null;
+    openedAt?: string;
+    offerSentAt?: string | null;
+    acceptedAt?: string | null;
+    startDate?: string | null;
+    offerStatus?: string | null;
+    status?: string | null;
+    sourcingCost?: number | null;
+    recruitingCost?: number | null;
+  };
+  rowNumber: number;
+  errors: string[];
+}
+
 /** Outcome of parsing a CSV buffer. */
 export interface ParseResult {
   rows: ParsedRow[];
@@ -186,6 +206,37 @@ export class CsvService {
     const header = CSV_HEADERS.join(',');
     const line = CSV_HEADERS.map((h) => escape(example[h])).join(',');
     return `${header}\n${line}\n`;
+  }
+
+  /** Normalizes hiring-CSV headers (case/space/dash tolerant) to canonical keys. */
+  private normalizeHiringRow(raw: Record<string, unknown>): ParsedHiringRow['data'] {
+    const get = (key: string): string | undefined => {
+      const found = Object.entries(raw).find(([k]) => {
+        const normalized = k
+          .trim()
+          .toLowerCase()
+          .replace(/[\s_-]/g, '');
+        return normalized === key.toLowerCase();
+      });
+      const value = found?.[1];
+      if (value === undefined || value === null) return undefined;
+      const str = String(value).trim();
+      return str === '' ? undefined : str;
+    };
+    return {
+      requisitionId: get('requisitionId') ?? '',
+      jobTitle: get('jobTitle') ?? '',
+      department: get('department') ?? '',
+      candidateName: get('candidateName') ?? null,
+      openedAt: get('openedAt'),
+      offerSentAt: get('offerSentAt') ?? null,
+      acceptedAt: get('acceptedAt') ?? null,
+      startDate: get('startDate') ?? null,
+      offerStatus: get('offerStatus')?.toLowerCase() ?? null,
+      status: get('status')?.toLowerCase() ?? null,
+      sourcingCost: get('sourcingCost') !== undefined ? Number(get('sourcingCost')) : null,
+      recruitingCost: get('recruitingCost') !== undefined ? Number(get('recruitingCost')) : null,
+    };
   }
 
   private normalizeRow(raw: Record<string, unknown>): CsvEmployeeRow {
@@ -323,5 +374,124 @@ export class CsvService {
     }
 
     return errors;
+  }
+
+  // ── hiring-pipeline CSVs ───────────────────────────────────────────────────
+  // A separate lightweight format (requisitionId header) so the same import
+  // endpoint feeds both workforce and hiring data. Detection is header-based.
+
+  /** True when the CSV carries hiring-pipeline columns rather than employees. */
+  isHiringCsv(buffer: Buffer): boolean {
+    try {
+      const records = parse(buffer, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        bom: true,
+      }) as Record<string, unknown>[];
+      const headers = Object.keys(records[0] ?? {}).map((h) =>
+        h.toLowerCase().replace(/[\s_]+/g, ''),
+      );
+      return headers.includes('requisitionid');
+    } catch {
+      return false;
+    }
+  }
+
+  /** Parses + validates a hiring-pipeline CSV buffer. */
+  parseHiring(
+    buffer: Buffer,
+    originalName: string,
+  ): {
+    rows: ParsedHiringRow[];
+    errorReport: ImportRowError[];
+  } {
+    let records: Record<string, unknown>[];
+    try {
+      records = parse(buffer, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        bom: true,
+        relax_column_count: true,
+      }) as Record<string, unknown>[];
+    } catch (error) {
+      throw new BadRequestException(
+        `Could not parse CSV "${originalName}": ${error instanceof Error ? error.message : 'malformed file'}`,
+      );
+    }
+    if (records.length === 0) {
+      throw new BadRequestException('The CSV file contains no data rows');
+    }
+
+    const rows: ParsedHiringRow[] = records.map((raw, index) => {
+      const row = this.normalizeHiringRow(raw);
+      const errors: string[] = [];
+      if (!row.requisitionId) errors.push('requisitionId is required');
+      if (!row.jobTitle) errors.push('jobTitle is required');
+      if (!row.department) errors.push('department is required');
+      if (!row.openedAt) errors.push('openedAt is required');
+      if (row.openedAt && Number.isNaN(Date.parse(row.openedAt))) {
+        errors.push(`openedAt "${row.openedAt}" is not a valid date`);
+      }
+      for (const [field, label] of [
+        ['offerSentAt', 'offerSentAt'],
+        ['acceptedAt', 'acceptedAt'],
+        ['startDate', 'startDate'],
+      ] as const) {
+        if (row[field] && Number.isNaN(Date.parse(row[field] as string))) {
+          errors.push(`${label} "${row[field]}" is not a valid date`);
+        }
+      }
+      if (
+        row.offerStatus &&
+        !['pending', 'accepted', 'declined', 'withdrawn'].includes(row.offerStatus)
+      ) {
+        errors.push(
+          `offerStatus "${row.offerStatus}" must be one of pending, accepted, declined, withdrawn`,
+        );
+      }
+      if (
+        row.status &&
+        !['open', 'in_review', 'offer_sent', 'hired', 'closed'].includes(row.status)
+      ) {
+        errors.push(
+          `status "${row.status}" must be one of open, in_review, offer_sent, hired, closed`,
+        );
+      }
+      for (const field of ['sourcingCost', 'recruitingCost'] as const) {
+        const value = row[field];
+        if (value !== null && value !== undefined) {
+          if (!Number.isInteger(value) || value < 0) {
+            errors.push(`${field} "${value}" must be a non-negative whole number`);
+          }
+        }
+      }
+      return {
+        data: row,
+        rowNumber: index + 2,
+        errors,
+      };
+    });
+
+    const errorReport: ImportRowError[] = rows
+      .filter((r) => r.errors.length > 0)
+      .map((r) => ({
+        row: r.rowNumber,
+        employeeCode: r.data.requisitionId,
+        email: null,
+        errors: r.errors,
+      }));
+
+    return { rows, errorReport };
+  }
+
+  /** Builds the downloadable hiring-pipeline CSV template string. */
+  buildHiringTemplate(): string {
+    const header =
+      'requisitionId,jobTitle,department,candidateName,openedAt,offerSentAt,acceptedAt,startDate,offerStatus,status,sourcingCost,recruitingCost';
+    const example =
+      'REQ-2026-101,Senior Engineer,Engineering,Aisha Kapoor,2026-07-01,2026-07-22,2026-07-30,2026-08-10,accepted,hired,1800,3200';
+    return `${header}\n${example}\n`;
   }
 }

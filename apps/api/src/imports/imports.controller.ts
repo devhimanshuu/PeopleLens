@@ -78,6 +78,17 @@ export class ImportsController {
     return new StreamableFile(Buffer.from(this.importsService.buildTemplate(), 'utf-8'));
   }
 
+  @Get('template/hiring')
+  @ApiOperation({
+    summary: 'Download a hiring-pipeline CSV template',
+    description: 'Pre-filled with one example requisition row.',
+  })
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="peoplelens-hiring-template.csv"')
+  getHiringTemplate(): StreamableFile {
+    return new StreamableFile(Buffer.from(this.importsService.buildHiringTemplate(), 'utf-8'));
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get an import record with its error report' })
   @ApiParam({ name: 'id', description: 'Import history id' })

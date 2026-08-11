@@ -18,26 +18,26 @@ const GAUGE_LENGTH = Math.PI * GAUGE_RADIUS; // semicircle arc length
 export const MOCK_SNAPSHOT: LiveSignalsSnapshot = {
   generatedAt: new Date(0).toISOString(),
   uptimeSeconds: 0,
-  healthScore: 87,
-  healthDelta: 4.2,
-  headcount: 12847,
-  engagementPercent: 78,
-  flightRiskPercent: 4.2,
-  signalsTotal: 1284,
+  healthScore: 91,
+  healthDelta: 0,
+  headcount: 150,
+  engagementPercent: 74,
+  flightRiskPercent: 16.7,
+  signalsTotal: 228,
   signalsBySource: [
-    { source: 'Workday', count: 412 },
-    { source: 'BambooHR', count: 288 },
-    { source: 'Greenhouse', count: 214 },
-    { source: 'Slack', count: 197 },
-    { source: 'Performance', count: 103 },
-    { source: 'Payroll', count: 70 },
+    { source: 'Employee records', count: 150 },
+    { source: 'Departments', count: 10 },
+    { source: 'Teams', count: 15 },
+    { source: 'Hiring records', count: 48 },
+    { source: 'Imports', count: 5 },
+    { source: 'Copilot conversations', count: 0 },
   ],
   modelRefreshedAt: new Date(0).toISOString(),
   departments: [
-    { name: 'Engineering', pct: 86, tone: 'indigo' },
-    { name: 'Sales', pct: 72, tone: 'cyan' },
-    { name: 'Operations', pct: 64, tone: 'emerald' },
-    { name: 'Customer Success', pct: 58, tone: 'violet' },
+    { name: 'Engineering', pct: 35, tone: 'indigo' },
+    { name: 'Sales', pct: 15, tone: 'cyan' },
+    { name: 'Product', pct: 8, tone: 'emerald' },
+    { name: 'Marketing', pct: 8, tone: 'violet' },
   ],
   heatMap: [
     0.1, 0.08, 0.12, 0.15, 0.09, 0.11, 0.14, 0.07, 0.1, 0.13, 0.09, 0.08, 0.16, 0.12, 0.2, 0.28,
@@ -47,24 +47,24 @@ export const MOCK_SNAPSHOT: LiveSignalsSnapshot = {
   spark: [
     {
       label: 'Headcount',
-      value: 12847,
+      value: 150,
       suffix: '',
       decimals: 0,
-      data: [40, 42, 41, 45, 47, 49, 48, 51],
+      data: [52, 22, 12, 12, 16, 12, 8, 5],
     },
     {
       label: 'Engagement',
-      value: 78,
+      value: 74,
       suffix: '%',
       decimals: 0,
-      data: [60, 63, 61, 66, 68, 70, 72, 78],
+      data: [70, 72, 71, 73, 74, 76, 75, 78],
     },
     {
-      label: 'Flight risk',
-      value: 4.2,
+      label: 'Attrition',
+      value: 16.7,
       suffix: '%',
       decimals: 1,
-      data: [7, 6.4, 6.8, 5.9, 5.4, 5, 4.6, 4.2],
+      data: [11.5, 40.9, 16.7, 12.5, 10, 8.3, 20, 0],
     },
   ],
 };
@@ -200,9 +200,15 @@ export function HeroDashboard() {
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 Health Score
               </p>
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
-                ▲ {data.healthDelta.toFixed(1)} pts
-              </span>
+              {data.healthDelta > 0 ? (
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+                  ▲ {data.healthDelta.toFixed(1)} pts
+                </span>
+              ) : (
+                <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  Current dataset
+                </span>
+              )}
             </div>
             <div className="relative mx-auto mt-4 w-fit">
               <svg viewBox="0 0 120 62" className="h-24 w-auto" aria-hidden>
@@ -242,7 +248,7 @@ export function HeroDashboard() {
               </div>
             </div>
             <p className="mt-4 text-center text-xs text-muted-foreground/80">
-              Composite of retention, engagement, and sentiment signals
+              Composite of data quality, retention, and engagement signals
             </p>
           </div>
 
@@ -336,8 +342,8 @@ export function HeroDashboard() {
           <p className="flex items-center gap-1.5">
             <TrendingUp className="size-3.5 text-emerald-400" aria-hidden />
             {mode === 'demo'
-              ? 'Predictive model snapshot · demo data'
-              : `Predictive model refreshed ${
+              ? 'Workforce analytics snapshot · demo data'
+              : `Analytics snapshot computed ${
                   now === null ? 'recently' : formatAgo(data.modelRefreshedAt, now)
                 }`}
           </p>

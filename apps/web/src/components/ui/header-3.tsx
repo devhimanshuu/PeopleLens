@@ -7,16 +7,12 @@ import {
   BarChart,
   Code,
   FileText,
-  Handshake,
-  HelpCircle,
-  Leaf,
   MessageSquare,
   Network,
   Radar,
-  RotateCcw,
   Shield,
-  Star,
   Users,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,39 +40,39 @@ type LinkItem = {
 
 const productLinks: LinkItem[] = [
   {
-    title: 'Attrition Risk Predictor',
+    title: 'Workforce Analytics',
     href: '#capabilities',
-    description: 'Simulate retention impact across policy scenarios',
-    icon: Radar,
-  },
-  {
-    title: 'Unified Data Mesh',
-    href: '#capabilities',
-    description: 'HRIS, ATS and engagement normalized in one model',
-    icon: Network,
-  },
-  {
-    title: 'Board-Ready Narratives',
-    href: '#capabilities',
-    description: 'Automated executive decks from live signals',
-    icon: FileText,
-  },
-  {
-    title: 'Real-time Sentiment Radar',
-    href: '#capabilities',
-    description: 'Engagement and pulse signals, refreshed hourly',
-    icon: MessageSquare,
-  },
-  {
-    title: 'Executive Analytics',
-    href: '#solutions',
-    description: 'Board-level pulse across every region and function',
+    description: 'Attrition, retention and engagement across departments',
     icon: BarChart,
   },
   {
-    title: 'Integrations & API',
+    title: 'Department Comparison',
+    href: '#capabilities',
+    description: 'Head-to-head metrics with company averages',
+    icon: Network,
+  },
+  {
+    title: 'Executive Summary',
+    href: '#capabilities',
+    description: 'Board-ready narrative with print/PDF export',
+    icon: FileText,
+  },
+  {
+    title: 'Engagement Analytics',
+    href: '#capabilities',
+    description: 'Job, environment and relationship satisfaction scores',
+    icon: MessageSquare,
+  },
+  {
+    title: 'Workforce Copilot',
     href: '#solutions',
-    description: 'Connect Workday, BambooHR, Greenhouse and more',
+    description: 'Ask questions about your workforce in plain English',
+    icon: Radar,
+  },
+  {
+    title: 'CSV Import & API',
+    href: '#solutions',
+    description: 'Secure pipeline for employee and hiring records',
     icon: Code,
   },
 ];
@@ -84,25 +80,23 @@ const productLinks: LinkItem[] = [
 const companyLinks: LinkItem[] = [
   { title: 'About Us', href: '#top', description: 'The team behind PeopleLens', icon: Users },
   {
-    title: 'Customer Stories',
-    href: '#enterprise',
-    description: 'How enterprises de-risk their workforce',
-    icon: Star,
+    title: 'Role-Based Access',
+    href: '#solutions',
+    description: 'Admins, managers and viewers see only what they should',
+    icon: Shield,
   },
   {
-    title: 'Partnerships',
-    href: '#enterprise',
-    description: 'Collaborate with us for mutual growth',
-    icon: Handshake,
+    title: 'Live Sandbox',
+    href: '/sandbox',
+    description: 'Explore the product with sample data',
+    icon: Code,
   },
 ];
 
 const companyLinks2: LinkItem[] = [
-  { title: 'Terms of Service', href: '#top', icon: FileText },
-  { title: 'Privacy Policy', href: '#top', icon: Shield },
-  { title: 'Data Processing Addendum', href: '#top', icon: RotateCcw },
-  { title: 'Blog', href: '#top', icon: Leaf },
-  { title: 'Help Center', href: '#top', icon: HelpCircle },
+  { title: 'Terms of Service', href: '/legal/terms', icon: FileText },
+  { title: 'Privacy Policy', href: '/legal/privacy', icon: Shield },
+  { title: 'Data Processing Addendum', href: '/legal/dpa', icon: FileText },
 ];
 
 function useScroll(threshold: number) {
@@ -288,27 +282,33 @@ export function Header() {
         </nav>
         <MobileMenu
           open={open}
-          className={cn(
-            'flex flex-col justify-between gap-2 overflow-y-auto',
-            scrolled ? 'top-[4.75rem]' : 'top-16',
-          )}
+          onClose={() => setOpen(false)}
+          className={cn(scrolled ? 'top-[4.75rem]' : 'top-16')}
         >
           <NavigationMenu className="max-w-full">
-            <div className="flex w-full flex-col gap-y-2">
-              <span className="text-sm font-medium text-muted-foreground">Product</span>
-              {productLinks.map((link) => (
-                <ListItem key={link.title} {...link} />
-              ))}
-              <span className="text-sm font-medium text-muted-foreground">Company</span>
-              {companyLinks.map((link) => (
-                <ListItem key={link.title} {...link} />
-              ))}
-              {companyLinks2.map((link) => (
-                <ListItem key={link.title} {...link} />
-              ))}
+            <div className="flex w-full flex-col gap-y-4">
+              <div className="flex flex-col gap-y-2">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Product
+                </span>
+                {productLinks.map((link) => (
+                  <ListItem key={link.title} {...link} onClick={() => setOpen(false)} />
+                ))}
+              </div>
+              <div className="flex flex-col gap-y-2 border-t border-border pt-4">
+                <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Company
+                </span>
+                {companyLinks.map((link) => (
+                  <ListItem key={link.title} {...link} onClick={() => setOpen(false)} />
+                ))}
+                {companyLinks2.map((link) => (
+                  <ListItem key={link.title} {...link} onClick={() => setOpen(false)} />
+                ))}
+              </div>
             </div>
           </NavigationMenu>
-          <div className="flex flex-col gap-2">
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
             {session ? (
               <>
                 <Button className="w-full" asChild>
@@ -319,18 +319,24 @@ export function Header() {
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"
-                  onClick={() => setConfirmOpen(true)}
+                  onClick={() => {
+                    setConfirmOpen(true);
+                  }}
                 >
-                  Sign Out ({session.user.name || session.user.email})
+                  Sign Out
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" className="w-full bg-transparent" asChild>
-                  <Link href="/signin">Sign In</Link>
+                  <Link href="/signin" onClick={() => setOpen(false)}>
+                    Sign In
+                  </Link>
                 </Button>
                 <Button className="w-full" asChild>
-                  <Link href="/signup">Request Demo</Link>
+                  <Link href="/signup" onClick={() => setOpen(false)}>
+                    Request Demo
+                  </Link>
                 </Button>
               </>
             )}
@@ -353,32 +359,66 @@ export function Header() {
 
 type MobileMenuProps = React.ComponentProps<'div'> & {
   open: boolean;
+  onClose: () => void;
 };
 
-function MobileMenu({ open, children, className, ...props }: MobileMenuProps) {
+function MobileMenu({ open, onClose, children, className, ...props }: MobileMenuProps) {
+  // ESC closes the panel; the header also locks body scroll while open.
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open || typeof window === 'undefined') return null;
 
   return createPortal(
-    <div
-      id="mobile-menu"
-      className={cn(
-        'bg-background/95 supports-[backdrop-filter]:bg-background/50 backdrop-blur-lg',
-        // top offset is passed by the caller (top-16 at rest, below the floating pill when scrolled)
-        'fixed bottom-0 left-0 right-0 z-40 flex flex-col overflow-hidden border-y md:hidden',
-      )}
-    >
+    <>
+      {/* Tap-away backdrop below the sticky header. */}
       <div
+        aria-hidden
+        onClick={onClose}
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm data-[slot=open]:animate-in data-[slot=open]:fade-in-0 md:hidden"
+        data-slot={open ? 'open' : 'closed'}
+      />
+      {/* Full-height panel anchored below the header — content scrolls, actions stay pinned. */}
+      <div
+        id="mobile-menu"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
         data-slot={open ? 'open' : 'closed'}
         className={cn(
-          'data-[slot=open]:animate-in data-[slot=open]:zoom-in-97 ease-out',
-          'size-full p-4',
+          'fixed inset-x-0 bottom-0 z-40 flex flex-col overflow-hidden',
+          'border-y border-border bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-xl',
+          'data-[slot=open]:animate-in data-[slot=open]:slide-in-from-top-3 data-[slot=open]:fade-in-0 ease-out',
+          // top offset matches the header height (top-16 at rest, below the floating pill when scrolled)
           className,
         )}
-        {...props}
       >
-        {children}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+          <p className="font-display text-sm font-semibold text-foreground">Menu</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close menu"
+            className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <X className="size-4.5" aria-hidden />
+          </button>
+        </div>
+        {/* Scrollable body + pinned actions */}
+        <div
+          className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto overscroll-contain px-5 py-4"
+          {...props}
+        >
+          {children}
+        </div>
       </div>
-    </div>,
+    </>,
     document.body,
   );
 }

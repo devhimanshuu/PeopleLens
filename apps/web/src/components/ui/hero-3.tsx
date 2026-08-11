@@ -70,7 +70,7 @@ export function HeroSection() {
             <a
               href="#capabilities"
               className={cn(
-                'group flex w-fit items-center gap-3 rounded-full border border-border bg-card/80 p-1 pr-3 shadow-sm backdrop-blur-md transition-colors hover:border-foreground/25',
+                'group flex w-fit max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-full border border-border bg-card/80 p-1.5 pr-3 shadow-sm backdrop-blur-md transition-colors hover:border-foreground/25',
               )}
             >
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 shadow-sm">
@@ -81,8 +81,12 @@ export function HeroSection() {
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-widest">Now</p>
               </span>
 
-              <span className="text-xs font-medium text-foreground/80">
-                Announcing PeopleLens 2.0 — Predictive Flight Risk &amp; Sentiment Intelligence
+              {/* Short copy on phones so the pill fits; full claim from sm up. */}
+              <span className="text-xs font-medium leading-snug text-foreground/80">
+                <span className="sm:hidden">Announcing PeopleLens 2.0</span>
+                <span className="hidden sm:inline">
+                  Announcing PeopleLens 2.0 — Workforce Copilot &amp; Hiring Analytics
+                </span>
               </span>
               <span className="hidden h-5 border-l border-border sm:block" aria-hidden />
 
@@ -99,7 +103,7 @@ export function HeroSection() {
             className="mx-auto max-w-5xl text-balance text-center font-display text-4xl font-semibold leading-tight tracking-tight text-foreground md:text-6xl lg:text-7xl"
           >
             Transform Fragmented HR Signals into{' '}
-            <span className="text-gradient">Predictive Enterprise Intelligence</span>
+            <span className="text-gradient">Actionable Workforce Intelligence</span>
           </motion.h1>
         </motion.div>
 
@@ -110,13 +114,13 @@ export function HeroSection() {
           className="mx-auto max-w-3xl text-center space-y-3"
         >
           <p className="text-balance text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl font-normal">
-            PeopleLens unifies disaggregated data across your HRIS, ATS, Slack, and engagement tools
-            into a single real-time workforce intelligence layer.
+            PeopleLens turns your workforce data — imported from CSV or connected systems — into a
+            single intelligence layer for analytics, insights, and decision support.
           </p>
           <p className="text-pretty text-xs leading-relaxed text-muted-foreground/80 sm:text-sm max-w-2xl mx-auto">
-            Empower HR leaders, executives, and managers to accurately predict flight risks, prevent
-            key talent burnout, and deliver board-ready organizational analytics in seconds—backed
-            by zero-trust enterprise governance.
+            Empower HR leaders, executives, and managers to understand attrition drivers, engagement
+            patterns, and organizational health — with role-based access control and a complete
+            audit trail on every action.
           </p>
         </motion.div>
 
@@ -177,11 +181,13 @@ export function HeroSection() {
             ))}
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground text-center sm:text-left">
-            Trusted by People Leaders at{' '}
-            <span className="font-semibold text-foreground">200+ enterprises</span>
+            Built for{' '}
+            <span className="font-semibold text-foreground">
+              HR leaders, managers, and executives
+            </span>
             <span className="mt-1 flex items-center justify-center sm:justify-start gap-1.5">
               <ShieldCheck className="size-3.5 text-emerald-500" aria-hidden />
-              SOC 2 Type II · GDPR Compliant · ISO 27001 Certified
+              Role-based access · Field-level privacy · Full audit trail
             </span>
           </p>
         </motion.div>
@@ -221,11 +227,11 @@ export function HeroSection() {
               </span>
               <span>
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Flight risk
+                  Attrition
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  −{snapshot.flightRiskPercent.toFixed(1)} pts{' '}
-                  <span className="font-normal text-muted-foreground">this quarter</span>
+                  {snapshot.flightRiskPercent.toFixed(1)}%
+                  <span className="font-normal text-muted-foreground"> observed</span>
                 </p>
               </span>
             </motion.div>

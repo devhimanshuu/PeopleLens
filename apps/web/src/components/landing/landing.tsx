@@ -6,6 +6,7 @@ import { Header } from '@/components/ui/header-3';
 import { HeroSection } from '@/components/ui/hero-3';
 import { Bento } from './bento';
 import { Cta } from './cta';
+import { HowItWorks } from './how-it-works';
 import { Footer } from './footer';
 import { Roi } from './roi';
 import { Security } from './security';
@@ -21,6 +22,7 @@ export function Landing() {
         <main>
           <HeroSection />
           <Bento />
+          <HowItWorks />
           <Showcase />
           <Security />
           <Roi />

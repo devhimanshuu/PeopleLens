@@ -30,6 +30,7 @@ import {
 import {
   AnalyticsRepository,
   type AnalyticsEmployeeRow,
+  type HiringRecordRow,
   type LastImportRow,
 } from './analytics.repository';
 
@@ -71,19 +72,20 @@ export class AnalyticsService {
     const scope = await this.rbac.departmentScope(actor);
     const incomeVisible = this.rbac.canWrite(actor);
 
-    const [rows, departments, orgCounts, deleted, lastImport] = await Promise.all([
+    const [rows, departments, orgCounts, deleted, lastImport, hiringRecords] = await Promise.all([
       this.repo.getEmployeeRows(scope, filters),
       this.repo.getDepartmentNames(scope),
       this.repo.getOrgCounts(scope),
       this.repo.countDeleted(scope),
       this.repo.getLastImport(this.rbac.isAdmin(actor), actor.sub),
+      this.repo.getHiringRecords(scope),
     ]);
 
     const departmentNameById = new Map(departments.map((d) => [d.id, d.name]));
     const kpis = this.computeKpis(rows, orgCounts);
     const attrition = this.computeAttrition(rows, departmentNameById);
     const engagement = this.computeEngagement(rows);
-    const talent = this.computeTalent(rows, departmentNameById);
+    const talent = this.computeTalent(rows, departmentNameById, hiringRecords);
     const composition = this.computeComposition(rows, departmentNameById);
     const insights = this.generateInsights(rows, kpis, departmentNameById);
     const executiveSummary = this.computeExecutiveSummary(kpis, insights);
@@ -278,6 +280,7 @@ export class AnalyticsService {
   private computeTalent(
     rows: AnalyticsEmployeeRow[],
     deptNameById: Map<string, string>,
+    hiring: HiringRecordRow[],
   ): TalentData {
     // Hiring velocity window: hires in the last 12 months.
     const recentHires = rows.filter((r) => {
@@ -307,6 +310,36 @@ export class AnalyticsService {
     });
     const earlyAttritionCount = early.filter((r) => r.attrition).length;
 
+    // ── hiring-pipeline metrics (real HiringRecord rows) ─────────────────────
+    const hired = hiring.filter((h) => h.status === 'hired' && h.acceptedAt !== null);
+    const timed = hired.filter((h) => h.acceptedAt!.getTime() > h.openedAt.getTime());
+    const averageTimeToHireDays =
+      timed.length === 0
+        ? null
+        : average(timed.map((h) => (h.acceptedAt!.getTime() - h.openedAt.getTime()) / 86400000));
+
+    const costed = hired.filter((h) => h.sourcingCost !== null || h.recruitingCost !== null);
+    const averageCostPerHire =
+      costed.length === 0
+        ? null
+        : average(costed.map((h) => (h.sourcingCost ?? 0) + (h.recruitingCost ?? 0)));
+
+    const decided = hiring.filter(
+      (h) => h.offerStatus === 'accepted' || h.offerStatus === 'declined',
+    );
+    const accepted = decided.filter((h) => h.offerStatus === 'accepted').length;
+    const offerAcceptanceRate = decided.length === 0 ? null : accepted / decided.length;
+
+    const openRequisitions = hiring.filter(
+      (h) => h.status === 'open' || h.status === 'in_review' || h.status === 'offer_sent',
+    ).length;
+
+    // Dynamic availability: only metrics without supporting rows are listed.
+    const unavailable: string[] = [];
+    if (averageTimeToHireDays === null) unavailable.push('Time-to-hire');
+    if (averageCostPerHire === null) unavailable.push('Cost-per-hire');
+    if (offerAcceptanceRate === null) unavailable.push('Offer acceptance rate');
+
     return {
       recentHires: recentHires.length,
       hiresByDepartment: [...hiresByDepartment.entries()]
@@ -324,9 +357,15 @@ export class AnalyticsService {
         attritionCount: earlyAttritionCount,
         attritionRate: rate(earlyAttritionCount, early.length),
       },
-      // Hiring-pipeline metrics the IBM HR dataset cannot support. Stated
-      // explicitly rather than fabricated.
-      unavailable: ['Time-to-hire', 'Cost-per-hire', 'Offer acceptance rate'],
+      pipeline: {
+        openRequisitions,
+        filledRequisitions: hired.length,
+        offersSent: decided.length,
+        averageTimeToHireDays,
+        averageCostPerHire,
+        offerAcceptanceRate,
+      },
+      unavailable,
     };
   }
 

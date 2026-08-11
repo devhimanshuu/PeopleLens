@@ -77,8 +77,8 @@ export function Footer() {
               <Logo size="sm" />
             </a>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Enterprise Workforce Intelligence Platform — real-time predictive people analytics for
-              HR leaders and executives.
+              Enterprise Workforce Intelligence Platform — workforce analytics, insights, and an AI
+              copilot for HR leaders and executives.
             </p>
             <div className="mt-6 flex items-center gap-3">
               {socials.map((social) => (
@@ -102,6 +102,7 @@ export function Footer() {
               title="Product"
               links={[
                 { label: 'Capabilities', href: '/#capabilities' },
+                { label: 'How it works', href: '/#how-it-works' },
                 { label: 'Solutions', href: '/#solutions' },
                 { label: 'Pricing', href: '/#pricing' },
                 { label: 'Live Sandbox', href: '/sandbox' },

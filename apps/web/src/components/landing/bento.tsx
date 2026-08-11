@@ -21,10 +21,10 @@ const years = ['2026', '2027', '2028', '2029', '2030'];
 const retentionByYear = [94.2, 92.8, 91.4, 89.7, 88.1];
 
 const meshSources = [
-  { name: 'Workday', tone: 'text-indigo-600 dark:text-indigo-300' },
-  { name: 'BambooHR', tone: 'text-cyan-600 dark:text-cyan-300' },
-  { name: 'Greenhouse', tone: 'text-emerald-600 dark:text-emerald-300' },
-  { name: 'Slack', tone: 'text-violet-600 dark:text-violet-300' },
+  { name: 'CSV Import', tone: 'text-indigo-600 dark:text-indigo-300' },
+  { name: 'Employees', tone: 'text-cyan-600 dark:text-cyan-300' },
+  { name: 'Hiring Pipeline', tone: 'text-emerald-600 dark:text-emerald-300' },
+  { name: 'Analytics', tone: 'text-violet-600 dark:text-violet-300' },
 ];
 
 const narrativeRows = [96, 88, 92, 70, 84];
@@ -84,7 +84,13 @@ function AttritionPredictor() {
 
   return (
     <CardShell className="lg:col-span-2">
-      <CardHeader icon={Radar} title="Attrition Risk Predictor" chip="Interactive" />
+      {' '}
+      <CardHeader icon={Radar} title="Attrition Risk Predictor" chip="Roadmap" />{' '}
+      <div className="mt-4 flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+        <Radar className="size-3.5 shrink-0 text-cyan-400" aria-hidden />
+        On the roadmap — today PeopleLens reports observed attrition patterns across departments,
+        roles, tenure, and overtime.
+      </div>
       <div className="mt-6 grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
         <div className="text-center sm:text-left">
           <p className="text-[11px] uppercase tracking-widest text-muted-foreground/80">
@@ -143,7 +149,7 @@ function DataMesh() {
   return (
     <TiltCard className="h-full">
       <CardShell className="flex h-full flex-col">
-        <CardHeader icon={Network} title="Unified Data Mesh" chip="6 sources" />
+        <CardHeader icon={Network} title="One Workforce Model" chip="Imported" />
         <div className="relative mt-6 flex flex-1 items-center justify-center py-6" aria-hidden>
           <svg viewBox="0 0 300 190" className="absolute inset-0 h-full w-full opacity-60">
             <defs>
@@ -185,7 +191,7 @@ function DataMesh() {
           </div>
         </div>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          HRIS · ATS · engagement · collaboration — normalized in one model
+          Employees · departments · hiring · engagement — normalized in one model
         </p>
       </CardShell>
     </TiltCard>
@@ -215,19 +221,19 @@ function BoardNarratives() {
           </div>
           <div className="mt-4 flex gap-2">
             <span className="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-medium text-foreground/80">
-              Export · PPT
+              Print / PDF
             </span>
             <span className="rounded-md border border-border bg-muted px-2 py-1 text-[10px] font-medium text-foreground/80">
-              PDF
+              Executive summary
             </span>
           </div>
         </div>
         <p className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Workflow className="size-3.5 text-cyan-400" aria-hidden />
-            Drafted from live signals
+            Generated from your analytics
           </span>
-          <span className="text-foreground/80">10× faster than manual decks</span>
+          <span className="text-foreground/80">Board-ready in seconds</span>
         </p>
       </CardShell>
     </TiltCard>
@@ -240,7 +246,7 @@ function SentimentRadar() {
 
   return (
     <CardShell className="lg:col-span-2">
-      <CardHeader icon={MessageSquare} title="Real-time Sentiment Radar" chip="Live" />
+      <CardHeader icon={MessageSquare} title="Sentiment & Pulse Analytics" chip="Roadmap" />
       <div className="mt-6 grid items-center gap-6 sm:grid-cols-[auto_1fr]">
         <div
           className="relative mx-auto size-44"
@@ -306,7 +312,8 @@ function SentimentRadar() {
             </div>
           ))}
           <p className="pt-1 text-xs text-muted-foreground">
-            Aggregated from surveys, pulses, and collaboration signals — refreshed hourly
+            On the roadmap — today PeopleLens tracks engagement from job satisfaction, environment,
+            relationships, and work-life balance in your dataset.
           </p>
         </div>
       </div>
@@ -320,8 +327,8 @@ export function Bento() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="Capabilities"
-          title="Four ways PeopleLens turns data into foresight"
-          description="Predictive, governed, and board-ready — every capability ships on a unified data mesh."
+          title="Four ways PeopleLens turns data into intelligence"
+          description="Shipped today: analytics, insights, executive summaries, and the Workforce Copilot. Predictive modeling is on the roadmap."
         />
         <div className="mt-14 grid gap-4 lg:grid-cols-3">
           <AttritionPredictor />
