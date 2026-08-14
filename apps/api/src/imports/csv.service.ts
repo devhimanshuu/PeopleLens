@@ -398,6 +398,41 @@ export class CsvService {
     }
   }
 
+  /**
+   * Reports which canonical columns the file's header row matches, which
+   * headers were auto-aliased, and which canonical columns are missing.
+   */
+  analyzeHeaders(buffer: Buffer): {
+    matched: number;
+    total: number;
+    aliased: string[];
+    missing: string[];
+  } {
+    const records = parse(buffer, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      bom: true,
+    }) as Record<string, unknown>[];
+    const rawHeaders = Object.keys(records[0] ?? {});
+    const matched: string[] = [];
+    const aliased: string[] = [];
+    for (const header of rawHeaders) {
+      const normalized = header
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]/g, '');
+      const canonical = CSV_HEADERS.find(
+        (key) => key.toLowerCase() === normalized || HEADER_ALIASES[normalized] === key,
+      );
+      if (!canonical) continue;
+      matched.push(canonical);
+      if (canonical.toLowerCase() !== normalized) aliased.push(header.trim());
+    }
+    const missing = CSV_HEADERS.filter((key) => !matched.includes(key));
+    return { matched: matched.length, total: CSV_HEADERS.length, aliased, missing };
+  }
+
   /** Parses + validates a hiring-pipeline CSV buffer. */
   parseHiring(
     buffer: Buffer,
@@ -493,5 +528,48 @@ export class CsvService {
     const example =
       'REQ-2026-101,Senior Engineer,Engineering,Aisha Kapoor,2026-07-01,2026-07-22,2026-07-30,2026-08-10,accepted,hired,1800,3200';
     return `${header}\n${example}\n`;
+  }
+
+  /** Header-level report for hiring-pipeline CSVs. */
+  analyzeHiringHeaders(buffer: Buffer): {
+    matched: number;
+    total: number;
+    aliased: string[];
+    missing: string[];
+  } {
+    const hiringHeaders = [
+      'requisitionId',
+      'jobTitle',
+      'department',
+      'candidateName',
+      'openedAt',
+      'offerSentAt',
+      'acceptedAt',
+      'startDate',
+      'offerStatus',
+      'status',
+      'sourcingCost',
+      'recruitingCost',
+    ];
+    const records = parse(buffer, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      bom: true,
+    }) as Record<string, unknown>[];
+    const matched: string[] = [];
+    const aliased: string[] = [];
+    for (const header of Object.keys(records[0] ?? {})) {
+      const normalized = header
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]/g, '');
+      const canonical = hiringHeaders.find((key) => key.toLowerCase() === normalized);
+      if (!canonical) continue;
+      matched.push(canonical);
+      if (canonical.toLowerCase() !== normalized) aliased.push(header.trim());
+    }
+    const missing = hiringHeaders.filter((key) => !matched.includes(key));
+    return { matched: matched.length, total: hiringHeaders.length, aliased, missing };
   }
 }

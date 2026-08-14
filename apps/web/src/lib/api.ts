@@ -208,3 +208,18 @@ export async function downloadAuthenticated(path: string, filename: string): Pro
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+/** Fetches an auth-protected CSV sample from the API and returns it as a File object. */
+export async function fetchSampleCsv(path = '/imports/sample'): Promise<File> {
+  const authHeader = getAuthHeader();
+  const response = await fetch(`${API_URL}${path}`, {
+    credentials: 'include',
+    headers: {
+      Accept: 'text/csv, application/octet-stream',
+      ...(authHeader ? { Authorization: authHeader } : {}),
+    },
+  });
+  if (!response.ok) throw await toError(response);
+  const blob = await response.blob();
+  return new File([blob], 'sample.csv', { type: 'text/csv' });
+}

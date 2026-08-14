@@ -23,6 +23,8 @@ interface Mocks {
     employee: {
       findMany: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
     };
     department: { findMany: jest.Mock };
     team: { findMany: jest.Mock };
@@ -31,18 +33,30 @@ interface Mocks {
       findMany: jest.Mock;
       findUnique: jest.Mock;
       count: jest.Mock;
+      update: jest.Mock;
     };
-    hiringRecord: { create: jest.Mock };
+    hiringRecord: { create: jest.Mock; deleteMany: jest.Mock };
     $transaction: jest.Mock;
   };
-  csv: { parse: jest.Mock; isHiringCsv: jest.Mock; parseHiring: jest.Mock };
+  csv: {
+    parse: jest.Mock;
+    isHiringCsv: jest.Mock;
+    parseHiring: jest.Mock;
+    analyzeHeaders: jest.Mock;
+    analyzeHiringHeaders: jest.Mock;
+  };
   rbac: { canWrite: jest.Mock; departmentScope: jest.Mock; isAdmin: jest.Mock };
   audit: { record: jest.Mock };
 }
 
 function createMocks(): Mocks {
   const prisma = {
-    employee: { findMany: jest.fn(), create: jest.fn() },
+    employee: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
     department: { findMany: jest.fn() },
     team: { findMany: jest.fn() },
     importHistory: {
@@ -50,14 +64,21 @@ function createMocks(): Mocks {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       count: jest.fn(),
+      update: jest.fn(),
     },
-    hiringRecord: { create: jest.fn() },
+    hiringRecord: { create: jest.fn(), deleteMany: jest.fn() },
     $transaction: jest.fn(),
   };
   return {
     prisma,
     csv: {
       parse: jest.fn(),
+      analyzeHeaders: jest
+        .fn()
+        .mockReturnValue({ matched: 36, total: 36, aliased: [], missing: [] }),
+      analyzeHiringHeaders: jest
+        .fn()
+        .mockReturnValue({ matched: 12, total: 12, aliased: [], missing: [] }),
       isHiringCsv: jest.fn().mockReturnValue(false),
       parseHiring: jest.fn(),
     },
@@ -402,6 +423,64 @@ describe('ImportsService', () => {
       expect(result.status).toBe('completed');
     });
 
+    it('auto-provisions a missing manager so the row still imports', async () => {
+      const rows = [row({ managerEmail: 'new.manager@company.com' })];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue(ENGINEERING_TEAMS);
+      mockEmployeeFindMany(mocks, []); // manager NOT in the DB
+      mocks.prisma.employee.create.mockImplementation(({ data }: { data: { jobTitle?: string } }) =>
+        Promise.resolve(data.jobTitle === 'Manager' ? { id: 'mgr-new' } : { id: 'emp-1' }),
+      );
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<number>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, { status: 'completed', successCount: 1, totalRows: 1 });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      // Provisioned manager record + the imported employee itself.
+      expect(mocks.prisma.employee.create).toHaveBeenCalledTimes(2);
+      expect(mocks.prisma.employee.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'new.manager@company.com',
+            jobTitle: 'Manager',
+            departmentId: 'dept-1',
+            status: 'active',
+          }),
+        }),
+      );
+      // The employee row now points at the provisioned manager.
+      expect(mocks.prisma.employee.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ firstName: 'Alex', managerId: 'mgr-new' }),
+        }),
+      );
+      expect(result.successCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+    });
+
+    it('does not provision managers for rows that have other errors', async () => {
+      const rows = [row({ managerEmail: 'new.manager@company.com', department: 'UnknownDept' })];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([]); // department missing
+      mocks.prisma.team.findMany.mockResolvedValue([]);
+      mockEmployeeFindMany(mocks, []);
+      mocks.prisma.employee.create.mockResolvedValue({ id: 'emp-1' });
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<number>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, { status: 'completed', successCount: 0, totalRows: 1 });
+
+      const result = await service.importCsv(ACTOR, FILE);
+
+      // Row fails (department + manager errors) — no phantom employee created.
+      expect(mocks.prisma.employee.create).not.toHaveBeenCalled();
+      expect(result.successCount).toBe(0);
+      expect(result.failedCount).toBe(1);
+    });
+
     it('skips DB duplicates and reports them without inserting', async () => {
       const rows = [rowNoTeam(), rowNoTeam({ employeeCode: 'EMP-2', email: 'b@company.com' })];
       mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
@@ -570,6 +649,214 @@ describe('ImportsService', () => {
       expect(result.status).toBe('partial');
       expect(result.failedCount).toBe(1);
       expect(result.errorReport).toHaveLength(1);
+    });
+  });
+
+  describe('previewCsv — dry run', () => {
+    it('validates rows and references without writing anything', async () => {
+      const rows = [
+        { ...row(), rowNumber: 2 },
+        {
+          ...row({ employeeCode: 'EMP-2', email: 'b@company.com', firstName: 'Bea' }),
+          rowNumber: 3,
+        },
+        {
+          ...rowNoTeam({
+            employeeCode: 'EMP-3',
+            email: 'c@company.com',
+            department: 'MissingDept',
+          }),
+          rowNumber: 4,
+        },
+      ];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue(ENGINEERING_TEAMS);
+      mockEmployeeFindMany(mocks);
+
+      const preview = await service.previewCsv(ACTOR, FILE);
+
+      expect(preview.type).toBe('employees');
+      expect(preview.totalRows).toBe(3);
+      expect(preview.validRows).toBe(2);
+      expect(preview.invalidRows).toBe(1);
+      expect(preview.previewRows[0]?.status).toBe('valid');
+      expect(preview.previewRows[2]?.status).toBe('invalid');
+      expect(preview.previewRows[2]?.errors.join(' ')).toContain('not found');
+      // Nothing was created or updated.
+      expect(mocks.prisma.employee.create).not.toHaveBeenCalled();
+      expect(mocks.prisma.employee.update).not.toHaveBeenCalled();
+      expect(mocks.prisma.importHistory.create).not.toHaveBeenCalled();
+    });
+
+    it('reports managers that will be auto-provisioned without creating them', async () => {
+      const rows = [{ ...row({ managerEmail: 'new.manager@company.com' }), rowNumber: 2 }];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue(ENGINEERING_TEAMS);
+      mockEmployeeFindMany(mocks, []); // manager missing
+
+      const preview = await service.previewCsv(ACTOR, FILE);
+
+      expect(preview.managersProvisioned).toBe(1);
+      expect(preview.invalidRows).toBe(0);
+      expect(mocks.prisma.employee.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('duplicate strategy', () => {
+    const dupRow = () => rowNoTeam({ employeeCode: 'EMP-1', email: 'alex@company.com' });
+
+    it('fail rejects the whole file when any row collides', async () => {
+      mocks.csv.parse.mockReturnValue({ rows: [dupRow()], errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue([]);
+      mockEmployeeFindMany(mocks, [], [{ employeeCode: 'EMP-1' }]);
+      mocks.prisma.employee.create.mockResolvedValue({ id: 'emp-1' });
+      mockHistoryCreate(mocks, { status: 'failed', successCount: 0, totalRows: 1 });
+
+      const result = await service.importCsv(ACTOR, FILE, undefined, {
+        duplicateStrategy: 'fail',
+      });
+
+      expect(result.status).toBe('failed');
+      expect(result.successCount).toBe(0);
+      expect(result.errorReport?.[0]?.errors.join(' ')).toContain('already exists');
+      expect(mocks.prisma.employee.create).not.toHaveBeenCalled();
+    });
+
+    it('update upserts rows whose employeeCode already exists', async () => {
+      mocks.csv.parse.mockReturnValue({ rows: [dupRow()], errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue([]);
+      // Update mode selects { employeeCode, id, email } — route by select shape.
+      mocks.prisma.employee.findMany.mockImplementation((args: { select?: unknown }) => {
+        const select = (args.select ?? {}) as Record<string, unknown>;
+        if ('employeeCode' in select) {
+          return Promise.resolve([
+            { employeeCode: 'EMP-1', id: 'emp-99', email: 'old@company.com' },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      mocks.prisma.employee.update.mockResolvedValue({ id: 'emp-99' });
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, {
+        status: 'completed',
+        successCount: 0,
+        totalRows: 1,
+        updatedCount: 1,
+      });
+
+      const result = await service.importCsv(ACTOR, FILE, undefined, {
+        duplicateStrategy: 'update',
+      });
+
+      expect(mocks.prisma.employee.create).not.toHaveBeenCalled();
+      expect(mocks.prisma.employee.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'emp-99' },
+          data: expect.objectContaining({ employeeCode: 'EMP-1', email: 'alex@company.com' }),
+        }),
+      );
+      expect(result.updatedCount).toBe(1);
+      expect(result.status).toBe('completed');
+    });
+  });
+
+  describe('labels', () => {
+    it('stores the batch label on the history row', async () => {
+      const rows = [row()];
+      mocks.csv.parse.mockReturnValue({ rows, errorReport: [] });
+      mocks.prisma.department.findMany.mockResolvedValue([{ id: 'dept-1', name: 'Engineering' }]);
+      mocks.prisma.team.findMany.mockResolvedValue(ENGINEERING_TEAMS);
+      mockEmployeeFindMany(mocks);
+      mocks.prisma.employee.create.mockResolvedValue({ id: 'emp-1' });
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<number>) =>
+        fn(mocks.prisma),
+      );
+      mockHistoryCreate(mocks, { status: 'completed', successCount: 1, totalRows: 1 });
+
+      await service.importCsv(ACTOR, FILE, undefined, { label: 'Q3 New Hires' });
+
+      expect(mocks.prisma.importHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ label: 'Q3 New Hires', type: 'employees' }),
+        }),
+      );
+    });
+
+    it('rejects labels longer than 80 characters', async () => {
+      await expect(
+        service.importCsv(ACTOR, FILE, undefined, { label: 'x'.repeat(81) }),
+      ).rejects.toThrow('Label must be 80 characters or fewer');
+    });
+  });
+
+  describe('rollback', () => {
+    const historyWithIds = (overrides: Partial<ImportHistory> = {}) =>
+      historyRow({
+        type: 'employees',
+        status: 'completed',
+        importedRecordIds: ['emp-a', 'emp-b'],
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      mocks.rbac.isAdmin.mockReturnValue(true);
+    });
+
+    it('soft-deletes the imported employees and marks the history rolled back', async () => {
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(historyWithIds());
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn(mocks.prisma),
+      );
+
+      const result = await service.rollback(ACTOR, 'hist-1');
+
+      expect(mocks.prisma.employee.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: ['emp-a', 'emp-b'] } },
+          data: expect.objectContaining({ isActive: false, deletedAt: expect.any(Date) }),
+        }),
+      );
+      expect(mocks.prisma.importHistory.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'rolled_back' }) }),
+      );
+      expect(result.status).toBe('rolled_back');
+    });
+
+    it('hard-deletes hiring records for hiring imports', async () => {
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(
+        historyWithIds({ type: 'hiring', importedRecordIds: ['req-1'] }),
+      );
+      mocks.prisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn(mocks.prisma),
+      );
+
+      await service.rollback(ACTOR, 'hist-1');
+
+      expect(mocks.prisma.hiringRecord.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: ['req-1'] } } }),
+      );
+    });
+
+    it('managers cannot roll back imports they did not perform (404, opaque)', async () => {
+      mocks.rbac.isAdmin.mockReturnValue(false);
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(
+        historyWithIds({ importedByUserId: 'someone-else' }),
+      );
+      await expect(service.rollback(ACTOR, 'hist-1')).rejects.toThrow(NotFoundException);
+      expect(mocks.prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects an already-rolled-back import', async () => {
+      mocks.prisma.importHistory.findUnique.mockResolvedValue(
+        historyWithIds({ status: 'rolled_back' }),
+      );
+      await expect(service.rollback(ACTOR, 'hist-1')).rejects.toThrow('already been rolled back');
     });
   });
 });

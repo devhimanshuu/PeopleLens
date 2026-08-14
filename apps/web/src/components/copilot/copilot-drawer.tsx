@@ -70,6 +70,9 @@ export function CopilotDrawer() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [commandIndex, setCommandIndex] = useState(0);
+  // Id of the assistant message currently streaming — used to render the
+  // thinking bubble only until the real bubble has content to show.
+  const [streamingId, setStreamingId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -139,14 +142,34 @@ export function CopilotDrawer() {
       };
 
       const assistantMsgId = `resp-${Date.now()}`;
-      const initialAssistantMessage: ChatMessage = {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: '',
-        createdAt: new Date().toISOString(),
+      setStreamingId(assistantMsgId);
+      // The assistant bubble is NOT pre-created: it is upserted as stream
+      // events arrive, so an empty bubble never renders next to the thinking
+      // state.
+      const upsertAssistant = (
+        patch: (existing: ChatMessage | undefined) => Partial<ChatMessage>,
+      ) => {
+        setMessages((prev) => {
+          const index = prev.findIndex((m) => m.id === assistantMsgId);
+          if (index === -1) {
+            return [
+              ...prev,
+              {
+                id: assistantMsgId,
+                role: 'assistant',
+                content: '',
+                createdAt: new Date().toISOString(),
+                ...patch(undefined),
+              },
+            ];
+          }
+          const copy = [...prev];
+          copy[index] = { ...copy[index]!, ...patch(copy[index]) };
+          return copy;
+        });
       };
 
-      setMessages((prev) => [...prev, userMessage, initialAssistantMessage]);
+      setMessages((prev) => [...prev, userMessage]);
       setInput('');
 
       try {
@@ -159,47 +182,31 @@ export function CopilotDrawer() {
             if (event.type === 'tool_start') {
               setActiveTool(event.toolName);
             } else if (event.type === 'tool_result') {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? {
-                        ...m,
-                        toolName: event.toolName,
-                        toolData: event.data,
-                        deepLinks: event.deepLinks,
-                        suggestions: event.suggestions,
-                      }
-                    : m,
-                ),
-              );
+              upsertAssistant(() => ({
+                toolName: event.toolName,
+                toolData: event.data,
+                deepLinks: event.deepLinks,
+                suggestions: event.suggestions,
+              }));
               if (event.suggestions?.length) {
                 setSuggestions(event.suggestions);
               }
             } else if (event.type === 'token') {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId ? { ...m, content: m.content + event.content } : m,
-                ),
-              );
+              upsertAssistant((existing) => ({
+                content: (existing?.content ?? '') + event.content,
+              }));
             } else if (event.type === 'done') {
               setConversationId(event.response.conversationId);
               window.localStorage.setItem(CONVERSATION_KEY, event.response.conversationId);
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? {
-                        ...m,
-                        content: event.response.answer,
-                        toolName: event.response.provenance.toolUsed,
-                        provider: event.response.provenance.provider,
-                        model: event.response.provenance.model,
-                        deepLinks: event.response.deepLinks,
-                        suggestions: event.response.suggestions,
-                        toolData: event.response.toolData,
-                      }
-                    : m,
-                ),
-              );
+              upsertAssistant(() => ({
+                content: event.response.answer,
+                toolName: event.response.provenance.toolUsed,
+                provider: event.response.provenance.provider,
+                model: event.response.provenance.model,
+                deepLinks: event.response.deepLinks,
+                suggestions: event.response.suggestions,
+                toolData: event.response.toolData,
+              }));
               if (event.response.suggestions?.length) {
                 setSuggestions(event.response.suggestions);
               }
@@ -222,6 +229,7 @@ export function CopilotDrawer() {
         sendingRef.current = false;
         setBusy(false);
         setActiveTool(null);
+        setStreamingId(null);
       }
     },
     [busy, conversationId, input],
@@ -305,11 +313,7 @@ export function CopilotDrawer() {
       aria-label="PeopleLens Copilot"
     >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={() => setOpen(false)}
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} aria-hidden />
 
       {/* Panel */}
       <aside className="absolute inset-y-0 right-0 flex w-full max-w-[26rem] flex-col border-l border-border/60 bg-background shadow-2xl">
@@ -371,7 +375,9 @@ export function CopilotDrawer() {
                   onCopy={() => void copyMessage(message.content)}
                 />
               ))}
-              {busy ? <ThinkingBubble activeTool={activeTool} /> : null}
+              {busy && streamingId && !messages.some((m) => m.id === streamingId) ? (
+                <ThinkingBubble activeTool={activeTool} />
+              ) : null}
             </div>
           )}
 

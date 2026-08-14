@@ -42,6 +42,7 @@ enum ImportStatus {
   completed
   partial
   failed
+  rolled_back
 }
 
 // ───────────────────────────────────────────────────────────────────────────── Identity & access…
@@ -292,13 +293,21 @@ model HiringRecord {
 model ImportHistory {
   id               String       @id @default(cuid())
   fileName         String
+  /// employees | hiring
+  type             String?
+  /// Optional user-provided batch name shown in history.
+  label            String?
   status           ImportStatus
   totalRows        Int
   successCount     Int
+  /// Rows updated in place (duplicateStrategy = update).
+  updatedCount     Int          @default(0)
   failedCount      Int
   duplicateCount   Int          @default(0)
   /// JSON array of `{ row, email?, employeeCode?, errors: string[] }`.
   errorReport      Json?
+  /// IDs of the employee/hiring records created by this import — enables rollback.
+  importedRecordIds String[]   @default([])
   importedByUserId String
   importedByUser   User         @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
   createdAt        DateTime     @default(now())

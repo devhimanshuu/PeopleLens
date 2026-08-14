@@ -99,7 +99,7 @@ export type EmployeeStatus = 'active' | 'on_leave' | 'probation' | 'terminated';
 export type Gender = 'female' | 'male' | 'non_binary' | 'prefer_not_to_say';
 
 /** Outcome of a CSV bulk import. */
-export type ImportStatus = 'completed' | 'partial' | 'failed';
+export type ImportStatus = 'completed' | 'partial' | 'failed' | 'rolled_back';
 // ───────────────────────────────────────────────────────────────────────────── Identity & organization…
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -256,9 +256,15 @@ export interface ImportRowError {
 export interface ImportHistory {
   id: EntityId;
   fileName: string;
+  /** employees | hiring */
+  type?: 'employees' | 'hiring' | null;
+  /** Optional user-provided batch name. */
+  label?: string | null;
   status: ImportStatus;
   totalRows: number;
   successCount: number;
+  /** Rows updated in place (duplicateStrategy = update). */
+  updatedCount?: number;
   failedCount: number;
   duplicateCount: number;
   errorReport?: ImportRowError[] | null;
@@ -271,6 +277,40 @@ export interface ImportHistory {
 /** Import record joined with the actor's identity. */
 export interface ImportHistoryView extends ImportHistory {
   importedBy?: Pick<User, 'id' | 'name' | 'email'> | null;
+}
+
+/** How the importer treats rows that collide with existing records. */
+export type DuplicateStrategy = 'skip' | 'fail' | 'update';
+
+/** One row shown on the import staging (preview) screen. */
+export interface ImportPreviewRow {
+  row: number;
+  employeeCode: string | null;
+  email: string | null;
+  name: string | null;
+  department: string | null;
+  team: string | null;
+  status: 'valid' | 'invalid';
+  errors: string[];
+}
+
+/** Dry-run result — nothing is written to the database. */
+export interface ImportPreview {
+  type: 'employees' | 'hiring';
+  fileName: string;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateCount: number;
+  /** Managers that will be auto-provisioned when the import is confirmed. */
+  managersProvisioned: number;
+  columnMatch: {
+    matched: number;
+    total: number;
+    aliased: string[];
+    missing: string[];
+  };
+  previewRows: ImportPreviewRow[];
 }
 // ───────────────────────────────────────────────────────────────────────────── Audit trail…
 // ─────────────────────────────────────────────────────────────────────────────

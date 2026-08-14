@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
@@ -28,7 +29,9 @@ import { PaginationDto } from '@app/common/dto/pagination.dto';
 import { Roles } from '@app/common/decorators/roles.decorator';
 import { Role } from '@app/common/enums/role.enum';
 import type { RequestUser } from '@app/common/interfaces/request-user.interface';
+import type { DuplicateStrategy } from '@peoplelens/types';
 import { ImportsService } from './imports.service';
+import { SAMPLE_EMPLOYEES_CSV } from './sample-data';
 
 /** CSV bulk import — upload, history, error reports and template. */
 @ApiTags('Imports')
@@ -50,6 +53,13 @@ export class ImportsController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary', description: 'CSV file' },
+        duplicateStrategy: {
+          type: 'string',
+          enum: ['skip', 'fail', 'update'],
+          description:
+            'skip (default) excludes duplicates; fail rejects the whole file; update upserts by employeeCode',
+        },
+        label: { type: 'string', description: 'Optional batch name shown in history' },
       },
     },
   })
@@ -57,8 +67,54 @@ export class ImportsController {
     @CurrentUser() user: RequestUser,
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
+    @Body() body: { duplicateStrategy?: DuplicateStrategy; label?: string },
   ) {
-    return this.importsService.importCsv(user, file, req.ip);
+    return this.importsService.importCsv(user, file, req.ip, {
+      duplicateStrategy: body?.duplicateStrategy,
+      label: body?.label,
+    });
+  }
+
+  @Post('preview')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_CSV_SIZE_BYTES } }))
+  @ApiOperation({
+    summary: 'Dry-run a CSV import',
+    description: 'Validates every row and resolves references without writing to the database.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'CSV file' },
+      },
+    },
+  })
+  previewCsv(@CurrentUser() user: RequestUser, @UploadedFile() file: Express.Multer.File) {
+    return this.importsService.previewCsv(user, file);
+  }
+
+  @Get('sample')
+  @ApiOperation({
+    summary: 'Download the demo new-hires CSV',
+    description: 'A 30-row sample batch that imports cleanly against the seeded org.',
+  })
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="peoplelens-sample.csv"')
+  getSample(): StreamableFile {
+    return new StreamableFile(Buffer.from(SAMPLE_EMPLOYEES_CSV, 'utf-8'));
+  }
+
+  @Post(':id/rollback')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @ApiOperation({
+    summary: 'Roll back an import',
+    description: 'Soft-deletes the employees (or removes hiring records) the import created.',
+  })
+  @ApiParam({ name: 'id', description: 'Import history id' })
+  rollback(@CurrentUser() user: RequestUser, @Param('id') id: string, @Req() req: Request) {
+    return this.importsService.rollback(user, id, req.ip);
   }
 
   @Get()
